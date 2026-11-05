@@ -160,5 +160,10 @@ All thresholds and timing windows are database-driven in `city_settings` and man
 | `unbatching_delay_threshold_minutes` | Maximum preparation delay for one merchant before automatic dynamic unbatching into independent legs occurs | `12` | minutes | Per-city (`city_settings`) |
 | `checkout_quote_ttl_seconds` | Validity duration for locking checkout quote pricing, delivery fees, and inventory soft reservations | `600` | seconds | Per-city (`city_settings`) |
 | `mode_b_customer_discount_inr` | Delivery fee reduction awarded to customer for choosing Mode B combined delivery | `25.00` | INR | Per-city (`city_settings`) |
+| `mode_b_courier_extra_pickup_inr` | Additional compensation paid to courier for executing a second pickup stop | `20.00` | INR | Per-city (`city_settings`) |
+| `mode_b_max_combined_weight_kg` | Maximum combined cargo weight allowable for a single two-wheeler delivery partner | `12.0` | kg | Per-city (`city_settings`) |
+| `mode_b_max_combined_volume_liters` | Maximum combined volumetric capacity for a standard insulated delivery bag | `30.0` | L | Per-city (`city_settings`) |
+| `merchant_accept_timeout_seconds` | Maximum window for merchant to accept/reject an incoming sub-order before auto-rejection | `180` | seconds | Per-city (`city_settings`) |
+| `customer_cancel_free_window_seconds` | Free cancellation window for customer prior to merchant acceptance confirmation | `60` | seconds | Per-city (`city_settings`) |
 
 
