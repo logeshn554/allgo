@@ -4,13 +4,13 @@
  * AllGo Multi-Vertical On-Demand Platform
  * Dynamic Monthly INR Cost Projection & Operational Estimates Calculator
  *
- * Revision: 4.0.0 (Modernized March 2025 Pricing Alignment)
+ * Revision: 4.1.0 (Detailed Resource Breakdown, Topology Rules & DLT Custom-Token Security Flow)
  *
  * Usage:
  *   node --experimental-transform-types scripts/cost-calculator.ts
  *   node --experimental-transform-types scripts/cost-calculator.ts --json
  *   node --experimental-transform-types scripts/cost-calculator.ts --ordersPerDay=2500 --activeCouriers=100 --operatingHours=14 --json
- *   node --experimental-transform-types scripts/cost-calculator.ts --ceilingDev=10000 --ceilingProd=80000 --json
+ *   node --experimental-transform-types scripts/cost-calculator.ts --usdInrRate=94.40 --ceilingDev=10000 --ceilingProd=80000 --json
  */
 
 export interface CalculatorInputs {
@@ -53,6 +53,7 @@ export interface CostProjection {
   smsMonthlyInr: number;
   smsDirectFirebaseMonthlyInr: number;
   totalPilotMonthlyInr: number;
+  combinedDevAndProdMonthlyInr: number;
   ceilings: BudgetCeilingsConfig;
   evaluation?: {
     dev: CeilingEvaluation;
@@ -67,7 +68,7 @@ function parseArgs(args: string[]): CalculatorInputs {
     ordersPerDay: 1000,
     activeCouriers: 50,
     operatingHours: 12,
-    exchangeRateUsdInr: 94.40, // November 2026 FBIL / RBI baseline & Google Finance
+    exchangeRateUsdInr: 94.40, // Configurable planning input [UNVERIFIED: Planning estimate input]
     formatJson: false,
   };
 
@@ -101,7 +102,7 @@ function parseArgs(args: string[]): CalculatorInputs {
 
 function printHelp(): void {
   console.log(`
-AllGo Platform Monthly Cost Calculator CLI (Revision 4.0.0)
+AllGo Platform Monthly Cost Calculator CLI (Revision 4.1.0)
 
 Usage:
   node --experimental-transform-types scripts/cost-calculator.ts [options]
@@ -110,7 +111,7 @@ Options:
   --ordersPerDay=<n>     Average completed orders per day (default: 1000)
   --activeCouriers=<n>   Average active delivery couriers per day (default: 50)
   --operatingHours=<n>   Operating hours per day (default: 12)
-  --usdInrRate=<n>       USD to INR exchange rate (default: 94.40)
+  --usdInrRate=<n>       USD to INR exchange rate [UNVERIFIED: Planning estimate input] (default: 94.40)
   --ceilingDev=<n>       Optional budget ceiling for Dev GCP (default: unset)
   --ceilingProd=<n>      Optional budget ceiling for Prod Pilot GCP (default: unset)
   --ceilingMaps=<n>      Optional budget ceiling for Google Maps (default: unset)
@@ -148,7 +149,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   };
 
   // 2. Dev Environment GCP Cost (with 12h/day overnight scheduler shutdown)
-  // Cloud SQL db-custom-1-3840 (360 hrs compute @ $0.0764/hr = $27.50 + $1.70 SSD + $0.80 backup) = $30.00
+  // Cloud SQL db-custom-1-3840 (360 hrs compute @ $0.07638/hr = $27.50 + $1.70 SSD + $0.80 backup) = $30.00
   // Memorystore Redis Basic 1GB (730 hrs @ $0.024/hr in asia-south1) = $17.52
   // Direct VPC Egress: $0.00 fixed infrastructure fee (zero VM connectors)
   // Cross-zone egress (~20 GB @ $0.01/GiB) = $0.20
@@ -162,7 +163,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const devGcpMonthlyInr = devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹4,633
 
   // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard HA Redis + Direct VPC Egress + min_instances=1)
-  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.3188/hr = $232.76 + $6.80 HA SSD + $2.80 PITR) = $242.36
+  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.31885/hr = $232.76 + $6.80 HA SSD + $2.80 PITR) = $242.36
   const prodSqlComputeInr = Math.round(232.76 * exchangeRateUsdInr); // ₹21,973
   const prodSqlStorageInr = Math.round(6.80 * exchangeRateUsdInr);   // ₹642
   const prodSqlBackupsInr = Math.round(2.80 * exchangeRateUsdInr);   // ₹264
@@ -197,7 +198,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   // Per-SKU Free Monthly Allowance in India:
   // - ComputeRoutes Essentials: 70,000 free calls / month
   // - Geocoding API: 70,000 free calls / month
-  // - Places Autocomplete: 70,000 free calls / month
+  // - Places Autocomplete: 70,000 free requests / month
   // - Mobile Maps SDK (Android/iOS): Unlimited free map loads
   const routesCallsPerOrder = 2.1; // 2 legs (pickup + dropoff) + 0.1 re-route trigger (100m displacement & 60s cooldown)
   const monthlyRoutesCalls = Math.round(ordersPerDay * routesCallsPerOrder * 30);
@@ -233,15 +234,18 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const monthlyOtps = Math.round(ordersPerDay * 1.1 * 30); // ~33,000 OTPs at 1,000 orders/day
 
   // Approach 2: Domestic Indian DLT Gateway + Firebase Custom Token (~₹0.25/SMS)
-  const smsMonthlyInr = Math.round(monthlyOtps * 0.25); // ₹8,250
+  const smsMonthlyInr = Math.round(monthlyOtps * 0.25); // ₹8,250 [UNVERIFIED: Planning assumption]
 
   // Approach 1: Direct Firebase Phone Auth / Identity Platform ($0.07 USD / ~₹6.61 INR per SMS after 300 free/mo)
   const firebaseFreeMonthly = 300; // 10 SMS/day globally
   const firebaseBillableOtps = Math.max(0, monthlyOtps - firebaseFreeMonthly);
   const smsDirectFirebaseMonthlyInr = Math.round((firebaseBillableOtps * 0.07) * exchangeRateUsdInr); // ₹2,16,082
 
-  // Total Pilot Monthly (Prod GCP + Maps Approach A + DLT SMS)
+  // Total Production Pilot Monthly (Prod GCP + Maps Approach A + DLT SMS)
   const totalPilotMonthlyInr = prodGcpMonthlyInr + mapsMonthlyInr + smsMonthlyInr; // ₹59,006
+
+  // Combined Spend (Only if Dev and Prod Pilot environments run simultaneously)
+  const combinedDevAndProdMonthlyInr = totalPilotMonthlyInr + devGcpMonthlyInr; // ₹63,639
 
   const anyCeilingsConfigured = (
     ceilings.devCeilingConfigured ||
@@ -268,6 +272,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
     smsMonthlyInr,
     smsDirectFirebaseMonthlyInr,
     totalPilotMonthlyInr,
+    combinedDevAndProdMonthlyInr,
     ceilings,
     evaluation,
   };
@@ -295,15 +300,15 @@ Operational Assumptions:
   - Orders / Day:          ${inputs.ordersPerDay.toLocaleString()} completed orders
   - Active Couriers / Day: ${inputs.activeCouriers} couriers
   - Operating Hours / Day: ${inputs.operatingHours} hours/day
-  - USD/INR Exchange Rate: ₹${inputs.exchangeRateUsdInr.toFixed(2)} per USD (FBIL/RBI Nov 2026)
+  - USD/INR Exchange Rate: ₹${inputs.exchangeRateUsdInr.toFixed(2)} per USD [UNVERIFIED: Planning estimate input; configurable via --usdInrRate]
 
 --------------------------------------------------------------------------------
 Estimated Monthly Spend (Google Cloud Mumbai asia-south1):
 --------------------------------------------------------------------------------
-1. Dev Environment GCP:        ${formatInr(proj.devGcpMonthlyInr)} / mo
+1. Dev Environment GCP (Separate): ${formatInr(proj.devGcpMonthlyInr)} / mo
    • Cloud SQL & Redis:        NO Free Tier (hourly billable compute/storage)
    • Direct VPC Egress:        $0 Infrastructure Fee (native VPC routing)
-   • Cloud Run & Pub/Sub:      Covered by Permanent Free Tier
+   • Cloud Run & Pub/Sub:      Covered by Permanent Free Tier (<2M req, <10 GiB)
    • Scheduled Shutdown:       Overnight 12h/day off saves ~50% compute
    • Ceiling Status:           ${proj.ceilings.devCeilingConfigured ? formatInr(proj.ceilings.devCeilingInr!) : 'Not configured (estimates only)'}
 
@@ -320,13 +325,15 @@ Estimated Monthly Spend (Google Cloud Mumbai asia-south1):
    • Ceiling Status:           ${proj.ceilings.mapsCeilingConfigured ? formatInr(proj.ceilings.mapsCeilingInr!) : 'Not configured (estimates only)'}
 
 4. SMS / OTP Authentication:   ${formatInr(proj.smsMonthlyInr)} / mo
-   • Approach 2 (DLT Gateway): ${formatInr(proj.smsMonthlyInr)} / mo (~33,000 OTPs @ ₹0.25 DLT rate)
+   • Approach 2 (DLT Gateway): ${formatInr(proj.smsMonthlyInr)} / mo (~33,000 OTPs @ ₹0.25 DLT rate) [UNVERIFIED]
+   • Header:                   [ILLUSTRATIVE / UNAPPROVED: ALGOIN] (Formal DLT registration required)
    • Approach 1 (Direct FB):   ${formatInr(proj.smsDirectFirebaseMonthlyInr)} / mo ($0.07/SMS Identity Platform tariff)
    • Cost Difference:          Direct Firebase is ~26x more expensive than DLT Gateway!
    • Ceiling Status:           ${proj.ceilings.smsCeilingConfigured ? formatInr(proj.ceilings.smsCeilingInr!) : 'Not configured (estimates only)'}
 
 --------------------------------------------------------------------------------
-Total Estimated Pilot Spend:   ${formatInr(proj.totalPilotMonthlyInr)} / mo
+Production Pilot Monthly Total (Prod GCP + Maps + DLT SMS): ${formatInr(proj.totalPilotMonthlyInr)} / mo
+Combined Monthly Spend (If Dev and Prod Pilot run simultaneously): ${formatInr(proj.combinedDevAndProdMonthlyInr)} / mo
 Budget Ceilings Governance:    Optional config variables (empty by default; owner to set)
 ================================================================================
 `);
