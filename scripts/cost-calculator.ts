@@ -163,20 +163,21 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const devGcpMonthlyInr = devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹6,356
 
   // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard M2 HA Redis + Direct VPC Egress + min_instances=1)
-  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.31885/hr = $232.76 + $6.80 HA SSD + $2.80 PITR) = $242.36
-  const prodSqlComputeInr = Math.round(232.76 * exchangeRateUsdInr); // ₹21,973
+  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.3310/hr = $241.63 + $6.80 HA SSD + $2.80 PITR) = $251.23
+  const prodSqlComputeInr = Math.round(241.63 * exchangeRateUsdInr); // ₹22,810 (2 vCPU @ $0.0505 * 2 + 7.5 GiB @ $0.0086 * 2)
   const prodSqlStorageInr = Math.round(6.80 * exchangeRateUsdInr);   // ₹642
   const prodSqlBackupsInr = Math.round(2.80 * exchangeRateUsdInr);   // ₹264
 
   // Memorystore Redis Standard Tier M2 HA 5GB (730 hrs * 5GB * $0.0540/GB-hr in asia-south1 Mumbai) = $197.10
   const prodRedisInr = Math.round(197.10 * exchangeRateUsdInr);      // ₹18,606
 
-  // Cloud Run baseline: api ($20.00) + dispatch ($15.80) + webhooks ($0.80) = $36.60
+  // Cloud Run baseline (Request-based): api ($9.51) + dispatch ($34.94) + webhooks ($0.59) + admin ($0.20) = $45.24
   // Dynamic scale component for order volume above 1,000 baseline
   const dynamicComputeUsd = Math.max(0, (ordersPerDay - 1000) * 30 * 0.002);
-  const prodCloudRunApiInr = Math.round((20.00 + dynamicComputeUsd * 0.6) * exchangeRateUsdInr);     // ₹1,888 baseline
-  const prodCloudRunDispatchInr = Math.round((15.80 + dynamicComputeUsd * 0.4) * exchangeRateUsdInr);// ₹1,492 baseline
-  const prodCloudRunWebhooksInr = Math.round(0.80 * exchangeRateUsdInr);                             // ₹76
+  const prodCloudRunApiInr = Math.round((9.51 + dynamicComputeUsd * 0.4) * exchangeRateUsdInr);       // ₹898 baseline
+  const prodCloudRunDispatchInr = Math.round((34.94 + dynamicComputeUsd * 0.5) * exchangeRateUsdInr); // ₹3,298 baseline
+  const prodCloudRunWebhooksInr = Math.round((0.59 + dynamicComputeUsd * 0.08) * exchangeRateUsdInr); // ₹56 baseline
+  const prodCloudRunAdminInr = Math.round((0.20 + dynamicComputeUsd * 0.02) * exchangeRateUsdInr);    // ₹19 baseline
 
   // Direct VPC Egress ($0.00 setup fee; $1.00 cross-zone network egress for ~100 GB)
   const prodNetworkInr = Math.round(1.00 * exchangeRateUsdInr);       // ₹94
@@ -185,13 +186,13 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const prodStorageInr = Math.round(4.80 * exchangeRateUsdInr);       // ₹453
   const prodSecretsInr = Math.round(2.70 * exchangeRateUsdInr);       // ₹255
 
-  // Observability & Operational Buffer
+  // Observability & Operational Contingency Buffer
   const prodLoggingInr = Math.round(25.00 * exchangeRateUsdInr);      // ₹2,360
   const prodMonitoringInr = Math.round(10.00 * exchangeRateUsdInr);   // ₹944
-  const prodBufferInr = Math.round(40.00 * exchangeRateUsdInr);       // ₹3,776
+  const prodBufferInr = Math.round(22.50 * exchangeRateUsdInr);       // ₹2,124
 
   const prodGcpMonthlyInr = prodSqlComputeInr + prodSqlStorageInr + prodSqlBackupsInr +
-    prodRedisInr + prodCloudRunApiInr + prodCloudRunDispatchInr + prodCloudRunWebhooksInr +
+    prodRedisInr + prodCloudRunApiInr + prodCloudRunDispatchInr + prodCloudRunWebhooksInr + prodCloudRunAdminInr +
     prodNetworkInr + prodStorageInr + prodSecretsInr + prodLoggingInr + prodMonitoringInr + prodBufferInr; // ₹52,823 baseline
 
   // 4. Google Maps Cost Analysis (Modernized March 2025 Per-SKU India Pricing)
@@ -206,18 +207,24 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const monthlyMobilityCalls = mobilityOrders * 3.3 * 30; // 9,900 calls
   const monthlyRoutesCalls = Math.round(monthlyDeliveryCalls + monthlyParcelCalls + monthlyMobilityCalls); // 66,600 calls
   
-  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.33 * 30); // ~10,000 un-cached addresses
-  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.50 * 30);   // ~15,000 un-cached checkout searches
+  const monthlyRouteMatrixElements = Math.round(ordersPerDay * 0.50 * 30); // ~15,000 matrix elements
+  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.33 * 30);       // ~10,000 un-cached addresses
+  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.50 * 30);          // ~15,000 un-cached checkout searches
+  const monthlyPlaceDetailsCalls = Math.round(ordersPerDay * 0.40 * 30);    // ~12,000 place details calls
 
   const billableRoutesCalls = Math.max(0, monthlyRoutesCalls - 70000);
+  const billableRouteMatrixElements = Math.max(0, monthlyRouteMatrixElements - 70000);
   const billableGeocodingCalls = Math.max(0, monthlyGeocodingCalls - 70000);
   const billablePlacesCalls = Math.max(0, monthlyPlacesCalls - 70000);
+  const billablePlaceDetailsCalls = Math.max(0, monthlyPlaceDetailsCalls - 70000);
 
-  // Localized India pricing rates: ~₹125/1k for Routes & Geocoding; ~₹70/1k for Places Autocomplete
+  // Localized India pricing rates: ~₹125/1k for Routes, Matrix, Geocoding & Place Details; ~₹70/1k for Places Autocomplete
   const routesBillableInr = (billableRoutesCalls / 1000) * 125;
+  const routeMatrixBillableInr = (billableRouteMatrixElements / 1000) * 125;
   const geocodingBillableInr = (billableGeocodingCalls / 1000) * 125;
   const placesBillableInr = (billablePlacesCalls / 1000) * 70;
-  const mapsMonthlyInr = Math.round(routesBillableInr + geocodingBillableInr + placesBillableInr); // ₹0 under 70k free cap
+  const placeDetailsBillableInr = (billablePlaceDetailsCalls / 1000) * 125;
+  const mapsMonthlyInr = Math.round(routesBillableInr + routeMatrixBillableInr + geocodingBillableInr + placesBillableInr + placeDetailsBillableInr); // ₹0 under 70k free cap
 
   // Naive Continuous Polling Anti-Pattern Comparison (5s interval across active couriers):
   const secondsPerDay = operatingHours * 3600;

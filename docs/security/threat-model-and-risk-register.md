@@ -48,3 +48,4 @@ This document presents a comprehensive STRIDE threat modeling analysis and opera
 | **R-04** | Google Maps Polling Cost Spike | Med | High | **P1** | Redis GEO proximity caching + WebSockets (Zero continuous polling) | Backend Lead |
 | **R-05** | Unauthorized DB Deletion | Low | Critical | **P0** | `deletion_protection = true` + multi-party IAM sign-off | Tech Lead |
 | **R-06** | Courier COD Cash Absconding | Med | Med | **P2** | ₹2,000 cash-in-hand ceiling + automated COD suspension | Finance Lead |
+

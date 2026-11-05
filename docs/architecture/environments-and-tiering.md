@@ -55,3 +55,4 @@ gitGraph
    - Requires pull request approval by at least one engineering lead.
    - Terraform production changes require explicit manual `terraform apply` with human review of the generated plan.
    - Production database migrations must execute via zero-downtime backward-compatible migration steps.
+

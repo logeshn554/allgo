@@ -71,3 +71,4 @@ erDiagram
 1. **Identity Unification:** A user is uniquely identified by an E.164 phone number (`+91XXXXXXXXXX`). A single user record can simultaneously hold `CUSTOMER`, `PARTNER`, and `MERCHANT_OPERATOR` roles in `user_roles`.
 2. **Context Separation:** Client requests must explicitly specify an `X-Active-Role` context header. A driver cannot accept customer orders while operating under the `PARTNER` session context.
 3. **Immutability Invariant:** Financial transactions and lifecycle order events (`order_events`, `ledger_entries`) are strictly append-only. No SQL `UPDATE` or `DELETE` operations are permitted under any role or service account.
+

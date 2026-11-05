@@ -41,3 +41,4 @@ To eliminate the critical security risk of long-lived service account JSON keys 
 2. A GCP Workload Identity Pool validates the GitHub repository token (`repo:owner/allgo:ref:refs/heads/main`).
 3. Google Cloud issues a short-lived (1-hour) federated access token for deployment execution.
 4. Downloadable service account keys (`.json`) are disabled at the organization policy level (`constraints/iam.disableServiceAccountKeyCreation`).
+

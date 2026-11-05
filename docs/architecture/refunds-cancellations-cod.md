@@ -89,3 +89,4 @@ For a ₹300 refund to customer wallet:
    - App generates a dynamic UPI QR code linked to AllGo's Razorpay virtual account.
    - Courier pays cash amount from their personal UPI app (PhonePe/GPay).
    - Razorpay webhook confirms payment -> Courier's partner wallet credited -> COD suspension lifted immediately.
+

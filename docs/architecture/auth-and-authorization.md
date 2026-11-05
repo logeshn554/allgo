@@ -117,3 +117,4 @@ Because Firebase ID tokens have a 1-hour lifespan, relying solely on cryptograph
   - Backend invokes `admin.auth().revokeRefreshTokens(firebase_uid)`.
   - Backend writes `DEL "user:session:<user_id>"`.
   - All existing mobile sessions are terminated.
+

@@ -62,3 +62,4 @@ AllGo operates as a unified multi-vertical platform in India. Rather than isolat
 | **Cash on Delivery** | Yes (≤ ₹1,500) | Yes (≤ ₹2,000) | No (Prepaid only) | Yes (Exact fare) | Prepaid / Post-trip |
 | **Dynamic Surge** | Rain / Peak surge | Rain / Peak surge | Peak surge | Dynamic demand surge | Night allowance |
 | **Bilingual UI** | Tamil + English | Tamil + English | Tamil + English | Tamil + English | Tamil + English |
+

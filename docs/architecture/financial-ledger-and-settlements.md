@@ -86,3 +86,4 @@ sequenceDiagram
 - **Merchants:** Daily T+1 batch settlement via NEFT/IMPS. Minimum settlement threshold: ₹500.
 - **Partners (Couriers/Drivers):** Weekly automated payout on Tuesdays; optional Instant Withdrawal (max 3 times/day, ₹5 fee per instant transfer).
 - **Withholding Compliance:** Monthly export of Form GSTR-8 (TCS) and Form 26Q (TDS) generated directly from immutable ledger records.
+

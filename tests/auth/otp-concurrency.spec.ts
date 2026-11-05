@@ -10,7 +10,18 @@ import {
 const TEST_PEPPER = 'allgo-production-cryptographic-pepper-2026';
 const TEST_PHONE = '+919876543210';
 
-describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Atomic Verification', () => {
+/**
+ * Test Environment Clarification:
+ * These tests execute against AtomicOtpChallengeStore, an in-memory single-threaded atomic
+ * challenge store simulator that models Redis's single-threaded event loop and atomic Lua script
+ * execution semantics.
+ *
+ * Classification: Unit / Contract Tests.
+ * (Live Redis server concurrency integration tests require Docker / live Redis daemon,
+ * provided in tests/auth/redis-live-integration.spec.ts, which executes when Docker/Redis is online).
+ */
+
+describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / Contract Tests (In-Memory Atomic Simulator)', () => {
   let securityService: OtpSecurityService;
   let store: AtomicOtpChallengeStore;
 
@@ -149,3 +160,4 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Atomic Verification
     });
   });
 });
+

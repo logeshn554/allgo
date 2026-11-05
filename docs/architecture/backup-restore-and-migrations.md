@@ -50,3 +50,4 @@ sequenceDiagram
 2. **Non-Blocking Indexing:** Use `CONCURRENTLY` for index creation on active production tables (`CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`) to prevent table-level write locks.
 3. **No Destructive Drops:** `DROP TABLE` or `DROP COLUMN` commands are strictly forbidden in standard deployment migrations. Deprecated columns must be retained for at least two deployment cycles.
 4. **Pre-Deployment Verification:** All migrations are tested in CI against a test database with simulated production volume before deployment approval.
+

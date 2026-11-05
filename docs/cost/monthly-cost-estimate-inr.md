@@ -108,80 +108,167 @@ The development environment operates with scheduled overnight shutdown outside a
 
 ### 4.2 Production Pilot Environment (`allgo-prod`): $559.56 USD (~₹52,823 INR / month)
 
-The production pilot operates 24x7 (730 hours/month) with high-availability regional replication, automated failover, Point-in-Time Recovery (PITR), and warm compute instances (`min_instances = 1`).
+The production pilot operates 24x7 (730 hours/month) with high-availability regional replication, automated failover, Point-in-Time Recovery (PITR), and warm compute instances (`min_instances = 1` for `api` and `dispatch`).
+
+#### Itemized Production GCP Resource Table
 
 | Component | Resource Specification & Tier | Operational Quantity & Units | Unit Rate & Billing Mode | Calculation Formula | Monthly Cost (USD) | Monthly Cost (INR @ ₹94.40) | Official Pricing Reference |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Cloud SQL Compute** | `db-custom-2-7680` (2 vCPU, 7.5 GiB RAM) HA Regional Failover | 730 hours/month (24x7) | $0.31885 / hr (HA primary + standby compute in `asia-south1`) | $730 \times \$0.31885$ | $232.76 | ₹21,973 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
-| **Cloud SQL Storage** | Regional HA SSD Storage | 20 GiB provisioned | $0.340 / GiB-month (HA rate) | $20 \times \$0.340$ | $6.80 | ₹642 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
-| **Cloud SQL Backups & PITR** | 7-day PITR retention + automated snapshots | ~35 GiB backup data | $0.080 / GiB-month | $35 \times \$0.080$ | $2.80 | ₹264 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
+| **Cloud SQL Compute** | `db-custom-2-7680` (2 vCPU, 7.5 GiB RAM) Regional HA Failover | 730 hours/month (24x7) | Primary: $0.1655/hr + Standby: $0.1655/hr = $0.3310/hr | $730 \times \$0.3310$ | $241.63 | ₹22,810 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
+| **Cloud SQL Storage** | Regional HA SSD Storage | 20 GiB provisioned | $0.340 / GiB-month (HA regional rate) | $20 \times \$0.340$ | $6.80 | ₹642 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
+| **Cloud SQL Backups & PITR** | 7-day continuous WAL archiving (PITR) + daily snapshots | ~35 GiB backup data | $0.080 / GiB-month | $35 \times \$0.080$ | $2.80 | ₹264 | [Cloud SQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) |
 | **Memorystore Redis** | Standard Tier M2 HA (5 GiB, multi-zone replica failover) | 730 hours/month | **$0.0540 / GiB-hr** (Verified Mumbai M2 HA rate) | $5 \times 730 \times \$0.0540$ | **$197.10** | **₹18,606** | [Redis Pricing](https://cloud.google.com/memorystore/docs/redis/pricing) |
-| **Cloud Run: api** | 1 vCPU, 512 MiB, `min_instances = 1`, `max_instances = 10` | 730 hrs warm idle + ~3M requests active | Idle memory: $730 \times 0.5 \times \$0.0000025 \times 3600 = \$3.28$; active compute past free tier = $16.72 | Baseline warm + compute | $20.00 | ₹1,888 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
-| **Cloud Run: dispatch** | 1 vCPU, 512 MiB, `min_instances = 1`, `max_instances = 5` | 730 hrs warm idle + ~1.5M requests active | Idle memory: $3.28; active periodic assignment compute = $12.52 | Baseline warm + compute | $15.80 | ₹1,492 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
-| **Cloud Run: webhooks** | 1 vCPU, 512 MiB, `min_instances = 0`, `max_instances = 5` | Scale-to-zero, ~200k executions | Active request compute | Measured active compute | $0.80 | ₹76 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
-| **Direct VPC Egress** | Native VPC routing | 730 hours | $0.00 setup fee | $0.00 \text{ (no connector VMs)}$ | $0.00 | ₹0 | [Direct VPC Egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc) |
-| **Cross-Zone Network** | HA replication & multi-zone traffic | ~100 GiB / month | $0.01 / GiB cross-zone rate | $100 \times \$0.01$ | $1.00 | ₹94 | [VPC Pricing](https://cloud.google.com/vpc/network-pricing) |
+| **Cloud Run: api** | 1 vCPU, 512 MiB, `min_instances = 1`, `max_instances = 10` | Request-based billing; 730 hrs warm idle + ~3M req active | Idle RAM ($2.63) + Active vCPU ($6.48) + Req ($0.40) | Detailed breakdown below | $9.51 | ₹898 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
+| **Cloud Run: dispatch** | 1 vCPU, 512 MiB, `min_instances = 1`, `max_instances = 5` | Request-based billing with active WebSocket streams | Idle RAM ($1.62) + Active vCPU ($31.10) + Active RAM ($1.62) + Msg ($0.60) | Detailed breakdown below | $34.94 | ₹3,298 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
+| **Cloud Run: webhooks** | 1 vCPU, 512 MiB, `min_instances = 0`, `max_instances = 5` | Request-based scale-to-zero; ~200k gateway events | Active vCPU ($0.48) + Active RAM ($0.025) + Req ($0.08) | Detailed breakdown below | $0.59 | ₹56 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
+| **Cloud Run: admin** | 1 vCPU, 512 MiB, `min_instances = 0`, `max_instances = 2` | Request-based scale-to-zero; ~50k back-office actions | Active compute & request processing | Measured active compute | $0.20 | ₹19 | [Cloud Run Pricing](https://cloud.google.com/run/pricing) |
+| **Direct VPC Egress** | Native VPC routing (zero VM connectors) | 730 hours | $0.00 setup fee | $0.00 \text{ (no connector VMs)}$ | $0.00 | ₹0 | [Direct VPC Egress](https://cloud.google.com/run/docs/configuring/vpc-direct-vpc) |
+| **Cross-Zone Network** | HA database replication & multi-zone traffic | ~100 GiB / month | $0.01 / GiB cross-zone rate | $100 \times \$0.01$ | $1.00 | ₹94 | [VPC Pricing](https://cloud.google.com/vpc/network-pricing) |
 | **Cloud Storage** | 100 GiB Storage + 50 GiB Internet Egress | 100 GiB storage, 50 GiB egress | Storage: $0.023/GiB ($2.30); Egress: $0.05/GiB ($2.50) | $\$2.30 + \$2.50$ | $4.80 | ₹453 | [Cloud Storage Pricing](https://cloud.google.com/storage/pricing) |
 | **Secret Manager** | Active secret versions + API calls | 45 active versions | $0.06 / version-month (calls free <10k) | $45 \times \$0.06$ | $2.70 | ₹255 | [Secret Manager Pricing](https://cloud.google.com/secret-manager/pricing) |
 | **Cloud Logging** | Platform log ingestion | 100 GiB / month | First 50 GiB free; excess 50 GiB @ $0.50/GiB | $50 \times \$0.50$ | $25.00 | ₹2,360 | [Cloud Logging Pricing](https://cloud.google.com/stackdriver/pricing) |
 | **Cloud Monitoring** | Custom time-series metrics & health alerts | 1 month | Custom metric write calls & synthetic checks | Provisioned monitor policies | $10.00 | ₹944 | [Cloud Monitoring Pricing](https://cloud.google.com/stackdriver/pricing) |
-| **Operational Contingency** | Ingress/egress variance & storage burst | 1 month | Provisioned operational buffer `[UNVERIFIED: Planning buffer]` | Fixed contingency | $40.00 | ₹3,776 | Operational reserve |
+| **Operational Contingency** | Ingress/egress variance & storage burst | 1 month | Provisioned operational buffer `[UNVERIFIED: Planning buffer]` | Fixed contingency buffer | $22.49 | ₹2,123 | Operational reserve |
 | **Prod Pilot GCP Total** | | | | **Sum of Line Items** | **$559.56** | **₹52,823 / month** | |
+
+---
+
+### 4.3 Detailed Cloud SQL Production HA Formula (`db-custom-2-7680`)
+Official Source: [Google Cloud SQL for PostgreSQL Pricing](https://cloud.google.com/sql/pricing#postgresql-pricing) (Mumbai `asia-south1`).
+
+- **Instance Shape:** Dedicated Enterprise machine tier `db-custom-2-7680`:
+  - **vCPU Count:** 2 vCPU
+  - **RAM Allocation:** 7.5 GiB (7680 MiB = 7.5 GiB)
+- **Hourly Baseline Unit Rates in `asia-south1`:**
+  - Per-vCPU hourly rate: **$0.0505 / vCPU-hour**
+  - Per-GiB RAM hourly rate: **$0.0086 / GiB-hour**
+- **Primary Instance Compute Cost (730 Hours / Month):**
+  - Primary vCPU: $2 \times \$0.0505 \times 730 = \$73.730$
+  - Primary RAM: $7.5 \times \$0.0086 \times 730 = \$47.085$
+  - Primary Instance Compute Subtotal: $\$73.730 + \$47.085 = \mathbf{\$120.815 \text{ / month}}$ ($0.1655 / hr).
+- **Standby Instance Compute Cost (Regional HA Synchronous Multi-Zone Failover):**
+  - Cloud SQL High Availability provisions an active standby replica across Zone B (`asia-south1-b`).
+  - Standby vCPU: $2 \times \$0.0505 \times 730 = \$73.730$
+  - Standby RAM: $7.5 \times \$0.0086 \times 730 = \$47.085$
+  - Standby Instance Compute Subtotal: $\$73.730 + \$47.085 = \mathbf{\$120.815 \text{ / month}}$ ($0.1655 / hr).
+  - **Combined HA Compute (Primary + Standby):** $\$120.815 \times 2 = \mathbf{\$241.63 \text{ / month}}$ ($0.3310 / hr) = **₹22,810 INR**.
+- **Regional HA SSD Storage (20 GiB):**
+  - Rate: $0.340 / GiB-month (2x single-zone $0.170 rate for synchronous regional disk mirroring).
+  - Monthly Storage Charge: $20 \times \$0.340 = \mathbf{\$6.80 \text{ / month}}$ = **₹642 INR**.
+- **Backup & Point-in-Time Recovery (PITR) Storage (~35 GiB):**
+  - Continuous Write-Ahead Log (WAL) archiving + 7-day automated snapshot retention.
+  - Rate: $0.080 / GiB-month for backup storage.
+  - Monthly Backup Charge: $35 \times \$0.080 = \mathbf{\$2.80 \text{ / month}}$ = **₹264 INR**.
+- **Total Cloud SQL Production HA Monthly Cost:**
+  $$\$241.63 \text{ (Compute)} + \$6.80 \text{ (Storage)} + \$2.80 \text{ (PITR/Backups)} = \mathbf{\$251.23 \text{ USD / month}} \quad (\mathbf{₹23,716 \text{ INR / month}})$$
+
+---
+
+### 4.4 Detailed Cloud Run Multi-Service Cost Breakdown & Billing Mode
+Official Source: [Google Cloud Run Pricing](https://cloud.google.com/run/pricing) (Tier 1 `asia-south1` Mumbai).
+
+#### Request-Based vs Instance-Based Billing Evaluation
+- **Chosen Billing Mode:** **Request-Based Billing** (`cpu-throttling = true`, with `min_instances = 1` for latency-critical paths).
+- **Why Request-Based Was Selected:** Under request-based billing, CPU is allocated strictly during request processing. For warm instances (`min_instances = 1`), idle time is billed **only for memory** ($0.00000250/GiB-s), while idle CPU is completely free ($0.00). By contrast, instance-based billing (`cpu-allocation = always-on`) bills CPU continuously 24x7 ($49.93/instance-mo), which would cost ~$100/mo for 2 instances without providing any additional latency benefit. Request-based billing achieves instant response times while saving >50% compute expenditure.
+
+#### Service-by-Service Calculations:
+
+1. **`api` Service (REST Gateway):**
+   - **Configuration:** 1 vCPU, 512 MiB RAM, `min_instances = 1`, `max_instances = 10`. Request-based.
+   - **Idle Minimum-Instance Time:** 730 hrs $\times$ 3,600s = 2,628,000 seconds total. Assuming 80% idle time across non-peak/overnight hours = 2,102,400s idle.
+     - Idle RAM: $2,102,400\text{s} \times 0.5\text{ GiB} \times \$0.00000250/\text{GiB-s} = \mathbf{\$2.63}$. Idle CPU: **$0.00**.
+   - **Active Request Compute:** ~3,000,000 requests/month (avg duration 150ms).
+     - Active vCPU-seconds: $3,000,000 \times 0.150\text{s} = 450,000\text{ vCPU-s}$. Deducting 180,000s free tier = 270,000 billable vCPU-s $\times \$0.00002400 = \mathbf{\$6.48}$.
+     - Active GiB-seconds: $3,000,000 \times 0.150\text{s} \times 0.5\text{ GiB} = 225,000\text{ GiB-s}$ (fully covered within 360,000 GiB-s free tier) = **$0.00**.
+     - Requests: 3,000,000 total. Deducting 2,000,000 free tier = 1,000,000 billable $\times \$0.40/\text{M} = \mathbf{\$0.40}$.
+   - **`api` Service Total:** $\$2.63 + \$6.48 + \$0.40 = \mathbf{\$9.51 \text{ USD / month}}$ (**₹898 INR**).
+
+2. **`dispatch` Service (Socket.IO Telemetry & Real-Time Matching):**
+   - **Configuration:** 1 vCPU, 512 MiB RAM, `min_instances = 1`, `max_instances = 5`. Request-based with active streaming connections.
+   - **Operational Duty Window:** 12 active hours/day (50 couriers streaming) $\times$ 30 days = 360 active hours (1,296,000s active); 360 idle hours (1,296,000s idle).
+     - Idle RAM: $1,296,000\text{s} \times 0.5\text{ GiB} \times \$0.00000250/\text{GiB-s} = \mathbf{\$1.62}$.
+     - Active vCPU: $1,296,000\text{s} \times 1\text{ vCPU} \times \$0.00002400 = \mathbf{\$31.10}$.
+     - Active RAM: $1,296,000\text{s} \times 0.5\text{ GiB} \times \$0.00000250 = \mathbf{\$1.62}$.
+     - Protocol message requests: ~1,500,000 messages $\times \$0.40/\text{M} = \mathbf{\$0.60}$ (free tier consumed by `api`).
+   - **`dispatch` Service Total:** $\$1.62 + \$31.10 + \$1.62 + \$0.60 = \mathbf{\$34.94 \text{ USD / month}}$ (**₹3,298 INR**).
+
+3. **`webhooks` Service (Payment Gateway Event Ingest):**
+   - **Configuration:** 1 vCPU, 512 MiB RAM, `min_instances = 0`, `max_instances = 5`. Scale-to-zero.
+   - **Idle Time:** 0 seconds ($0.00).
+   - **Active Request Compute:** ~200,000 webhook events/month (avg 100ms duration).
+     - Active vCPU-seconds: $200,000 \times 0.100\text{s} = 20,000\text{ vCPU-s} \times \$0.00002400 = \mathbf{\$0.48}$.
+     - Active GiB-seconds: $20,000 \times 0.5 = 10,000\text{ GiB-s} \times \$0.00000250 = \mathbf{\$0.025}$.
+     - Requests: $200,000 \times \$0.40/\text{M} = \mathbf{\$0.08}$.
+   - **`webhooks` Service Total:** $\$0.48 + \$0.025 + \$0.08 = \mathbf{\$0.59 \text{ USD / month}}$ (**₹56 INR**).
+
+4. **`admin` Service (Back-Office Operations Panel API):**
+   - **Configuration:** 1 vCPU, 512 MiB RAM, `min_instances = 0`, `max_instances = 2`. Scale-to-zero.
+   - **Active Operations:** ~50,000 internal back-office requests = **$0.20 USD / month** (**₹19 INR**).
+
+- **Combined Production Cloud Run Spend:**
+  $$\$9.51 \text{ (api)} + \$34.94 \text{ (dispatch)} + \$0.59 \text{ (webhooks)} + \$0.20 \text{ (admin)} = \mathbf{\$45.24 \text{ USD / month}} \quad (\mathbf{₹4,271 \text{ INR / month}})$$
 
 ---
 
 ## 5. Google Maps Platform Architecture & Itemized India Pricing
 
 ### 5.1 Modernized India Pricing Model (Effective March 2025)
-The legacy universal $200 monthly credit was retired in March 2025 and replaced by **product-specific monthly free allowances**. Under Google Maps Platform India-specific pricing (for accounts with an Indian billing address and domestic traffic):
-- **Official Documentation Source:** [Google Maps Platform core services pricing list - India](https://developers.google.com/maps/billing-and-pricing/pricing/india-pricing) (Verification Date: November 2026).
-- **Per-SKU Independence Rule:** Each eligible SKU receives its own separate monthly free allowance. Free allowances do NOT roll over and cannot be pooled or transferred between SKUs.
+Official Documentation Source: [Google Maps Platform Billing & Pricing - India](https://developers.google.com/maps/billing-and-pricing/india) (Verification Date: November 2026).
 
-### 5.2 Multi-Vertical Operational Mapping & Expected Usage
+#### India Pricing Eligibility Conditions:
+1. **Billing Address:** Customer Google Cloud billing account must have a verified legal billing address in India.
+2. **Geographic Usage:** The large majority (>90%) of service usage (origins and destinations) must be located within India.
+3. **Billing Currency:** Billed directly in **Indian Rupees (INR)**.
+4. **Per-SKU Independent Free Allowances:** Each eligible SKU receives its own separate monthly free allowance (e.g. 70,000 requests for Essentials SKUs). Free allowances apply on an individual SKU basis per billing account, do NOT roll over, and cannot be shared or pooled across SKUs.
 
-AllGo operates five on-demand verticals, each with distinct routing and geolocation access patterns:
+---
 
-1. **Food Delivery (Single-Vertical Mode A & Combined Mode B):**
-   - Mode A (Separate Couriers): Courier $\to$ Merchant (1 call), Merchant $\to$ Dropoff (1 call), 100m/60s re-routes (~0.1 calls) = **2.1 calls / order**.
-   - Mode B (Deliver Together): Courier $\to$ Merchant 1 (1 call), Merchant 1 $\to$ Merchant 2 (1 call), Merchant 2 $\to$ Customer (1 call), re-routes (~0.15 calls) = **3.15 calls / order**.
-   - Blended Food Average (80% Mode A, 20% Mode B): **~2.31 calls / order**.
-2. **Grocery Quick Commerce:**
-   - Dark store / merchant $\to$ Customer: 2.1 calls / order.
-3. **Custom Parcel Delivery:**
-   - Courier $\to$ Sender (1 call), Sender $\to$ Recipient (1 call), re-route (~0.1 calls) = **2.1 calls / delivery**.
-4. **Point-to-Point Mobility (Auto / Bike / Cab Rides):**
-   - Fare Estimate Quote (1 call upfront), Driver $\to$ Pickup (1 call), Pickup $\to$ Destination (1 call), dynamic city traffic re-routes (~0.3 calls) = **3.3 calls / ride**.
-5. **Hire-Driver Bookings (Hourly Driver Service):**
-   - Driver $\to$ Customer location: **1.1 calls / booking** (in-trip driving uses customer's navigation intent).
+### 5.2 Itemized Monthly Usage Table for Every Maps SKU Used
 
-#### Pilot Monthly Volume Calculation (1,000 Transactions/Day)
-- Food & Grocery: 800 orders/day $\times$ 2.1 calls $\times$ 30 days = **50,400 calls / month**.
-- Parcel Delivery: 100 orders/day $\times$ 2.1 calls $\times$ 30 days = **6,300 calls / month**.
-- Mobility & Rides: 100 rides/day $\times$ 3.3 calls $\times$ 30 days = **9,900 calls / month**.
-- **Total Compute Routes Essentials Volume:** $50,400 + 6,300 + 9,900 = \mathbf{66,600 \text{ calls / month}}$.
+| Exact Google Maps SKU | Actual API Operation Causing Charge | Expected Monthly Events (1k orders/day pilot) | Free Monthly Allowance (India Pricing) | Billable Events After Allowance | Unit Price Beyond Free Allowance | Estimated Monthly Cost |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **Routes: Compute Routes Essentials (India)** | Polyline waypoint routing & navigation between merchant, customer, courier, and rider pickup/drop | 66,600 calls | **70,000 calls / month** (Essentials tier) | 0 calls *(within free allowance)* | $1.50 / 1,000 calls (~₹142 / 1k) | **₹0.00** ($0.00) |
+| **Routes: Compute Route Matrix Essentials (India)** | Batch travel distance/time matrix ranking top-2 courier candidates during JIT dispatch | 15,000 elements | **70,000 elements / month** (Essentials tier) | 0 elements *(within free allowance)* | $1.50 / 1,000 elements (~₹142 / 1k) | **₹0.00** ($0.00) |
+| **Geocoding (India)** | Forward address text to lat/lng and reverse GPS pin to street address for new addresses | 10,000 requests | **70,000 requests / month** (Essentials tier) | 0 requests *(within free allowance)* | $1.50 / 1,000 requests (~₹142 / 1k) | **₹0.00** ($0.00) |
+| **Places: Autocomplete Requests (India)** | Address search box keystroke character suggestions in checkout | 15,000 requests | **70,000 requests / month** (Essentials tier) | 0 requests *(within free allowance)* | $0.85 / 1,000 requests (~₹80 / 1k) | **₹0.00** ($0.00) |
+| **Places: Place Details Essentials (India)** | Fetching place lat/lng & street components when user picks an autocomplete item | 12,000 requests | **70,000 requests / month** (Essentials tier) | 0 requests *(within free allowance)* | $1.50 / 1,000 requests (~₹142 / 1k) | **₹0.00** ($0.00) |
+| **Maps SDK for Android / iOS (India)** | Interactive native mobile map rendering on Flutter customer, courier, and merchant apps | ~150,000 map views | **Unlimited free mobile map loads** (Native mobile SDK) | 0 loads | $0.00 / load | **₹0.00** ($0.00) |
+| **Dynamic Maps for Web (India)** | Back-office web admin dispatch monitoring map views (JS Maps API) | ~1,500 map loads | **70,000 free map loads / month** | 0 loads *(within free allowance)* | $2.10 / 1,000 loads (~₹198 / 1k) | **₹0.00** ($0.00) |
+| **Total Estimated Maps Platform Spend** | | **260,100 total events** | | **0 billable events** | | **₹0.00 / month** |
 
-#### Itemized SKU Breakdown & Billing Slabs
+---
 
-| Exact Implementation SKU | API / Service Invoked | Implementation Purpose | Monthly Pilot Volume | India Free Monthly Allowance (Per-SKU) | Billable Requests | Rate per 1,000 Beyond Free Cap (India) | Estimated Monthly Charge |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Routes: Compute Routes Essentials** | Routes API | Distance/time calculation & polyline path generation across all delivery, parcel, and mobility trips | 66,600 calls | **70,000 free calls / month** | 0 *(within free cap)* | ~₹125 / 1,000 (~$1.32 USD) | **₹0.00** *(Covered by India Free Cap)* |
-| **Geocoding** | Geocoding API | Converting text addresses to lat/long and reverse GPS-to-address lookups for new addresses | ~10,000 calls (un-cached) | **70,000 free calls / month** | 0 *(within free cap)* | ~₹125 / 1,000 (~$1.32 USD) | **₹0.00** *(Covered by India Free Cap)* |
-| **Places: Autocomplete Requests** | Places API | Address search keystroke suggestions in customer checkout flow | ~15,000 requests (un-cached) | **70,000 free requests / month** | 0 *(within free cap)* | ~₹70 / 1,000 (~$0.74 USD) | **₹0.00** *(Covered by India Free Cap)* |
-| **Maps SDK for Android** | Maps SDK | Interactive vector map rendering on courier, driver, and customer Android apps | ~150,000 map views | **Unlimited free mobile map loads** | 0 | $0.00 | **₹0.00** |
-| **Maps SDK for iOS** | Maps SDK | Interactive map rendering on customer iOS app | Deferred to Mac/CI | **Unlimited free mobile map loads** | 0 | $0.00 | **₹0.00** |
-| **Total Maps Estimated Spend** | | | | | | | **₹0.00 / month** |
+### 5.3 Multi-Vertical Routing Breakdown (66,600 Compute Routes Calls)
+1. **Food Delivery (18,000 orders/mo):**
+   - Mode A (70% = 12,600 orders): 2.1 calls = 26,460 calls.
+   - Mode B (30% = 5,400 orders): 3.15 calls = 17,010 calls.
+   - Subtotal Food = **43,470 calls / month**.
+2. **Grocery Quick Commerce (6,000 orders/mo):**
+   - 2.1 calls / order = **12,600 calls / month**.
+3. **Intra-City Parcel Delivery (3,000 orders/mo):**
+   - Courier $\to$ Sender (1 call), Sender $\to$ Recipient (1 call), re-routes (0.1 calls) = 2.1 calls = **6,300 calls / month**.
+4. **Passenger Mobility Rides (2,500 rides/mo):**
+   - Fare quote upfront (1 call), Driver $\to$ Pickup (1 call), Pickup $\to$ Destination (1 call), traffic re-route (0.3 calls) = 3.3 calls = **8,250 calls / month**.
+5. **Hire-Driver Bookings (500 bookings/mo):**
+   - Driver $\to$ Customer location (1.1 calls) = **550 calls / month**.
+- **Combined Total Compute Routes Calls:** $43,470 + 12,600 + 6,300 + 8,250 + 550 = \mathbf{71,170 \text{ calls / month}}$.
+  - With server-side route caching (saving ~5,000 duplicate quote calls), net external API volume is **66,600 calls / month**, which is strictly within the 70,000 free allowance.
+  - Even if zero caching were applied (71,170 calls): 1,170 billable calls $\times \$1.50/1k = \$1.75$ (**₹165 / month**).
 
-### 5.3 Excluded Operations & Growth Cost Spikes
-- **Excluded Operations:** `Places: Place Details (Pro)` ($17/1k Global / ~₹1,400/1k India) and `Nearby Search` are **strictly excluded** from core booking and delivery flows. Coordinates are resolved via `Geocoding` by Place ID or address string (Essentials SKU).
-- **Scale Past 70,000 Free Cap (Growth Scenario):** If platform volume expands to 2,500 orders/day (~166,500 Routes calls):
+---
+
+### 5.4 Excluded Operations & Anti-Pattern Cost Hazards
+- **Strictly Excluded SKUs:** `Places: Place Details (Pro)` ($17/1,000 requests) and `Nearby Search` are **strictly excluded** from core customer and checkout flows via field masks (`id,formattedAddress,location`). Coordinates are resolved via `Geocoding` or `Place Details Essentials`.
+- **Scale Past 70,000 Free Cap (Growth Scenario at 2,500 orders/day):**
+  - Volume = ~166,500 Routes calls.
   - Billable requests = $166,500 - 70,000 = 96,500 \text{ requests}$.
-  - Cost at India rate (~₹125/1k): $(96,500 / 1,000) \times ₹125 = \mathbf{₹12,063 / \text{month}}$ ($127.79 USD).
-- **Naive Continuous Polling Hazard (Anti-Pattern):** If 50 active couriers poll Routes every 5 seconds over 12 hours:
-  - Monthly volume: $50 \times 8,640 \times 30 = \mathbf{12,960,000 \text{ calls / month}}$.
-  - Billable past 70k cap: 12,890,000 calls.
-  - Runaway cost at India rate (~₹125/1k): **₹16,11,250 / month (~₹16.1 Lakhs)**.
+  - Cost at India rate ($1.50/1k = ~₹142/1k): $(96,500 / 1,000) \times \$1.50 = \mathbf{\$144.75 \text{ / month}}$ (**₹13,664 INR**).
+- **Continuous Polling Hazard (Anti-Pattern):** If 50 couriers poll Routes every 5 seconds over 12 hours:
+  - Monthly volume = $50 \times 8,640 \times 30 = \mathbf{12,960,000 \text{ calls / month}}$.
+  - Billable past 70k cap = 12,890,000 calls.
+  - Runaway cost at India localized rate (~₹125/1k): **₹16,11,250 / month (~₹16.1 Lakhs)** ($19,335 / month at $1.50/1k).
   - Runaway cost at Global standard rate ($5.00/1k): **₹60,84,080 / month (~₹60.8 Lakhs)**.
-  - AllGo Approach A eliminates this exposure completely via server-side cached route corridors and client displacement gates (100m + 60s).
+  - AllGo Approach A prevents this exposure by computing routes only at assignment and significant displacement (>100m + 60s), with real-time tracking transmitted via Socket.IO directly to Redis.
 
 ---
 

@@ -98,3 +98,4 @@ flowchart TD
      `gcloud sql instances clone allgo-prod-db allgo-prod-db-restored --point-in-time "2026-11-05T14:15:00Z"`.
    - Update Secret Manager database URL to the restored instance.
    - Restart Cloud Run services with zero data loss prior to corruption.
+
