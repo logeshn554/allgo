@@ -1144,8 +1144,9 @@ components:
         is_online:
           type: boolean
         active_vertical_lock:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           example: FOOD
 
     PartnerJob:
