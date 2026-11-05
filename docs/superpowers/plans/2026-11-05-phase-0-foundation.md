@@ -240,11 +240,11 @@
   - `docs/api/openapi.yaml`: Comprehensive endpoints with request/response schemas, idempotency key headers, `Accept-Language` headers (`en`, `ta`), error payloads, and security schemes (Firebase Bearer token + rotating refresh tokens).
   - `docs/api/websocket-events.md`: Specification of real-time events over Socket.IO (namespaces `/tracking`, `/dispatch`), payload definitions for `location:ping`, `partner:location`, `order:status_updated`, `job:offer`, `job:accept`, and heartbeat/reconnect recovery.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npm test -- tests/api/openapi-lint.spec.ts`.
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add docs/api/ tests/api/
   git commit -m "docs(api): specify openapi 3.1 contracts and real-time websocket event schemas"
@@ -266,23 +266,23 @@
 - Consumes: Tech stack requirements (Razorpay, Google Maps, Firebase, Cloud SQL, Redis).
 - Produces: Complete inventory of all secrets in Google Secret Manager, acquisition guides, rotation procedures, and local development environment templates.
 
-- [ ] **Step 1: Write the failing environment variable validation test**
+- [x] **Step 1: Write the failing environment variable validation test**
   Write `tests/security/env-validator.spec.ts` checking that every environment variable referenced in `.env.example` files is documented in `docs/security/secrets-inventory.md` with: secret name, provider source, sensitivity classification, and rotation method. Ensure no plain-text secret keys exist.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `npm test -- tests/security/env-validator.spec.ts`.
   Expected: FAIL.
 
-- [ ] **Step 3: Implement secrets inventory and `.env.example` files**
+- [x] **Step 3: Implement secrets inventory and `.env.example` files**
   Create:
   - `docs/security/secrets-inventory.md`: Complete matrix of credentials (`FIREBASE_SERVICE_ACCOUNT_KEY`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `GOOGLE_MAPS_SERVER_API_KEY`, `GOOGLE_MAPS_CLIENT_ANDROID_KEY`, `GOOGLE_MAPS_CLIENT_IOS_KEY`, `DATABASE_URL`, `REDIS_URL`, `JWT_SIGNING_KEY`), including instructions on how to acquire each from official developer consoles.
   - `.env.example` files for `apps/api`, `apps/dispatch`, `apps/webhooks`, and `apps/admin`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npm test -- tests/security/env-validator.spec.ts`.
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add docs/security/ apps/*/.env.example tests/security/
   git commit -m "docs(security): publish secret manager inventory and service environment templates"
@@ -301,14 +301,14 @@
 - Consumes: Google Cloud Mumbai (`asia-south1`) pricing, Google Maps Platform pricing, Firebase Auth pricing, and budget ceilings (`Rs [X]`, `Rs [Y]`, `Rs [Z]`, `Rs [W]`).
 - Produces: Itemized INR cost model, scaling sensitivity analysis, cost spike mitigation strategies, and budget alert configurations.
 
-- [ ] **Step 1: Write the failing cost model validation test**
+- [x] **Step 1: Write the failing cost model validation test**
   Write `tests/cost/cost-model-validation.spec.ts` verifying that `docs/cost/monthly-cost-estimate-inr.md` exists, provides mathematical breakdowns for both `dev` and `prod`, breaks out Google Maps and Firebase Auth costs under varying traffic assumptions, and explicitly flags cost components capable of breaching budget ceilings Rs [X], [Y], [Z], and [W].
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
   Run: `npm test -- tests/cost/cost-model-validation.spec.ts`.
   Expected: FAIL.
 
-- [ ] **Step 3: Implement cost calculator script and detailed INR model document**
+- [x] **Step 3: Implement cost calculator script and detailed INR model document**
   Author:
   - `docs/cost/monthly-cost-estimate-inr.md`:
     - Detailed line-item GCP bill for `dev` (with overnight shutdown savings) and `prod pilot`.
@@ -317,11 +317,11 @@
     - Threshold alert triggers at 50%, 80%, and 100% of the user's budget ceilings Rs [X], [Y], [Z], and [W].
   - `scripts/cost-calculator.ts`: CLI utility to project costs given partner count, active order volume, and daily operating hours.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
   Run: `npm test -- tests/cost/cost-model-validation.spec.ts`.
   Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   ```bash
   git add docs/cost/ scripts/cost-calculator.ts tests/cost/
   git commit -m "docs(cost): publish itemized inr monthly cost model and budget ceiling sensitivity analysis"
