@@ -99,3 +99,18 @@ To boost platform gross merchandise value (GMV) across verticals without aggress
   - *"Need to send a package or run an errand? Book an AllGo Parcel courier with 10% off."*
   - *"Heading out soon? Schedule a driver or check ride availability in your area."*
 - **Remote Config Control:** Cross-sell cards, banners, and coupon promotions are controlled via database-backed remote config per city/zone, ensuring zero promotional clutter in unlaunched verticals.
+
+---
+
+## 6. Configurable Parameters (Admin-Editable Per-City)
+
+All job distribution, proximity chaining, and dispatch timers are configured in `city_settings` rather than fixed constants.
+
+| Parameter Key | Setting Description | Default Value | Unit | Admin Editable Scope |
+| :--- | :--- | :--- | :--- | :--- |
+| `next_job_chaining_proximity_radius_km` | Search radius for chaining upcoming offers around the partner's destination drop-off | `2.0` | km | Per-city (`city_settings`) |
+| `next_job_chaining_trigger_distance_meters` | Remaining distance to drop-off point that triggers proximity scan for next job | `500` | meters | Per-city (`city_settings`) |
+| `next_job_chaining_trigger_eta_minutes` | Remaining estimated arrival time to drop-off that triggers proximity scan for next job | `3` | minutes | Per-city (`city_settings`) |
+| `partner_idle_auto_offline_minutes` | Inactivity timeout before an idle partner without GPS updates is automatically placed offline | `45` | minutes | Per-city (`city_settings`) |
+
+

@@ -146,3 +146,19 @@ stateDiagram-v2
     ModeA_Separate --> [*]
     ModeB_Together --> [*]
 ```
+
+---
+
+## 5. Configurable Parameters (Admin-Editable Per-City)
+
+All thresholds and timing windows are database-driven in `city_settings` and managed by platform operators via the Admin Web Panel.
+
+| Parameter Key | Setting Description | Default Value | Unit | Admin Editable Scope |
+| :--- | :--- | :--- | :--- | :--- |
+| `mode_b_max_merchant_distance_km` | Maximum geographical proximity between merchant pickup outlets to offer Mode B (Deliver Together) | `1.5` | km | Per-city (`city_settings`) |
+| `jit_dispatch_lead_time_minutes` | JIT courier dispatch trigger lead time before estimated food ready time | `7` | minutes | Per-city (`city_settings`) |
+| `unbatching_delay_threshold_minutes` | Maximum preparation delay for one merchant before automatic dynamic unbatching into independent legs occurs | `12` | minutes | Per-city (`city_settings`) |
+| `checkout_quote_ttl_seconds` | Validity duration for locking checkout quote pricing, delivery fees, and inventory soft reservations | `600` | seconds | Per-city (`city_settings`) |
+| `mode_b_customer_discount_inr` | Delivery fee reduction awarded to customer for choosing Mode B combined delivery | `25.00` | INR | Per-city (`city_settings`) |
+
+

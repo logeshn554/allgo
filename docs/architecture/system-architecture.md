@@ -128,3 +128,27 @@ To prevent severe Google Maps platform cost runaway:
 - **Authentication:** Firebase Auth verifies mobile phone numbers via SMS OTP. Upon verification, the client exchanges the Firebase ID token for an AllGo session JWT signed with an asymmetric key pair stored in GCP Secret Manager.
 - **Firebase App Check:** Integrated on Customer, Partner, and Merchant apps (Play Integrity on Android, DeviceCheck / App Attest on iOS) to block unauthorized bot traffic and emulators.
 - **Direct VPC Egress & Service Accounts:** Cloud Run services run under dedicated least-privilege IAM service accounts (`sa-api@`, `sa-dispatch@`, `sa-webhooks@`). Direct VPC egress guarantees that all database and cache connections use RFC 1918 private IP addresses.
+
+---
+
+## 6. Database & Extension Compatibility (Cloud SQL)
+
+- **PostgreSQL Version:** Cloud SQL for PostgreSQL 15 (`POSTGRES_15`).
+- **PostGIS Version:** PostGIS 3.5.2 (officially supported on Cloud SQL for PostgreSQL 15, backward compatible with 3.3/3.4).
+- **Spatial Extensions Installed:** `postgis`, `postgis_raster`, `address_standardizer`.
+
+---
+
+## 7. Configurable Parameters (Admin-Editable Per-City)
+
+All thresholds are stored in the database (`city_settings` / `system_config`) and managed dynamically via the Admin Web Panel, rather than hardcoded in application logic.
+
+| Parameter Key | Setting Description | Default Value | Unit | Admin Editable Scope |
+| :--- | :--- | :--- | :--- | :--- |
+| `route_deviation_distance_threshold_meters` | Minimum courier deviation displacement before triggering Google Routes re-calculation | `100` | meters | Per-city (`city_settings`) |
+| `route_deviation_cooldown_seconds` | Minimum elapsed time cooldown between successive route recalculation requests | `60` | seconds | Per-city (`city_settings`) |
+| `partner_gps_ping_interval_active_seconds` | WebSocket GPS ping interval for couriers/drivers on an active job | `4` | seconds | Per-city (`city_settings`) |
+| `partner_gps_ping_interval_idle_seconds` | WebSocket GPS ping interval for couriers/drivers idle / awaiting offers | `20` | seconds | Per-city (`city_settings`) |
+| `postgis_location_batch_flush_seconds` | Frequency for flushing partner coordinates from Redis Stream to PostGIS audit tables | `30` | seconds | Platform global (`system_config`) |
+
+
