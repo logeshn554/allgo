@@ -2,7 +2,11 @@ node_modules/
 dist/
 .superpowers/
 .env
+.env.*.local
 *.local
+*.pem
+*.key
+*service-account*.json
 .terraform/
 *.tfstate
 *.tfstate.*
