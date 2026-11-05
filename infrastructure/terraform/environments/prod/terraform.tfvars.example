@@ -1,0 +1,5 @@
+project_id         = "allgo-prod"
+region             = "asia-south1"
+billing_account_id = "012345-6789AB-CDEF01"
+budget_amount_inr  = 100000
+db_password        = "prod-secure-db-password-example"

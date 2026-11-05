@@ -1,0 +1,5 @@
+project_id         = "allgo-dev"
+region             = "asia-south1"
+billing_account_id = "012345-6789AB-CDEF01"
+budget_amount_inr  = 10000
+db_password        = "dev-db-password-example"
