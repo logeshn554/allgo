@@ -5,6 +5,6 @@
   "type": "module",
   "description": "AllGo Dispatch Engine & Real-Time Tracking Service",
   "dependencies": {
-    "@allgo/common": "workspace:*"
+    "@allgo/common": "*"
   }
 }

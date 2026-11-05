@@ -11,6 +11,5 @@
   "scripts": {
     "test": "node --experimental-transform-types --test tests/**/*.spec.ts",
     "test:workspace": "node --experimental-transform-types --test tests/workspace/*.spec.ts"
-  },
-  "packageManager": "pnpm@9.15.4"
+  }
 }

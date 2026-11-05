@@ -5,6 +5,6 @@
   "type": "module",
   "description": "AllGo Admin Web Panel",
   "dependencies": {
-    "@allgo/common": "workspace:*"
+    "@allgo/common": "*"
   }
 }

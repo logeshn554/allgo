@@ -20,12 +20,13 @@ describe('Monorepo Structure & Core Workspace Scaffolding', () => {
       assert.ok(pkg.workspaces.includes('packages/*'), 'workspaces must include packages/*');
     });
 
-    it('should have a valid pnpm-workspace.yaml referencing apps and packages', () => {
+    it('should configure npm workspaces without pnpm-workspace.yaml', () => {
       const pnpmWorkspacePath = path.join(ROOT_DIR, 'pnpm-workspace.yaml');
-      assert.ok(fs.existsSync(pnpmWorkspacePath), 'pnpm-workspace.yaml must exist');
-      const content = fs.readFileSync(pnpmWorkspacePath, 'utf-8');
-      assert.match(content, /apps\/\*/, 'pnpm-workspace.yaml must include apps/*');
-      assert.match(content, /packages\/\*/, 'pnpm-workspace.yaml must include packages/*');
+      assert.strictEqual(
+        fs.existsSync(pnpmWorkspacePath),
+        false,
+        'pnpm-workspace.yaml should not exist when using npm workspaces'
+      );
     });
 
     it('should have a valid tsconfig.base.json', () => {
@@ -53,9 +54,10 @@ describe('Monorepo Structure & Core Workspace Scaffolding', () => {
         assert.strictEqual(manifest.name, pkgInfo.name, `Package name must be ${pkgInfo.name}`);
 
         if (pkgInfo.dir.startsWith('apps/')) {
-          assert.ok(
+          assert.strictEqual(
             manifest.dependencies && manifest.dependencies['@allgo/common'],
-            `${pkgInfo.name} must depend on @allgo/common`
+            '*',
+            `${pkgInfo.name} must depend on @allgo/common via npm workspace "*"`
           );
         } else if (pkgInfo.dir === 'packages/common') {
           assert.ok(manifest.main, '@allgo/common must define main');

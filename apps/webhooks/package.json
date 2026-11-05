@@ -5,6 +5,6 @@
   "type": "module",
   "description": "AllGo Inbound Webhooks Service (Payment & Partner Callbacks)",
   "dependencies": {
-    "@allgo/common": "workspace:*"
+    "@allgo/common": "*"
   }
 }
