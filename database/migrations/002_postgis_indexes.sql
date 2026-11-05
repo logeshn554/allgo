@@ -32,6 +32,14 @@ CREATE INDEX IF NOT EXISTS idx_partner_jobs_drop_gist
 CREATE INDEX IF NOT EXISTS idx_delivery_leg_stops_location_gist 
     ON delivery_leg_stops USING gist (location);
 
+-- Waitlist spatial location for zone expansion notification scans
+CREATE INDEX IF NOT EXISTS idx_waitlist_entries_location_gist
+    ON waitlist_entries USING gist (location);
+
+-- Fast cart items lookup
+CREATE INDEX IF NOT EXISTS idx_cart_items_cart_id
+    ON cart_items (cart_id);
+
 
 -- 2. DISPATCH & PARTNER FEED INDEXES (Section 5B)
 CREATE INDEX IF NOT EXISTS idx_partner_jobs_partner_status 
@@ -123,3 +131,4 @@ CREATE INDEX IF NOT EXISTS idx_devices_user_active
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity 
     ON audit_logs (entity_type, entity_id, created_at DESC);
+

@@ -511,3 +511,4 @@ INSERT INTO tax_rules (
         TRUE
     )
 ON CONFLICT DO NOTHING;
+

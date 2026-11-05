@@ -823,6 +823,7 @@ model Payout {
   status           String    @default("SCHEDULED") @db.VarChar(32)
   failureReason    String?   @map("failure_reason") @db.Text
   processedAt      DateTime? @map("processed_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("payouts")
@@ -870,9 +871,10 @@ model TaxInvoice {
 
 model Rating {
   id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderGroupId  String       @map("order_group_id") @db.Uuid
+  orderGroupId  String?      @map("order_group_id") @db.Uuid
   subOrderId    String?      @map("sub_order_id") @db.Uuid
   deliveryLegId String?      @map("delivery_leg_id") @db.Uuid
+  partnerJobId  String?      @map("partner_job_id") @db.Uuid
   reviewerId    String       @map("reviewer_id") @db.Uuid
   targetType    String       @map("target_type") @db.VarChar(32)
   targetId      String       @map("target_id") @db.Uuid
@@ -880,9 +882,10 @@ model Rating {
   feedback      String?      @db.Text
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  orderGroup    OrderGroup   @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
+  orderGroup    OrderGroup?  @relation(fields: [orderGroupId], references: [id], onDelete: Cascade)
   subOrder      SubOrder?    @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
   deliveryLeg   DeliveryLeg? @relation(fields: [deliveryLegId], references: [id], onDelete: Cascade)
+  partnerJob    PartnerJob?  @relation(fields: [partnerJobId], references: [id], onDelete: Cascade)
   reviewer      User         @relation(fields: [reviewerId], references: [id], onDelete: Restrict)
 
   @@map("ratings")
@@ -949,3 +952,4 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+

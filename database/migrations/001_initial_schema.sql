@@ -600,6 +600,7 @@ CREATE TABLE IF NOT EXISTS payouts (
     status VARCHAR(32) NOT NULL DEFAULT 'SCHEDULED',
     failure_reason TEXT,
     processed_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_payout_recipient CHECK (recipient_type IN ('MERCHANT', 'PARTNER')),
     CONSTRAINT chk_payout_status CHECK (status IN ('SCHEDULED', 'PROCESSING', 'SUCCESS', 'FAILED'))
@@ -640,9 +641,10 @@ CREATE TABLE IF NOT EXISTS tax_invoices (
 -- 9. RATINGS, COUPONS, SUPPORT & AUDIT LOGS
 CREATE TABLE IF NOT EXISTS ratings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_group_id UUID NOT NULL REFERENCES order_groups(id) ON DELETE CASCADE,
+    order_group_id UUID REFERENCES order_groups(id) ON DELETE CASCADE,
     sub_order_id UUID REFERENCES sub_orders(id) ON DELETE CASCADE,
     delivery_leg_id UUID REFERENCES delivery_legs(id) ON DELETE CASCADE,
+    partner_job_id UUID REFERENCES partner_jobs(id) ON DELETE CASCADE,
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     target_type VARCHAR(32) NOT NULL,
     target_id UUID NOT NULL,
@@ -701,3 +703,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Deferred foreign key constraints for circular/forward referenced tables
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_inventory_reservations_checkout_session'
+    ) THEN
+        ALTER TABLE inventory_reservations
+        ADD CONSTRAINT fk_inventory_reservations_checkout_session
+        FOREIGN KEY (checkout_session_id) REFERENCES checkout_sessions(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+
