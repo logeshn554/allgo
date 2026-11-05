@@ -113,9 +113,9 @@ All job distribution, proximity chaining, and dispatch timers are configured in 
 | `next_job_chaining_trigger_eta_minutes` | Remaining estimated arrival time to drop-off that triggers proximity scan for next job | `3` | minutes | Per-city (`city_settings`) |
 | `partner_idle_auto_offline_minutes` | Inactivity timeout before an idle partner without GPS updates is automatically placed offline | `45` | minutes | Per-city (`city_settings`) |
 | `partner_offer_accept_timeout_seconds` | Timeout for a partner to accept a dispatched job offer before auto-rejection | `20` | seconds | Per-city (`city_settings`) |
-| `partner_cash_in_hand_limit_inr` | Accumulated cash-on-delivery threshold held by partner before blocking further COD job offers | `2500.00` | INR | Per-city (`city_settings`) |
-| `max_continuous_duty_hours` | Maximum allowable continuous active shift hours before mandatory rest lockout is enforced | `8.0` | hours | Per-city (`city_settings`) |
-| `mandatory_rest_period_minutes` | Compulsory offline cooldown period after reaching maximum continuous duty threshold | `30` | minutes | Per-city (`city_settings`) |
-| `partner_min_rating_threshold` | Minimum average customer rating required for automatic dispatch eligibility | `4.2` | stars | Per-city (`city_settings`) |
+| `partner_cash_in_hand_limit_inr` | Accumulated cash-on-delivery threshold held by partner before blocking further COD job offers | `2500.00 [Placeholder, owner to decide]` | INR | Per-city (`city_settings`) |
+| `max_continuous_duty_hours` | Maximum allowable continuous active shift hours before mandatory rest lockout is enforced | `8.0 [Placeholder, owner to decide]` | hours | Per-city (`city_settings`) |
+| `mandatory_rest_period_minutes` | Compulsory offline cooldown period after reaching maximum continuous duty threshold | `30 [Placeholder, owner to decide]` | minutes | Per-city (`city_settings`) |
+| `partner_min_rating_threshold` | Minimum average customer rating required for automatic dispatch eligibility | `4.2 [Placeholder, owner to decide]` | stars | Per-city (`city_settings`) |
 
 

@@ -55,7 +55,7 @@ locals {
 }
 
 resource "google_project_iam_member" "api_roles" {
-  for_each = toset(locals.api_roles)
+  for_each = toset(local.api_roles)
 
   project = var.project_id
   role    = each.value
@@ -63,7 +63,7 @@ resource "google_project_iam_member" "api_roles" {
 }
 
 resource "google_project_iam_member" "dispatch_roles" {
-  for_each = toset(locals.dispatch_roles)
+  for_each = toset(local.dispatch_roles)
 
   project = var.project_id
   role    = each.value
@@ -71,7 +71,7 @@ resource "google_project_iam_member" "dispatch_roles" {
 }
 
 resource "google_project_iam_member" "webhooks_roles" {
-  for_each = toset(locals.webhooks_roles)
+  for_each = toset(local.webhooks_roles)
 
   project = var.project_id
   role    = each.value
@@ -79,7 +79,7 @@ resource "google_project_iam_member" "webhooks_roles" {
 }
 
 resource "google_project_iam_member" "worker_roles" {
-  for_each = toset(locals.worker_roles)
+  for_each = toset(local.worker_roles)
 
   project = var.project_id
   role    = each.value

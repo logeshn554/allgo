@@ -26,5 +26,11 @@ variable "db_password" {
   description = "Database administrator password for production environment (must be securely sourced)"
   type        = string
   sensitive   = true
+  default     = ""
 }
 
+variable "enable_prod" {
+  description = "Safety gate: production infrastructure is only provisioned when explicitly set to true. Defaults to false."
+  type        = bool
+  default     = false
+}

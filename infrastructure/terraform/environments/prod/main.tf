@@ -19,6 +19,7 @@ provider "google" {
 
 # 1. VPC & Networking
 module "vpc" {
+  count       = var.enable_prod ? 1 : 0
   source      = "../../modules/vpc"
   project_id  = var.project_id
   environment = "prod"
@@ -28,6 +29,7 @@ module "vpc" {
 
 # 2. Least-Privilege IAM Service Accounts
 module "iam" {
+  count       = var.enable_prod ? 1 : 0
   source      = "../../modules/iam"
   project_id  = var.project_id
   environment = "prod"
@@ -35,13 +37,14 @@ module "iam" {
 
 # 3. Cloud SQL PostgreSQL 15 (Prod: Regional HA, PITR enabled, db-custom-4-16384)
 module "cloudsql" {
+  count                         = var.enable_prod ? 1 : 0
   source                        = "../../modules/cloudsql"
   depends_on                    = [module.vpc]
   project_id                    = var.project_id
   environment                   = "prod"
   region                        = var.region
-  network_id                    = module.vpc.network_id
-  network_connection_dependency = module.vpc.google_service_networking_connection_id
+  network_id                    = module.vpc[0].network_id
+  network_connection_dependency = module.vpc[0].google_service_networking_connection_id
   tier                          = "db-custom-4-16384"
   availability_type             = "REGIONAL"
   pitr_enabled                  = true
@@ -55,24 +58,26 @@ module "cloudsql" {
 
 # 4. Memorystore Redis 7.0 (Prod: Standard Tier HA)
 module "redis" {
+  count          = var.enable_prod ? 1 : 0
   source         = "../../modules/redis"
   project_id     = var.project_id
   environment    = "prod"
   region         = var.region
-  network_id     = module.vpc.network_id
+  network_id     = module.vpc[0].network_id
   tier           = "STANDARD_HA"
   memory_size_gb = 5
 }
 
 # 5. Cloud Run Consolidated Services (Prod: min_instances = 1 for api and dispatch, 0 for webhooks)
 module "cloudrun" {
+  count            = var.enable_prod ? 1 : 0
   source           = "../../modules/cloudrun"
   project_id       = var.project_id
   environment      = "prod"
   region           = var.region
-  network_id       = module.vpc.network_id
-  subnet_id        = module.vpc.subnet_id
-  vpc_connector_id = module.vpc.vpc_connector_id
+  network_id       = module.vpc[0].network_id
+  subnet_id        = module.vpc[0].subnet_id
+  vpc_connector_id = module.vpc[0].vpc_connector_id
 
   services = {
     api = {
@@ -99,14 +104,15 @@ module "cloudrun" {
   }
 
   service_accounts = {
-    api      = module.iam.sa_api_email
-    dispatch = module.iam.sa_dispatch_email
-    webhooks = module.iam.sa_webhooks_email
+    api      = module.iam[0].sa_api_email
+    dispatch = module.iam[0].sa_dispatch_email
+    webhooks = module.iam[0].sa_webhooks_email
   }
 }
 
 # 6. Monitoring, Budget Alerts (50%, 80%, 100%) & Quotas (24x7 active)
 module "monitoring" {
+  count                     = var.enable_prod ? 1 : 0
   source                    = "../../modules/monitoring"
   project_id                = var.project_id
   environment               = "prod"

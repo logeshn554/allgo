@@ -133,18 +133,21 @@ To prevent severe Google Maps platform cost runaway:
 
 ## 6. Database & Extension Compatibility (Cloud SQL)
 
-- **PostgreSQL Version:** Cloud SQL for PostgreSQL 15 (`POSTGRES_15`, currently running 15.5+ in `asia-south1`).
-  - Google Cloud SQL officially supports PostgreSQL 11 through 16. PostgreSQL 15 is selected as the production standard for enterprise connection stability, mature PostGIS integration, and optimal Cloud SQL High Availability replication.
-- **PostGIS Version Matrix:**
-  - Cloud SQL PostgreSQL 15 provides **PostGIS 3.3.2** (upgrading automatically with minor point updates to 3.4/3.5).
-  - Spatial Extensions Installed:
-    - `postgis` (Core spatial data types: geometry, geography, GiST/SP-GiST 2D/3D indexing).
-    - `postgis_raster` (Raster spatial analysis).
-    - `postgis_topology` (Topological spatial relationship models).
-    - `address_standardizer` (Postal and street address parsing).
-- **Cloud SQL Flags Configured:**
-  - `cloudsql.enable_pg_bigm = "on"` (Multi-language 2-gram index search for Tamil and English menu item lookups).
-  - `max_connections = 500` (Dev: 100, Prod: 500).
+Facts verified against official Google Cloud SQL documentation:
+- **Database Engine Version:** PostgreSQL 15 (`POSTGRES_15`).
+  - *Official Source:* [Google Cloud SQL for PostgreSQL Database Versions](https://cloud.google.com/sql/docs/postgres/db-versions).
+  - Cloud SQL supports major versions 9.6 through 17. PostgreSQL 15 is selected as the production baseline for stability and compatibility.
+- **PostGIS Extension Support:**
+  - *Official Source:* [Supported PostgreSQL Extensions in Cloud SQL](https://cloud.google.com/sql/docs/postgres/extensions).
+  - Cloud SQL officially supports the following spatial extensions under PostgreSQL 15:
+    - `postgis` (Core spatial data types: geometry, geography, spatial indexing GiST/SP-GiST).
+    - `postgis_raster` (Raster spatial data types and functions).
+    - `postgis_topology` (Topology data types and functions).
+    - `address_standardizer` and `address_standardizer_data_us` (Rules-based address standardizer).
+  - *PostGIS Minor Version:* **[UNVERIFIED - exact minor build is managed automatically by Google Cloud maintenance releases for POSTGRES_15]**.
+- **Extension & Flag Verification:**
+  - `cloudsql.enable_pg_bigm`: **[UNVERIFIED - pg_bigm is not listed in Cloud SQL standard supported extensions table (https://cloud.google.com/sql/docs/postgres/extensions); Cloud SQL officially provides pg_trgm for text/trigram matching. Verify pg_bigm availability on target engine release before enabling or standardize on pg_trgm]**.
+  - `max_connections`: Cloud SQL dynamically computes default connections using `LEAST(DB_RAM_IN_MB / 14, 5000)` ([Google Cloud SQL Flags Reference](https://cloud.google.com/sql/docs/postgres/flags)). Static overrides (Dev: 100, Prod: 500) are valid flags in Terraform, but connection ceiling per instance size is **[UNVERIFIED - derived from RAM formula, must be benchmarked under connection pooler/PgBouncer]**.
 
 ---
 
