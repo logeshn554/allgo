@@ -4,7 +4,7 @@
  * AllGo Multi-Vertical On-Demand Platform
  * Dynamic Monthly INR Cost Projection & Operational Estimates Calculator
  *
- * Revision: 4.1.0 (Detailed Resource Breakdown, Topology Rules & DLT Custom-Token Security Flow)
+ * Revision: 5.0.0 (Memorystore asia-south1 M1/M2 Verified Rates & Multi-Vertical Maps Audit)
  *
  * Usage:
  *   node --experimental-transform-types scripts/cost-calculator.ts
@@ -102,14 +102,14 @@ function parseArgs(args: string[]): CalculatorInputs {
 
 function printHelp(): void {
   console.log(`
-AllGo Platform Monthly Cost Calculator CLI (Revision 4.1.0)
+AllGo Platform Monthly Cost Calculator CLI (Revision 5.0.0)
 
 Usage:
   node --experimental-transform-types scripts/cost-calculator.ts [options]
 
 Options:
-  --ordersPerDay=<n>     Average completed orders per day (default: 1000)
-  --activeCouriers=<n>   Average active delivery couriers per day (default: 50)
+  --ordersPerDay=<n>     Average completed transactions per day (default: 1000)
+  --activeCouriers=<n>   Average active delivery couriers/drivers per day (default: 50)
   --operatingHours=<n>   Operating hours per day (default: 12)
   --usdInrRate=<n>       USD to INR exchange rate [UNVERIFIED: Planning estimate input] (default: 94.40)
   --ceilingDev=<n>       Optional budget ceiling for Dev GCP (default: unset)
@@ -150,26 +150,26 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
 
   // 2. Dev Environment GCP Cost (with 12h/day overnight scheduler shutdown)
   // Cloud SQL db-custom-1-3840 (360 hrs compute @ $0.07638/hr = $27.50 + $1.70 SSD + $0.80 backup) = $30.00
-  // Memorystore Redis Basic 1GB (730 hrs @ $0.024/hr in asia-south1) = $17.52
+  // Memorystore Redis Basic M1 1GB (730 hrs @ $0.0490/hr in asia-south1 Mumbai) = $35.77
   // Direct VPC Egress: $0.00 fixed infrastructure fee (zero VM connectors)
   // Cross-zone egress (~20 GB @ $0.01/GiB) = $0.20
   // Cloud Storage (20 GB @ $0.023/GB) = $0.46
   // Secret Manager (15 active versions @ $0.06/version) = $0.90
   const devCloudSqlInr = Math.round(27.50 * exchangeRateUsdInr) + Math.round(1.70 * exchangeRateUsdInr) + Math.round(0.80 * exchangeRateUsdInr); // 2596 + 160 + 76 = 2832
-  const devRedisInr = Math.round(17.52 * exchangeRateUsdInr); // 1654
+  const devRedisInr = Math.round(35.77 * exchangeRateUsdInr); // 3377
   const devNetworkInr = Math.round(0.20 * exchangeRateUsdInr); // 19
   const devStorageInr = Math.round(0.46 * exchangeRateUsdInr); // 43
   const devSecretsInr = Math.round(0.90 * exchangeRateUsdInr); // 85
-  const devGcpMonthlyInr = devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹4,633
+  const devGcpMonthlyInr = devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹6,356
 
-  // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard HA Redis + Direct VPC Egress + min_instances=1)
+  // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard M2 HA Redis + Direct VPC Egress + min_instances=1)
   // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.31885/hr = $232.76 + $6.80 HA SSD + $2.80 PITR) = $242.36
   const prodSqlComputeInr = Math.round(232.76 * exchangeRateUsdInr); // ₹21,973
   const prodSqlStorageInr = Math.round(6.80 * exchangeRateUsdInr);   // ₹642
   const prodSqlBackupsInr = Math.round(2.80 * exchangeRateUsdInr);   // ₹264
 
-  // Memorystore Redis Standard Tier HA 5GB (730 hrs * 5GB * $0.048/GB-hr in asia-south1) = $175.20
-  const prodRedisInr = Math.round(175.20 * exchangeRateUsdInr);      // ₹16,539
+  // Memorystore Redis Standard Tier M2 HA 5GB (730 hrs * 5GB * $0.0540/GB-hr in asia-south1 Mumbai) = $197.10
+  const prodRedisInr = Math.round(197.10 * exchangeRateUsdInr);      // ₹18,606
 
   // Cloud Run baseline: api ($20.00) + dispatch ($15.80) + webhooks ($0.80) = $36.60
   // Dynamic scale component for order volume above 1,000 baseline
@@ -192,18 +192,22 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
 
   const prodGcpMonthlyInr = prodSqlComputeInr + prodSqlStorageInr + prodSqlBackupsInr +
     prodRedisInr + prodCloudRunApiInr + prodCloudRunDispatchInr + prodCloudRunWebhooksInr +
-    prodNetworkInr + prodStorageInr + prodSecretsInr + prodLoggingInr + prodMonitoringInr + prodBufferInr; // ₹50,756 baseline
+    prodNetworkInr + prodStorageInr + prodSecretsInr + prodLoggingInr + prodMonitoringInr + prodBufferInr; // ₹52,823 baseline
 
   // 4. Google Maps Cost Analysis (Modernized March 2025 Per-SKU India Pricing)
-  // Per-SKU Free Monthly Allowance in India:
-  // - ComputeRoutes Essentials: 70,000 free calls / month
-  // - Geocoding API: 70,000 free calls / month
-  // - Places Autocomplete: 70,000 free requests / month
-  // - Mobile Maps SDK (Android/iOS): Unlimited free map loads
-  const routesCallsPerOrder = 2.1; // 2 legs (pickup + dropoff) + 0.1 re-route trigger (100m displacement & 60s cooldown)
-  const monthlyRoutesCalls = Math.round(ordersPerDay * routesCallsPerOrder * 30);
-  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.25 * 30); // ~25% un-cached addresses in pilot
-  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.375 * 30);   // ~37.5% un-cached search/autocomplete
+  // Multi-vertical distribution: 80% Delivery (2.1 calls), 10% Parcel (2.1 calls), 10% Mobility (3.3 calls)
+  // Blended average routes calls per transaction: (0.8 * 2.1) + (0.1 * 2.1) + (0.1 * 3.3) = 1.68 + 0.21 + 0.33 = 2.22 calls
+  const deliveryOrders = ordersPerDay * 0.8;
+  const parcelOrders = ordersPerDay * 0.1;
+  const mobilityOrders = ordersPerDay * 0.1;
+
+  const monthlyDeliveryCalls = deliveryOrders * 2.1 * 30; // 50,400 calls
+  const monthlyParcelCalls = parcelOrders * 2.1 * 30;     // 6,300 calls
+  const monthlyMobilityCalls = mobilityOrders * 3.3 * 30; // 9,900 calls
+  const monthlyRoutesCalls = Math.round(monthlyDeliveryCalls + monthlyParcelCalls + monthlyMobilityCalls); // 66,600 calls
+  
+  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.33 * 30); // ~10,000 un-cached addresses
+  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.50 * 30);   // ~15,000 un-cached checkout searches
 
   const billableRoutesCalls = Math.max(0, monthlyRoutesCalls - 70000);
   const billableGeocodingCalls = Math.max(0, monthlyGeocodingCalls - 70000);
@@ -231,7 +235,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const mapsDivergenceRatio = Math.round(mapsNaiveMonthlyInr / Math.max(1, approachAGrossInr)); // ~168x gross divergence
 
   // 5. SMS / OTP Authentication Cost (Approach 2 DLT Primary vs Approach 1 Direct Firebase)
-  const monthlyOtps = Math.round(ordersPerDay * 1.1 * 30); // ~33,000 OTPs at 1,000 orders/day
+  const monthlyOtps = Math.round(ordersPerDay * 1.1 * 30); // ~33,000 OTPs at 1,000 transactions/day
 
   // Approach 2: Domestic Indian DLT Gateway + Firebase Custom Token (~₹0.25/SMS)
   const smsMonthlyInr = Math.round(monthlyOtps * 0.25); // ₹8,250 [UNVERIFIED: Planning assumption]
@@ -242,10 +246,10 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const smsDirectFirebaseMonthlyInr = Math.round((firebaseBillableOtps * 0.07) * exchangeRateUsdInr); // ₹2,16,082
 
   // Total Production Pilot Monthly (Prod GCP + Maps Approach A + DLT SMS)
-  const totalPilotMonthlyInr = prodGcpMonthlyInr + mapsMonthlyInr + smsMonthlyInr; // ₹59,006
+  const totalPilotMonthlyInr = prodGcpMonthlyInr + mapsMonthlyInr + smsMonthlyInr; // ₹61,073
 
   // Combined Spend (Only if Dev and Prod Pilot environments run simultaneously)
-  const combinedDevAndProdMonthlyInr = totalPilotMonthlyInr + devGcpMonthlyInr; // ₹63,639
+  const combinedDevAndProdMonthlyInr = totalPilotMonthlyInr + devGcpMonthlyInr; // ₹67,429
 
   const anyCeilingsConfigured = (
     ceilings.devCeilingConfigured ||
@@ -297,8 +301,8 @@ function main(): void {
              AllGo Platform Monthly Operational Cost Estimates                  
 ================================================================================
 Operational Assumptions:
-  - Orders / Day:          ${inputs.ordersPerDay.toLocaleString()} completed orders
-  - Active Couriers / Day: ${inputs.activeCouriers} couriers
+  - Transactions / Day:    ${inputs.ordersPerDay.toLocaleString()} completed transactions
+  - Active Couriers / Day: ${inputs.activeCouriers} couriers & drivers
   - Operating Hours / Day: ${inputs.operatingHours} hours/day
   - USD/INR Exchange Rate: ₹${inputs.exchangeRateUsdInr.toFixed(2)} per USD [UNVERIFIED: Planning estimate input; configurable via --usdInrRate]
 
@@ -306,20 +310,20 @@ Operational Assumptions:
 Estimated Monthly Spend (Google Cloud Mumbai asia-south1):
 --------------------------------------------------------------------------------
 1. Dev Environment GCP (Separate): ${formatInr(proj.devGcpMonthlyInr)} / mo
-   • Cloud SQL & Redis:        NO Free Tier (hourly billable compute/storage)
+   • Cloud SQL & Redis M1:     NO Free Tier (Redis Basic M1 @ $0.049/GiB-hr = ₹3,377)
    • Direct VPC Egress:        $0 Infrastructure Fee (native VPC routing)
    • Cloud Run & Pub/Sub:      Covered by Permanent Free Tier (<2M req, <10 GiB)
    • Scheduled Shutdown:       Overnight 12h/day off saves ~50% compute
    • Ceiling Status:           ${proj.ceilings.devCeilingConfigured ? formatInr(proj.ceilings.devCeilingInr!) : 'Not configured (estimates only)'}
 
 2. Prod Pilot GCP Infra:       ${formatInr(proj.prodGcpMonthlyInr)} / mo
-   • Cloud SQL & Redis:        NO Free Tier (HA Regional replication billable 24x7)
+   • Cloud SQL & Redis M2:     NO Free Tier (Redis Standard M2 HA @ $0.054/GiB-hr = ₹18,606)
    • Direct VPC Egress:        $0 Infrastructure Fee ($1.00 cross-zone network egress)
    • Cloud Run:                Idle memory for min_instances=1 billable
    • Ceiling Status:           ${proj.ceilings.prodCeilingConfigured ? formatInr(proj.ceilings.prodCeilingInr!) : 'Not configured (estimates only)'}
 
 3. Google Maps Platform:       ${formatInr(proj.mapsMonthlyInr)} / mo
-   • Approach A (Optimized):   ${formatInr(proj.mapsMonthlyInr)} / mo (63,000 calls within 70k free cap)
+   • Approach A (Optimized):   ${formatInr(proj.mapsMonthlyInr)} / mo (66,600 multi-vertical calls within 70k free cap)
    • Naive Continuous Polling: ${formatInr(proj.mapsNaiveMonthlyInr)} / mo (12.96M calls)
    • Gross Cost Divergence:    ${proj.mapsDivergenceRatio}x higher cost under naive polling!
    • Ceiling Status:           ${proj.ceilings.mapsCeilingConfigured ? formatInr(proj.ceilings.mapsCeilingInr!) : 'Not configured (estimates only)'}

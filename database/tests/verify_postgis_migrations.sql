@@ -54,13 +54,22 @@ END $$;
 DO $$
 DECLARE
     v_user_id UUID := gen_random_uuid();
+    v_addr_id UUID := gen_random_uuid();
+    v_sess_id UUID := gen_random_uuid();
     v_group_id UUID := gen_random_uuid();
     v_event_id UUID := gen_random_uuid();
     v_update_blocked BOOLEAN := FALSE;
 BEGIN
     INSERT INTO users (id, phone_number, display_name) VALUES (v_user_id, '+919999900002', 'Test Order User');
-    INSERT INTO order_groups (id, customer_id, group_order_number, total_amount_inr)
-    VALUES (v_group_id, v_user_id, 'ORD-TEST-001', 250.00);
+    
+    INSERT INTO addresses (id, user_id, label, recipient_name, recipient_phone, address_line1, city, state, postal_code, location)
+    VALUES (v_addr_id, v_user_id, 'HOME', 'Test Recipient', '+919999900002', '123 Test St', 'Chennai', 'Tamil Nadu', '600017', ST_SetSRID(ST_Point(80.23, 13.04), 4326));
+
+    INSERT INTO checkout_sessions (id, customer_id, delivery_address_id, total_item_amount_inr, total_delivery_fee_inr, total_packaging_fee_inr, platform_fee_inr, total_tax_inr, final_payable_amount_inr, expires_at)
+    VALUES (v_sess_id, v_user_id, v_addr_id, 200.00, 30.00, 10.00, 5.00, 15.00, 260.00, NOW() + INTERVAL '15 minutes');
+
+    INSERT INTO order_groups (id, customer_id, checkout_session_id, delivery_address_id, order_group_number, total_items_amount_inr, total_delivery_fees_inr, total_packaging_fees_inr, platform_fee_inr, total_tax_amount_inr, total_paid_amount_inr)
+    VALUES (v_group_id, v_user_id, v_sess_id, v_addr_id, 'ORD-TEST-001', 200.00, 30.00, 10.00, 5.00, 15.00, 260.00);
 
     INSERT INTO order_events (id, order_group_id, event_type, to_status)
     VALUES (v_event_id, v_group_id, 'ORDER_PLACED', 'PLACED');
@@ -144,23 +153,24 @@ END $$;
 \echo 'TEST G: EXPLAIN Demonstrating GiST Index Usage on Spatial Query'
 \echo '------------------------------------------------------------------------'
 -- Seed dummy zone for plan verification
-INSERT INTO states (id, state_code, state_name) VALUES (gen_random_uuid(), '99', 'Test State') ON CONFLICT DO NOTHING;
-INSERT INTO cities (id, state_id, city_name, city_slug) 
-SELECT gen_random_uuid(), id, 'Test City', 'test-city' FROM states WHERE state_code = '99' ON CONFLICT DO NOTHING;
+INSERT INTO states (id, code, state_code, name, status) VALUES (gen_random_uuid(), 'TS', 99, 'Test State', 'LIVE') ON CONFLICT DO NOTHING;
+INSERT INTO cities (id, state_id, name, slug, status) 
+SELECT gen_random_uuid(), id, 'Test City', 'test-city', 'LIVE' FROM states WHERE state_code = 99 ON CONFLICT DO NOTHING;
 
-INSERT INTO zones (id, city_id, zone_name, zone_slug, polygon)
+INSERT INTO zones (id, city_id, name, code, polygon, is_active)
 SELECT 
     gen_random_uuid(), 
     id, 
     'T. Nagar Test Zone', 
     't-nagar-test',
-    ST_SetSRID(ST_GeomFromText('POLYGON((80.22 13.03, 80.25 13.03, 80.25 13.05, 80.22 13.05, 80.22 13.03))'), 4326)
-FROM cities WHERE city_slug = 'test-city' LIMIT 1;
+    ST_SetSRID(ST_GeomFromText('POLYGON((80.22 13.03, 80.25 13.03, 80.25 13.05, 80.22 13.05, 80.22 13.03))'), 4326),
+    true
+FROM cities WHERE slug = 'test-city' LIMIT 1;
 
 -- Force index usage check
 SET enable_seqscan = off;
 EXPLAIN (COSTS OFF) 
-SELECT id, zone_name 
+SELECT id, name 
 FROM zones 
 WHERE ST_Contains(polygon, ST_SetSRID(ST_Point(80.2337, 13.0418), 4326))
   AND is_active = true;

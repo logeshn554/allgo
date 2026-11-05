@@ -41,8 +41,10 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       // Cloud SQL has NO free tier
       assert.match(content, /Cloud SQL[\s\S]*?NO\s*Free\s*Tier/i, 'Cloud SQL must be explicitly marked as having NO free tier');
       
-      // Memorystore Redis has NO free tier
+      // Memorystore Redis has NO free tier and verified Mumbai M1/M2 rates
       assert.match(content, /Memorystore[\s\S]*?NO\s*Free\s*Tier/i, 'Memorystore Redis must be explicitly marked as having NO free tier');
+      assert.match(content, /0\.049/i, 'Must document verified $0.049/GiB-hr rate for Basic M1');
+      assert.match(content, /0\.054/i, 'Must document verified $0.054/GiB-hr rate for Standard M2');
 
       // Direct VPC Egress has $0 infrastructure fee
       assert.match(content, /Direct VPC Egress[\s\S]*?\$0\s*Infrastructure\s*Fee/i, 'Direct VPC Egress must be marked as $0 infrastructure fee');
@@ -99,26 +101,26 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /Direct VPC Egress/i, 'Must document Direct VPC Egress in dev breakdown');
       assert.match(content, /overnight|shutdown|scheduler/i, 'Must detail overnight scheduler shutdown mechanism');
       assert.match(content, /50%|half/i, 'Must reflect compute savings from scheduled shutdown (~50% compute reduction)');
-      assert.match(content, /₹4,633/i, 'Must calculate dev monthly spend as ₹4,633 / month');
+      assert.match(content, /₹6,356/i, 'Must calculate dev monthly spend as ₹6,356 / month with M1 Redis');
     });
 
-    it('should document prod pilot environment line items (HA SQL + PITR, Standard HA Redis, min_instances=1)', () => {
+    it('should document prod pilot environment line items (HA SQL + PITR, Standard HA Redis M2, min_instances=1)', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
       assert.match(content, /db-custom-2-7680/i, 'Must specify db-custom-2-7680 for prod pilot Cloud SQL');
       assert.match(content, /High Availability|HA Regional|regional failover/i, 'Must model Cloud SQL High Availability');
       assert.match(content, /PITR|Point-in-Time Recovery/i, 'Must model Point-in-Time Recovery (PITR) backup retention');
-      assert.match(content, /Standard\s*(?:Tier|HA)?|5\s*GB/i, 'Must model Memorystore Redis Standard HA tier');
+      assert.match(content, /Standard\s*(?:Tier\s*M2|HA)?|5\s*GB/i, 'Must model Memorystore Redis Standard M2 HA tier');
       assert.match(content, /min_instances\s*=\s*1/i, 'Must model Cloud Run min_instances=1 for api and dispatch');
       assert.match(content, /Direct VPC Egress/i, 'Must model Direct VPC Egress ($0 setup fee)');
       assert.match(content, /Cross-Zone Network/i, 'Must model Cross-Zone Network Egress ($0.01/GiB)');
-      assert.match(content, /₹50,756/i, 'Must calculate prod pilot GCP spend as ₹50,756 / month');
+      assert.match(content, /₹52,823/i, 'Must calculate prod pilot GCP spend as ₹52,823 / month with M2 Redis');
     });
   });
 
   describe('Google Maps Platform Modernized India Pricing & SKU Usage Model', () => {
-    it('should contrast Approach A (inside free cap) vs continuous polling runaway costs', () => {
+    it('should contrast Approach A (inside free cap) vs continuous polling runaway costs across verticals', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
@@ -128,7 +130,7 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /Approach A|Optimized/i, 'Must identify Approach A / Single-call architecture');
       assert.match(content, /100\s*m(?:eters?)?/i, 'Must mention 100m displacement threshold');
       assert.match(content, /60\s*s(?:econds?)?|cooldown|flapping/i, 'Must mention cooldown / flapping guard');
-      assert.match(content, /63,?000\s*(?:requests|calls)/i, 'Must document 63,000 monthly calls for 1,000 orders/day');
+      assert.match(content, /66,?600\s*(?:requests|calls)/i, 'Must document 66,600 monthly multi-vertical calls for 1,000 transactions/day');
       assert.match(content, /₹0(?:\.00)?\s*\/\s*month/i, 'Must document ₹0.00 / month under 70,000 free cap');
       assert.match(content, /polling|continuous|naive/i, 'Must contrast with naive continuous GPS polling');
       assert.match(content, /12,?960,?000/i, 'Must calculate 12.96M calls for naive polling');
@@ -156,27 +158,27 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /POST \/v1\/auth\/otp\/send/i, 'Must document send OTP endpoint');
       assert.match(content, /POST \/v1\/auth\/otp\/verify/i, 'Must document verify OTP endpoint');
       assert.match(content, /HMAC-SHA256/i, 'Must document HMAC-SHA256 digest hashing');
-      assert.match(content, /replay/i, 'Must detail atomic deletion to prevent replay attacks');
+      assert.match(content, /Lua/i, 'Must detail atomic Redis Lua script for verification and consumption');
       assert.match(content, /createCustomToken/i, 'Must specify firebaseAdmin.auth().createCustomToken');
       assert.match(content, /signInWithCustomToken/i, 'Must specify client signInWithCustomToken');
       assert.match(content, /App Check alone does not replace/i, 'Must state App Check alone does not replace backend auth and rate limiting');
-      assert.match(content, /cannot specify or influence the UID/i, 'Must enforce that client cannot choose another identity');
+      assert.match(content, /cannot specify,?\s*inject,?\s*or influence the UID/i, 'Must enforce that client cannot choose another identity');
     });
   });
 
   describe('Operational Cost Summary & Environment Separation', () => {
-    it('should separate production pilot (₹59,006) from dev (₹4,633) and show combined amount', () => {
+    it('should separate production pilot (₹61,073) from dev (₹6,356) and show combined amount', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
-      assert.match(content, /59,006/i, 'Must calculate production pilot total as ₹59,006 / month');
-      assert.match(content, /4,633/i, 'Must calculate separate dev environment as ₹4,633 / month');
-      assert.match(content, /63,639/i, 'Must show combined spend as ₹63,639 / month only if running simultaneously');
+      assert.match(content, /61,073/i, 'Must calculate production pilot total as ₹61,073 / month');
+      assert.match(content, /6,356/i, 'Must calculate separate dev environment as ₹6,356 / month');
+      assert.match(content, /67,429/i, 'Must show combined spend as ₹67,429 / month only if running simultaneously');
     });
   });
 
   describe('CLI Cost Calculator Script (scripts/cost-calculator.ts)', () => {
-    it('should execute successfully with --json flag and return exact Revision 4.1.0 cost estimates', () => {
+    it('should execute successfully with --json flag and return exact Revision 5.0.0 cost estimates', () => {
       assert.ok(fs.existsSync(CALCULATOR_SCRIPT_PATH));
 
       const cmd = 'node --experimental-transform-types scripts/cost-calculator.ts --json';
@@ -188,13 +190,13 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       }, 'Script output with --json must be valid JSON');
 
       assert.strictEqual(parsed.exchangeRateUsdInr, 94.40, 'Default exchange rate must be 94.40');
-      assert.strictEqual(parsed.devGcpMonthlyInr, 4633, 'devGcpMonthlyInr must match doc: ₹4,633');
-      assert.strictEqual(parsed.prodGcpMonthlyInr, 50756, 'prodGcpMonthlyInr must match doc: ₹50,756');
+      assert.strictEqual(parsed.devGcpMonthlyInr, 6356, 'devGcpMonthlyInr must match doc: ₹6,356');
+      assert.strictEqual(parsed.prodGcpMonthlyInr, 52823, 'prodGcpMonthlyInr must match doc: ₹52,823');
       assert.strictEqual(parsed.mapsMonthlyInr, 0, 'mapsMonthlyInr must match doc: ₹0 (inside 70k free cap)');
       assert.strictEqual(parsed.smsMonthlyInr, 8250, 'smsMonthlyInr must match doc: ₹8,250 (DLT route)');
       assert.strictEqual(parsed.smsDirectFirebaseMonthlyInr, 216082, 'smsDirectFirebaseMonthlyInr must match doc: ₹2,16,082');
-      assert.strictEqual(parsed.totalPilotMonthlyInr, 59006, 'totalPilotMonthlyInr must match doc: ₹59,006');
-      assert.strictEqual(parsed.combinedDevAndProdMonthlyInr, 63639, 'combinedDevAndProdMonthlyInr must match doc: ₹63,639');
+      assert.strictEqual(parsed.totalPilotMonthlyInr, 61073, 'totalPilotMonthlyInr must match doc: ₹61,073');
+      assert.strictEqual(parsed.combinedDevAndProdMonthlyInr, 67429, 'combinedDevAndProdMonthlyInr must match doc: ₹67,429');
 
       assert.ok(parsed.ceilings, 'Must include ceilings object');
       assert.strictEqual(parsed.ceilings.devCeilingConfigured, false, 'devCeilingConfigured must be false by default');

@@ -494,6 +494,109 @@ CREATE TABLE IF NOT EXISTS delivery_leg_stops (
     CONSTRAINT chk_stop_status CHECK (status IN ('PENDING', 'ARRIVED', 'COMPLETED', 'FAILED'))
 );
 
+-- 6B. PASSENGER MOBILITY, PARCEL COURIER & HIRE-DRIVER BOOKINGS
+CREATE TABLE IF NOT EXISTS rides (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ride_number VARCHAR(50) UNIQUE NOT NULL,
+    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    partner_id UUID REFERENCES partners(id) ON DELETE SET NULL,
+    vehicle_id UUID REFERENCES vehicles(id) ON DELETE SET NULL,
+    city_id UUID NOT NULL REFERENCES cities(id) ON DELETE RESTRICT,
+    zone_id UUID REFERENCES zones(id) ON DELETE SET NULL,
+    ride_type VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'REQUESTED',
+    pickup_address TEXT NOT NULL,
+    pickup_location geometry(Point, 4326) NOT NULL,
+    drop_address TEXT NOT NULL,
+    drop_location geometry(Point, 4326) NOT NULL,
+    start_otp VARCHAR(6) NOT NULL,
+    estimated_distance_km DECIMAL(8,2) NOT NULL,
+    actual_distance_km DECIMAL(8,2),
+    estimated_duration_minutes INTEGER NOT NULL,
+    actual_duration_minutes INTEGER,
+    fare_base_inr DECIMAL(10,2) NOT NULL,
+    fare_distance_inr DECIMAL(10,2) NOT NULL,
+    fare_time_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    surge_multiplier DECIMAL(4,2) NOT NULL DEFAULT 1.0,
+    platform_fee_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tax_total_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    discount_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_fare_inr DECIMAL(10,2) NOT NULL,
+    partner_payout_inr DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(32) NOT NULL DEFAULT 'ONLINE',
+    payment_status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_ride_status CHECK (status IN ('REQUESTED', 'OFFERED', 'ACCEPTED', 'ARRIVING', 'ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
+    CONSTRAINT chk_ride_type CHECK (ride_type IN ('BIKE', 'AUTO', 'CAB_ECONOMY', 'CAB_PREMIUM')),
+    CONSTRAINT chk_ride_payment_method CHECK (payment_method IN ('ONLINE', 'WALLET', 'CASH'))
+);
+
+CREATE TABLE IF NOT EXISTS parcels (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parcel_number VARCHAR(50) UNIQUE NOT NULL,
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    partner_id UUID REFERENCES partners(id) ON DELETE SET NULL,
+    city_id UUID NOT NULL REFERENCES cities(id) ON DELETE RESTRICT,
+    zone_id UUID REFERENCES zones(id) ON DELETE SET NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'CREATED',
+    pickup_address TEXT NOT NULL,
+    pickup_location geometry(Point, 4326) NOT NULL,
+    pickup_contact_name VARCHAR(100) NOT NULL,
+    pickup_contact_phone VARCHAR(20) NOT NULL,
+    drop_address TEXT NOT NULL,
+    drop_location geometry(Point, 4326) NOT NULL,
+    drop_contact_name VARCHAR(100) NOT NULL,
+    drop_contact_phone VARCHAR(20) NOT NULL,
+    package_category VARCHAR(64) NOT NULL DEFAULT 'PARCEL',
+    estimated_weight_kg DECIMAL(6,2) NOT NULL DEFAULT 1.00,
+    pickup_otp VARCHAR(6) NOT NULL,
+    delivery_otp VARCHAR(6) NOT NULL,
+    delivery_fee_inr DECIMAL(10,2) NOT NULL,
+    insurance_fee_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    platform_fee_inr DECIMAL(10,2) NOT NULL DEFAULT 5.00,
+    tax_total_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_amount_inr DECIMAL(10,2) NOT NULL,
+    partner_payout_inr DECIMAL(10,2) NOT NULL,
+    payment_status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_parcel_status CHECK (status IN ('CREATED', 'OFFERED', 'ACCEPTED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'RETURNED', 'CANCELLED'))
+);
+
+CREATE TABLE IF NOT EXISTS hire_driver_bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_number VARCHAR(50) UNIQUE NOT NULL,
+    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    partner_id UUID REFERENCES partners(id) ON DELETE SET NULL,
+    city_id UUID NOT NULL REFERENCES cities(id) ON DELETE RESTRICT,
+    status VARCHAR(32) NOT NULL DEFAULT 'BOOKED',
+    vehicle_transmission VARCHAR(32) NOT NULL DEFAULT 'MANUAL',
+    vehicle_model VARCHAR(100),
+    pickup_address TEXT NOT NULL,
+    pickup_location geometry(Point, 4326) NOT NULL,
+    booking_type VARCHAR(32) NOT NULL DEFAULT 'HOURLY',
+    duration_hours INTEGER NOT NULL DEFAULT 4,
+    scheduled_start_time TIMESTAMPTZ NOT NULL,
+    actual_start_time TIMESTAMPTZ,
+    actual_end_time TIMESTAMPTZ,
+    start_otp VARCHAR(6) NOT NULL,
+    end_otp VARCHAR(6) NOT NULL,
+    base_fee_inr DECIMAL(10,2) NOT NULL,
+    extra_hours_fee_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    night_allowance_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    platform_fee_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tax_total_inr DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    total_amount_inr DECIMAL(10,2) NOT NULL,
+    partner_payout_inr DECIMAL(10,2) NOT NULL,
+    payment_status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_hire_driver_status CHECK (status IN ('BOOKED', 'ASSIGNED', 'ARRIVED', 'STARTED', 'COMPLETED', 'CANCELLED')),
+    CONSTRAINT chk_hire_driver_transmission CHECK (vehicle_transmission IN ('MANUAL', 'AUTOMATIC')),
+    CONSTRAINT chk_hire_driver_type CHECK (booking_type IN ('HOURLY', 'ONE_WAY', 'OUTSTATION'))
+);
+
 -- 7. WALLETS, DOUBLE-ENTRY LEDGER, PAYMENTS & REFUNDS
 CREATE TABLE IF NOT EXISTS wallets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -510,6 +613,9 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     wallet_id UUID REFERENCES wallets(id) ON DELETE RESTRICT,
     sub_order_id UUID REFERENCES sub_orders(id) ON DELETE RESTRICT,
+    ride_id UUID REFERENCES rides(id) ON DELETE RESTRICT,
+    parcel_id UUID REFERENCES parcels(id) ON DELETE RESTRICT,
+    hire_driver_booking_id UUID REFERENCES hire_driver_bookings(id) ON DELETE RESTRICT,
     transaction_reference VARCHAR(100) NOT NULL,
     account_type VARCHAR(50) NOT NULL,
     direction VARCHAR(10) NOT NULL,
@@ -535,7 +641,10 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_group_id UUID NOT NULL REFERENCES order_groups(id) ON DELETE RESTRICT,
+    order_group_id UUID REFERENCES order_groups(id) ON DELETE RESTRICT,
+    ride_id UUID REFERENCES rides(id) ON DELETE RESTRICT,
+    parcel_id UUID REFERENCES parcels(id) ON DELETE RESTRICT,
+    hire_driver_booking_id UUID REFERENCES hire_driver_bookings(id) ON DELETE RESTRICT,
     gateway_name VARCHAR(32) NOT NULL DEFAULT 'RAZORPAY',
     gateway_order_id VARCHAR(100) NOT NULL,
     gateway_payment_id VARCHAR(100),
@@ -550,7 +659,8 @@ CREATE TABLE IF NOT EXISTS payments (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_payment_method CHECK (payment_method IN ('UPI', 'CARD', 'NETBANKING', 'WALLET', 'COD', 'SPLIT')),
-    CONSTRAINT chk_payment_status CHECK (status IN ('PENDING', 'AUTHORIZED', 'CAPTURED', 'FAILED', 'REFUNDED'))
+    CONSTRAINT chk_payment_status CHECK (status IN ('PENDING', 'AUTHORIZED', 'CAPTURED', 'FAILED', 'REFUNDED')),
+    CONSTRAINT chk_payment_source CHECK (order_group_id IS NOT NULL OR ride_id IS NOT NULL OR parcel_id IS NOT NULL OR hire_driver_booking_id IS NOT NULL)
 );
 
 CREATE TABLE IF NOT EXISTS refunds (

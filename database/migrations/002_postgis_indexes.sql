@@ -36,6 +36,24 @@ CREATE INDEX IF NOT EXISTS idx_delivery_leg_stops_location_gist
 CREATE INDEX IF NOT EXISTS idx_waitlist_entries_location_gist
     ON waitlist_entries USING gist (location);
 
+-- Multi-Vertical Passenger Mobility (Rides) Spatial GiST Indexes
+CREATE INDEX IF NOT EXISTS idx_rides_pickup_location_gist 
+    ON rides USING gist (pickup_location);
+
+CREATE INDEX IF NOT EXISTS idx_rides_drop_location_gist 
+    ON rides USING gist (drop_location);
+
+-- Multi-Vertical Courier (Parcels) Spatial GiST Indexes
+CREATE INDEX IF NOT EXISTS idx_parcels_pickup_location_gist 
+    ON parcels USING gist (pickup_location);
+
+CREATE INDEX IF NOT EXISTS idx_parcels_drop_location_gist 
+    ON parcels USING gist (drop_location);
+
+-- Multi-Vertical Designated Driver (Hire-Driver) Spatial GiST Index
+CREATE INDEX IF NOT EXISTS idx_hire_driver_pickup_location_gist 
+    ON hire_driver_bookings USING gist (pickup_location);
+
 -- Fast cart items lookup
 CREATE INDEX IF NOT EXISTS idx_cart_items_cart_id
     ON cart_items (cart_id);
@@ -131,4 +149,33 @@ CREATE INDEX IF NOT EXISTS idx_devices_user_active
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity 
     ON audit_logs (entity_type, entity_id, created_at DESC);
+
+-- 6. MULTI-VERTICAL (RIDES, PARCELS, HIRE-DRIVER) QUERY & AUDIT INDEXES
+CREATE INDEX IF NOT EXISTS idx_rides_customer_status 
+    ON rides (customer_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_rides_partner_status 
+    ON rides (partner_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_parcels_sender_status 
+    ON parcels (sender_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_parcels_partner_status 
+    ON parcels (partner_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_hire_driver_customer_status 
+    ON hire_driver_bookings (customer_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_hire_driver_partner_status 
+    ON hire_driver_bookings (partner_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_ride_id 
+    ON ledger_entries (ride_id);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_parcel_id 
+    ON ledger_entries (parcel_id);
+
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_booking_id 
+    ON ledger_entries (hire_driver_booking_id);
+
 

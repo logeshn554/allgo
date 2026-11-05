@@ -12,12 +12,33 @@ describe('System Architecture & Flow Specification Documentation Validation', ()
       'system-architecture.md',
       'fulfillment-engine.md',
       'partner-continuity.md',
+      'auth-and-authorization.md',
+      'domain-model-and-glossary.md',
+      'product-taxonomy-multi-vertical.md',
+      'financial-ledger-and-settlements.md',
+      'refunds-cancellations-cod.md',
+      'environments-and-tiering.md',
+      'observability-and-disaster-recovery.md',
+      'backup-restore-and-migrations.md',
     ];
 
     for (const doc of requiredDocs) {
       it(`should have documentation file: docs/architecture/${doc}`, () => {
         const filePath = path.join(DOCS_DIR, doc);
         assert.ok(fs.existsSync(filePath), `docs/architecture/${doc} must exist`);
+      });
+    }
+
+    const requiredSecurityDocs = [
+      'secrets-inventory.md',
+      'iam-and-service-accounts.md',
+      'threat-model-and-risk-register.md',
+    ];
+
+    for (const doc of requiredSecurityDocs) {
+      it(`should have documentation file: docs/security/${doc}`, () => {
+        const filePath = path.join(ROOT_DIR, 'docs/security', doc);
+        assert.ok(fs.existsSync(filePath), `docs/security/${doc} must exist`);
       });
     }
   });

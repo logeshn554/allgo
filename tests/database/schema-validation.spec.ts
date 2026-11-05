@@ -70,6 +70,9 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
         'order_events',
         'delivery_legs',
         'delivery_leg_stops',
+        'rides',
+        'parcels',
+        'hire_driver_bookings',
         'wallets',
         'ledger_entries',
         'payments',
@@ -91,12 +94,17 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
       }
     });
 
-    it('should configure PostGIS spatial types on zones, outlets, and partner locations', () => {
+    it('should configure PostGIS spatial types on zones, outlets, partner locations, and multi-vertical entities', () => {
       const filePath = path.join(MIGRATIONS_DIR, '001_initial_schema.sql');
       const sql = fs.readFileSync(filePath, 'utf-8');
 
       assert.match(sql, /geometry\s*\(\s*Polygon\s*(,\s*4326\s*)?\)/i, 'zones table must use PostGIS Polygon geometry with SRID 4326');
       assert.match(sql, /geometry\s*\(\s*Point\s*(,\s*4326\s*)?\)/i, 'outlets and partner location history must use PostGIS Point geometry with SRID 4326');
+      
+      // Multi-vertical spatial columns
+      assert.match(sql, /CREATE\s+TABLE[^\n]*rides[\s\S]*?pickup_location\s+geometry\(Point,\s*4326\)/i, 'rides must have pickup_location geometry(Point, 4326)');
+      assert.match(sql, /CREATE\s+TABLE[^\n]*parcels[\s\S]*?drop_location\s+geometry\(Point,\s*4326\)/i, 'parcels must have drop_location geometry(Point, 4326)');
+      assert.match(sql, /CREATE\s+TABLE[^\n]*hire_driver_bookings[\s\S]*?pickup_location\s+geometry\(Point,\s*4326\)/i, 'hire_driver_bookings must have pickup_location geometry(Point, 4326)');
     });
 
     it('should implement Section 5A order hierarchy, Section 5B jobs, and double-entry ledger constraints', () => {
@@ -139,6 +147,9 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
       // GiST spatial indexes
       assert.match(sql, /USING\s+gist\s*\([^)]*polygon[^)]*\)/i, 'Must create GiST spatial index on zones polygon');
       assert.match(sql, /USING\s+gist\s*\([^)]*location[^)]*\)/i, 'Must create GiST spatial index on spatial location column');
+      assert.match(sql, /idx_rides_pickup_location_gist/i, 'Must create GiST index on rides pickup location');
+      assert.match(sql, /idx_parcels_drop_location_gist/i, 'Must create GiST index on parcels drop location');
+      assert.match(sql, /idx_hire_driver_pickup_location_gist/i, 'Must create GiST index on hire_driver pickup location');
 
       // Composite B-Tree indexes for dispatch and ordering
       assert.match(sql, /CREATE\s+INDEX[\s\S]*?ON\s+partner_jobs/i, 'Must index partner_jobs for dispatch querying');
