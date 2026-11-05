@@ -19,6 +19,20 @@ describe('Task 7: Itemized Monthly INR Cost Model & Budget Ceiling Validation', 
     });
   });
 
+  describe('Official Documentation Links & Price Verification', () => {
+    it('should include official Google Cloud, Google Maps, and Firebase pricing links', () => {
+      assert.ok(fs.existsSync(COST_DOC_PATH));
+      const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
+
+      assert.match(content, /cloud\.google\.com\/sql\/pricing/i, 'Must link to Cloud SQL pricing page');
+      assert.match(content, /cloud\.google\.com\/memorystore\/docs\/redis\/pricing/i, 'Must link to Redis pricing page');
+      assert.match(content, /cloud\.google\.com\/run\/pricing/i, 'Must link to Cloud Run pricing page');
+      assert.match(content, /developers\.google\.com\/maps\/documentation\/routes/i, 'Must link to Routes API billing page');
+      assert.match(content, /firebase\.google\.com\/pricing/i, 'Must link to Firebase pricing page');
+      assert.match(content, /\[UNVERIFIED/i, 'Must flag unverified items explicitly');
+    });
+  });
+
   describe('GCP Infrastructure Itemized Costs in asia-south1 (Mumbai)', () => {
     it('should document dev environment line items with overnight scheduler shutdown savings', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH), 'Cost doc must exist to validate dev costs');
@@ -26,7 +40,7 @@ describe('Task 7: Itemized Monthly INR Cost Model & Budget Ceiling Validation', 
 
       // Region & USD/INR baseline
       assert.match(content, /asia-south1|mumbai/i, 'Must specify asia-south1 (Mumbai) pricing');
-      assert.match(content, /8[45]/, 'Must document USD to INR exchange rate baseline (~84-85 INR/USD)');
+      assert.match(content, /8[56]/, 'Must document USD to INR exchange rate baseline (~85-86 INR/USD)');
 
       // Dev line items
       assert.match(content, /Cloud SQL/i, 'Must include Cloud SQL in dev breakdown');
@@ -66,7 +80,7 @@ describe('Task 7: Itemized Monthly INR Cost Model & Budget Ceiling Validation', 
 
       // Routes API pricing
       assert.match(content, /Routes API|ComputeRoutes/i, 'Must reference Routes API / ComputeRoutes');
-      assert.match(content, /\$5(?:\.00)?\s*\/\s*1,?000|₹425\s*\/\s*1,?000/i, 'Must document Routes API list price ($5/1k or ~₹425/1k)');
+      assert.match(content, /\$5(?:\.00)?\s*\/\s*1,?000|₹430\s*\/\s*1,?000/i, 'Must document Routes API list price ($5/1k or ~₹430/1k)');
 
       // Approach A (Optimized)
       assert.match(content, /Approach A|Optimized/i, 'Must identify Approach A / Single-call architecture');
@@ -144,10 +158,10 @@ describe('Task 7: Itemized Monthly INR Cost Model & Budget Ceiling Validation', 
       assert.ok(typeof parsed.mapsMonthlyInr === 'number' && parsed.mapsMonthlyInr >= 0, 'mapsMonthlyInr must be a valid number');
       assert.ok(typeof parsed.smsMonthlyInr === 'number' && parsed.smsMonthlyInr >= 0, 'smsMonthlyInr must be a valid number');
       assert.ok(parsed.ceilings, 'Must include ceilings object');
-      assert.ok(typeof parsed.ceilings.devCeilingInr === 'number', 'ceilings.devCeilingInr must be numeric');
-      assert.ok(typeof parsed.ceilings.prodCeilingInr === 'number', 'ceilings.prodCeilingInr must be numeric');
-      assert.ok(typeof parsed.ceilings.mapsCeilingInr === 'number', 'ceilings.mapsCeilingInr must be numeric');
-      assert.ok(typeof parsed.ceilings.smsCeilingInr === 'number', 'ceilings.smsCeilingInr must be numeric');
+      assert.strictEqual(parsed.ceilings.devCeilingToken, 'Rs [X]');
+      assert.strictEqual(parsed.ceilings.prodCeilingToken, 'Rs [Y]');
+      assert.strictEqual(parsed.ceilings.mapsCeilingToken, 'Rs [Z]');
+      assert.strictEqual(parsed.ceilings.smsCeilingToken, 'Rs [W]');
       assert.ok(parsed.thresholdStatus, 'Must include thresholdStatus object');
       assert.ok(typeof parsed.exchangeRateUsdInr === 'number', 'exchangeRateUsdInr must be numeric');
     });

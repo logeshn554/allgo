@@ -5,6 +5,9 @@ info:
   description: >-
     Authoritative OpenAPI 3.1.0 specification for AllGo multi-vertical on-demand
     delivery and mobility platform microservices (api, dispatch, webhooks).
+  license:
+    name: Proprietary
+    identifier: Proprietary
   contact:
     name: AllGo Platform Engineering
     email: engineering@allgo.in
@@ -35,6 +38,7 @@ tags:
 paths:
   /v1/auth/session:
     post:
+      operationId: createAuthSession
       tags:
         - auth
       summary: Exchange Firebase ID token for AllGo session tokens
@@ -63,6 +67,8 @@ paths:
 
   /v1/zones/serviceable:
     get:
+      operationId: getServiceableZones
+      security: []
       tags:
         - zones
       summary: Retrieve active serviceable zones
@@ -117,6 +123,8 @@ paths:
 
   /v1/merchants/{id}/catalog:
     get:
+      operationId: getMerchantCatalog
+      security: []
       tags:
         - merchants
       summary: Retrieve localized catalog for a merchant outlet
@@ -154,6 +162,7 @@ paths:
 
   /v1/checkout/quote:
     post:
+      operationId: createCheckoutQuote
       tags:
         - checkout
       summary: Generate ephemeral checkout quote with 10-minute price-lock
@@ -187,6 +196,7 @@ paths:
 
   /v1/checkout/pay:
     post:
+      operationId: processCheckoutPayment
       tags:
         - checkout
       summary: Create order group and initiate payment order
@@ -227,6 +237,7 @@ paths:
 
   /v1/orders/{orderGroupId}:
     get:
+      operationId: getOrderGroup
       tags:
         - orders
       summary: Retrieve order group hierarchy with sub-orders and delivery legs
@@ -255,6 +266,7 @@ paths:
 
   /v1/orders/{orderGroupId}/sub-orders/{subOrderId}/cancel:
     post:
+      operationId: cancelSubOrder
       tags:
         - orders
       summary: Partially cancel an individual merchant sub-order
@@ -302,6 +314,7 @@ paths:
 
   /v1/partner/mode:
     put:
+      operationId: updatePartnerMode
       tags:
         - partner
       summary: Switch partner operational mode with mutual exclusion check
@@ -339,6 +352,7 @@ paths:
 
   /v1/partner/jobs/feed:
     get:
+      operationId: getPartnerJobsFeed
       tags:
         - partner
       summary: Retrieve unified job-type-agnostic dispatch feed
@@ -383,9 +397,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/PartnerJob'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /v1/partner/jobs/{id}/accept:
     post:
+      operationId: acceptPartnerJob
       tags:
         - partner
       summary: Accept offered dispatch job within 20s timeout window
@@ -424,6 +441,7 @@ paths:
 
   /v1/partner/jobs/{id}/step:
     post:
+      operationId: executePartnerJobStep
       tags:
         - partner
       summary: Transition lifecycle step for an active job
@@ -462,6 +480,7 @@ paths:
 
   /v1/webhooks/razorpay:
     post:
+      operationId: handleRazorpayWebhook
       tags:
         - webhooks
       summary: Inbound Razorpay webhook callback with signature verification

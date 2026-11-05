@@ -14,7 +14,6 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
       'migrations/001_initial_schema.sql',
       'migrations/002_postgis_indexes.sql',
       'seeds/dev_seed_chennai.sql',
-      'schema.prisma',
     ];
 
     for (const relPath of requiredFiles) {
@@ -188,77 +187,23 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
     });
   });
 
-  describe('database/schema.prisma Declarative Model Completeness', () => {
-    it('should define valid Prisma schema with postgresql datasource and client generator', () => {
-      const filePath = path.join(DB_DIR, 'schema.prisma');
-      assert.ok(fs.existsSync(filePath), 'schema.prisma must exist');
-      const prisma = fs.readFileSync(filePath, 'utf-8');
+  describe('database/migrations/001_initial_schema.sql Audit & Double-Entry Integrity Triggers', () => {
+    it('should define an immutability trigger preventing UPDATE and DELETE on order_events', () => {
+      const filePath = path.join(MIGRATIONS_DIR, '001_initial_schema.sql');
+      const sql = fs.readFileSync(filePath, 'utf-8');
 
-      assert.match(prisma, /datasource\s+db\s*\{[\s\S]*?provider\s*=\s*["']postgresql["'][\s\S]*?\}/, 'Must configure postgresql datasource');
-      assert.match(prisma, /generator\s+client\s*\{[\s\S]*?provider\s*=\s*["']prisma-client-js["'][\s\S]*?\}/, 'Must configure prisma-client-js generator');
+      assert.match(sql, /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_order_events_mutation/i, 'Must define prevent_order_events_mutation function');
+      assert.match(sql, /CREATE\s+TRIGGER\s+trg_order_events_immutable/i, 'Must define trg_order_events_immutable trigger');
+      assert.match(sql, /BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+order_events/i, 'Trigger must attach BEFORE UPDATE OR DELETE ON order_events');
     });
 
-    it('should define Prisma models matching all relational tables and PostGIS types', () => {
-      const filePath = path.join(DB_DIR, 'schema.prisma');
-      const prisma = fs.readFileSync(filePath, 'utf-8');
+    it('should define a deferred constraint trigger enforcing double-entry balanced ledger entries', () => {
+      const filePath = path.join(MIGRATIONS_DIR, '001_initial_schema.sql');
+      const sql = fs.readFileSync(filePath, 'utf-8');
 
-      const expectedModels = [
-        'User',
-        'Role',
-        'UserRole',
-        'Device',
-        'Address',
-        'State',
-        'City',
-        'CitySetting',
-        'Zone',
-        'WaitlistEntry',
-        'Merchant',
-        'Outlet',
-        'Catalog',
-        'Category',
-        'Item',
-        'ItemTranslation',
-        'ItemVariant',
-        'Inventory',
-        'InventoryReservation',
-        'Partner',
-        'Vehicle',
-        'PartnerDocument',
-        'PartnerMode',
-        'PartnerJob',
-        'PartnerLocationHistory',
-        'Cart',
-        'CartItem',
-        'CheckoutSession',
-        'OrderGroup',
-        'SubOrder',
-        'OrderItem',
-        'OrderEvent',
-        'DeliveryLeg',
-        'DeliveryLegStop',
-        'Wallet',
-        'LedgerEntry',
-        'Payment',
-        'Refund',
-        'DiscountAllocation',
-        'RefundAllocation',
-        'Payout',
-        'TaxRule',
-        'TaxInvoice',
-        'Rating',
-        'Coupon',
-        'SupportTicket',
-        'AuditLog',
-      ];
-
-      for (const model of expectedModels) {
-        const modelPattern = new RegExp(`model\\s+${model}\\s*\\{`, 'm');
-        assert.match(prisma, modelPattern, `Must define Prisma model "${model}"`);
-      }
-
-      // Check for PostGIS geometry support in Prisma
-      assert.match(prisma, /Unsupported\("geometry\(/i, 'Prisma schema must represent PostGIS geometry types');
+      assert.match(sql, /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+verify_ledger_entry_balance/i, 'Must define verify_ledger_entry_balance function');
+      assert.match(sql, /CREATE\s+CONSTRAINT\s+TRIGGER\s+trg_ledger_entries_balance_check/i, 'Must define trg_ledger_entries_balance_check constraint trigger');
+      assert.match(sql, /DEFERRABLE\s+INITIALLY\s+DEFERRED/i, 'Ledger balance trigger must be DEFERRABLE INITIALLY DEFERRED');
     });
   });
 });

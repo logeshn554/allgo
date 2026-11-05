@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the end-to-end authentication infrastructure (Firebase Phone OTP exchange, RS256 JWT session issuance, refresh token rotation) and scaffold the three Flutter mobile applications (Customer, Partner, Merchant) using a shared design system and bilingual localization (Tamil and English).
+**Goal:** Implement the end-to-end authentication infrastructure (Firebase Phone OTP exchange, RS256 JWT session issuance, refresh token rotation) and scaffold the three Flutter mobile applications (Customer, Partner, Merchant) for `[APP NAME / PACKAGE]` using a shared design system and bilingual localization (Tamil and English).
+
+**Platform Execution Strategy:** **Android First.** Android builds, emulators (AVD API 34+), and APK generation are prioritized directly on the development host. iOS builds and platform-specific configurations are planned to be handled later through a dedicated macOS workstation or cloud CI/CD pipelines (e.g., GitHub Actions / Codemagic / Xcode Cloud).
 
 **Architecture:** A centralized NestJS authentication service (`apps/api`) verifies Firebase ID tokens, checks user roles against PostgreSQL 15, and issues asymmetric RS256 session tokens with Redis-backed session management. On mobile, a modular Flutter architecture (`mobile/packages/allgo_ui`, `mobile/packages/allgo_auth`) provides reusable design tokens, components, and authenticated network interceptors to three distinct app shells (`customer`, `partner`, `merchant`).
 
-**Tech Stack:** NestJS, Firebase Admin SDK, PostgreSQL 15 (Prisma), Memorystore Redis 7.0, RS256 JWT (`jose`), Flutter 3.29+ / Dart 3.7+, Flutter Riverpod 2.6+, Dio 5.7+, `flutter_secure_storage`, `flutter_localizations` (ARB: `en`, `ta`).
+**Tech Stack:** NestJS, Firebase Admin SDK, PostgreSQL 15, Memorystore Redis 7.0, RS256 JWT (`jose`), Flutter 3.29+ / Dart 3.7+, Flutter Riverpod 2.6+, Dio 5.7+, `flutter_secure_storage`, `flutter_localizations` (ARB: `en`, `ta`).
 
 **Spec:** `delivery-super-app-prompt.md`, `docs/design-decisions.md`, `docs/api/openapi.yaml`, `docs/security/secrets-inventory.md`.
 
@@ -16,52 +18,51 @@
 
 Before Phase 1 implementation code can be executed on physical devices or emulators, the project owner must prepare the following accounts and environment tools:
 
-### 1. Developer Workstation Tooling
-- [ ] **Flutter SDK:** Install Flutter `3.29.x` (channel stable) with Dart `3.7.x`. Verify with `flutter doctor -v`.
-- [ ] **Android Development Tooling:**
-  - Android Studio Ladybug (2024.2.1+) or newer.
+### 1. Developer Workstation Tooling (Verified Official Releases)
+- [ ] **Flutter SDK:** Install Flutter `3.29.x` (stable channel) with Dart `3.7.x`. Verify with `flutter doctor -v`.
+  - *Official Release Documentation:* [https://docs.flutter.dev/release/archive](https://docs.flutter.dev/release/archive)
+- [ ] **Dart SDK:** Dart `3.7.x` (bundled with Flutter 3.29.x).
+  - *Official Release Documentation:* [https://dart.dev/get-dart/archive](https://dart.dev/get-dart/archive)
+- [ ] **Android Development Tooling (Android First Focus):**
+  - Android Studio Ladybug (2024.2.1+) or Meerkat (2024.3.1).
+    - *Official Release Documentation:* [https://developer.android.com/studio/releases](https://developer.android.com/studio/releases)
   - Android SDK Platform 34 (API 34) and 35.
   - Android SDK Build-Tools 34.0.0.
   - OpenJDK 17 (`JAVA_HOME` pointing to JDK 17).
   - Android Virtual Device (AVD) with Google Play Services enabled (API 34+).
-- [ ] **iOS Development Tooling (macOS required for iOS builds):**
-  - Xcode 16.x with Command Line Tools (`xcode-select --install`).
-  - CocoaPods 1.16+ or Swift Package Manager support.
-  - iOS Simulator (iOS 17+ or 18+).
+- [ ] **iOS Development Tooling (Deferred to Mac / Cloud Build Phase):**
+  - Handled later through macOS workstation or cloud CI build. Xcode 16.x and CocoaPods 1.16+ required when compiling iOS targets.
 
 ### 2. Firebase Console Configuration
-- [ ] **Create Firebase Project:** Create project `allgo-dev` (or production project) in [Firebase Console](https://console.firebase.google.com).
+- [ ] **Create Firebase Project:** Create development project in [Firebase Console](https://console.firebase.google.com).
 - [ ] **Enable Phone Authentication:**
   - Navigate to **Authentication** -> **Sign-in method** -> enable **Phone**.
   - Configure test phone numbers for local development (e.g., `+91 98765 43210` with OTP `123456`) to avoid SMS carrier costs during routine developer testing.
-- [ ] **Register Mobile Apps:**
-  - **Customer App:** Android package `in.allgo.customer`, iOS bundle ID `in.allgo.customer`.
-  - **Partner App:** Android package `in.allgo.partner`, iOS bundle ID `in.allgo.partner`.
-  - **Merchant App:** Android package `in.allgo.merchant`, iOS bundle ID `in.allgo.merchant`.
+- [ ] **Register Mobile Apps with Real App Name & Package ID `[APP NAME / PACKAGE]`:**
+  - **Customer App:** Android package `[APP NAME / PACKAGE].customer` (iOS bundle ID: `[APP NAME / PACKAGE].customer`)
+  - **Partner App:** Android package `[APP NAME / PACKAGE].partner` (iOS bundle ID: `[APP NAME / PACKAGE].partner`)
+  - **Merchant App:** Android package `[APP NAME / PACKAGE].merchant` (iOS bundle ID: `[APP NAME / PACKAGE].merchant`)
 - [ ] **Configure Android SHA Fingerprints:**
   - Extract debug keystore SHA-1 and SHA-256 (`keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`).
   - Add SHA-1 and SHA-256 to each registered Android app in Firebase Project Settings (required for Phone Auth SMS verification and Play Integrity).
 - [ ] **Download Firebase Configuration Files:**
-  - `google-services.json` for Android applications.
-  - `GoogleService-Info.plist` for iOS applications.
+  - `google-services.json` placed into Android application directories.
 - [ ] **Generate Firebase Admin SDK Service Account Key:**
   - Navigate to **Project Settings** -> **Service Accounts** -> **Generate new private key**.
-  - Save as `secrets/firebase-service-account.json` (covered by `.gitignore`).
-- [ ] **Firebase App Check (Production Readiness):**
-  - Register Play Integrity for Android.
-  - Register DeviceCheck / App Attest for iOS.
+  - Save as `secrets/firebase-service-account.json`.
+  - **Git Leak Verification:** Confirmed that `secrets/` is explicitly listed in `.gitignore` to prevent any credential commit.
+- [ ] **Firebase App Check (Android First):**
+  - Register Play Integrity for Android package IDs `[APP NAME / PACKAGE].*`.
   - Configure enforcement mode for Authentication endpoints.
 
 ### 3. Google Maps Platform Credentials
 - [ ] **Enable Google Maps SDKs:**
   - Maps SDK for Android.
-  - Maps SDK for iOS.
   - Routes API.
   - Places API (New).
   - Geocoding API.
 - [ ] **Create API Keys:**
-  - Android API Key restricted to package names (`in.allgo.*`) and SHA-1 fingerprints.
-  - iOS API Key restricted to bundle identifiers (`in.allgo.*`).
+  - Android API Key restricted to package names (`[APP NAME / PACKAGE].*`) and SHA-1 fingerprints.
 
 ---
 
@@ -99,7 +100,7 @@ Before Phase 1 implementation code can be executed on physical devices or emulat
 - Test: `apps/api/test/auth/token-rotation.spec.ts`
 
 **Interfaces:**
-- Consumes: `docs/api/openapi.yaml` (`POST /v1/auth/session`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`), `database/schema.prisma` (`User`, `UserRole`, `Session`).
+- Consumes: `docs/api/openapi.yaml` (`POST /v1/auth/session`, `POST /v1/auth/refresh`, `POST /v1/auth/logout`), `database/migrations/001_initial_schema.sql` (`users`, `user_roles`, `devices`).
 - Produces: Authenticated session endpoint returning `{ accessToken, refreshToken, expiresIn, user: { id, phoneNumber, role, language } }`.
 
 - [ ] **Step 1: Write failing auth and token rotation tests**
@@ -116,7 +117,7 @@ Before Phase 1 implementation code can be executed on physical devices or emulat
 - [ ] **Step 3: Implement FirebaseAuthService, TokenService, and AuthController**
   - Implement `FirebaseAuthService`: Wraps Firebase Admin SDK to verify ID tokens (`verifyIdToken`).
   - Implement `TokenService`: Uses `jose` to generate RS256 JWT access tokens and cryptographically random refresh tokens stored in Redis with SHA-256 hashes.
-  - Implement `AuthService`: Orchestrates user lookup/creation in PostgreSQL via Prisma, role assignment, and session record creation.
+  - Implement `AuthService`: Orchestrates user lookup/creation in PostgreSQL, role assignment, and session record creation.
   - Implement `JwtAuthGuard` and `RolesGuard`: Validates bearer tokens and enforces role-based access control.
   - Implement `AuthController`: Exposes `POST /v1/auth/session`, `POST /v1/auth/refresh`, and `POST /v1/auth/logout`.
 
@@ -374,3 +375,4 @@ Before Phase 1 implementation code can be executed on physical devices or emulat
 - [x] **Type consistency:** Matches domain enums (`VerticalType`, `OrderStatus`, `FulfillmentMode`, `SupportedLanguages`) and OpenAPI schemas defined in Phase 0.
 - [x] **Review Focus:** 5 operational failure modes (token reuse, role elevation, network retry, bilingual locale switch, cold start navigation) addressed in task tests.
 - [x] **No premature execution:** Strictly plan-only; waits for user approval.
+

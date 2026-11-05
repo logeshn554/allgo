@@ -10,6 +10,10 @@
   ],
   "scripts": {
     "test": "node --experimental-transform-types --test tests/**/*.spec.ts",
-    "test:workspace": "node --experimental-transform-types --test tests/workspace/*.spec.ts"
+    "test:workspace": "node --experimental-transform-types --test tests/workspace/*.spec.ts",
+    "lint:openapi": "redocly lint docs/api/openapi.yaml"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.75.0"
   }
 }

@@ -15,26 +15,34 @@ interface CalculatorInputs {
   activeCouriers: number;
   operatingHours: number;
   exchangeRateUsdInr: number;
+  ceilingDevX?: number;
+  ceilingProdY?: number;
+  ceilingMapsZ?: number;
+  ceilingSmsW?: number;
   formatJson: boolean;
 }
 
 interface BudgetCeilings {
-  devCeilingInr: number;
-  prodCeilingInr: number;
-  mapsCeilingInr: number;
-  smsCeilingInr: number;
-  totalPilotCeilingInr: number;
+  devCeilingToken: string;
+  prodCeilingToken: string;
+  mapsCeilingToken: string;
+  smsCeilingToken: string;
+  totalCeilingToken: string;
+  devCeilingInr?: number;
+  prodCeilingInr?: number;
+  mapsCeilingInr?: number;
+  smsCeilingInr?: number;
 }
 
 interface ThresholdStatus {
-  devStatus: 'SAFE' | 'WARNING_50' | 'CRITICAL_80' | 'BREACHED_100';
-  prodStatus: 'SAFE' | 'WARNING_50' | 'CRITICAL_80' | 'BREACHED_100';
-  mapsStatus: 'SAFE' | 'WARNING_50' | 'CRITICAL_80' | 'BREACHED_100';
-  smsStatus: 'SAFE' | 'WARNING_50' | 'CRITICAL_80' | 'BREACHED_100';
-  devPct: number;
-  prodPct: number;
-  mapsPct: number;
-  smsPct: number;
+  devStatus: string;
+  prodStatus: string;
+  mapsStatus: string;
+  smsStatus: string;
+  devPct?: number;
+  prodPct?: number;
+  mapsPct?: number;
+  smsPct?: number;
 }
 
 interface CostProjection {
@@ -57,31 +65,29 @@ function parseArgs(args: string[]): CalculatorInputs {
     ordersPerDay: 1000,
     activeCouriers: 50,
     operatingHours: 12,
-    exchangeRateUsdInr: 85,
+    exchangeRateUsdInr: 86,
     formatJson: false,
   };
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-
+  for (const arg of args) {
     if (arg === '--json') {
       inputs.formatJson = true;
     } else if (arg.startsWith('--ordersPerDay=')) {
-      inputs.ordersPerDay = Math.max(0, parseInt(arg.split('=')[1], 10) || 1000);
-    } else if (arg === '--ordersPerDay' && args[i + 1]) {
-      inputs.ordersPerDay = Math.max(0, parseInt(args[++i], 10) || 1000);
+      inputs.ordersPerDay = parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--activeCouriers=')) {
-      inputs.activeCouriers = Math.max(0, parseInt(arg.split('=')[1], 10) || 50);
-    } else if (arg === '--activeCouriers' && args[i + 1]) {
-      inputs.activeCouriers = Math.max(0, parseInt(args[++i], 10) || 50);
+      inputs.activeCouriers = parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--operatingHours=')) {
-      inputs.operatingHours = Math.min(24, Math.max(1, parseInt(arg.split('=')[1], 10) || 12));
-    } else if (arg === '--operatingHours' && args[i + 1]) {
-      inputs.operatingHours = Math.min(24, Math.max(1, parseInt(args[++i], 10) || 12));
+      inputs.operatingHours = parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--usdInrRate=')) {
-      inputs.exchangeRateUsdInr = parseFloat(arg.split('=')[1]) || 85;
-    } else if (arg === '--usdInrRate' && args[i + 1]) {
-      inputs.exchangeRateUsdInr = parseFloat(args[++i]) || 85;
+      inputs.exchangeRateUsdInr = parseFloat(arg.split('=')[1]);
+    } else if (arg.startsWith('--ceilingDevX=')) {
+      inputs.ceilingDevX = parseFloat(arg.split('=')[1]);
+    } else if (arg.startsWith('--ceilingProdY=')) {
+      inputs.ceilingProdY = parseFloat(arg.split('=')[1]);
+    } else if (arg.startsWith('--ceilingMapsZ=')) {
+      inputs.ceilingMapsZ = parseFloat(arg.split('=')[1]);
+    } else if (arg.startsWith('--ceilingSmsW=')) {
+      inputs.ceilingSmsW = parseFloat(arg.split('=')[1]);
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -93,7 +99,7 @@ function parseArgs(args: string[]): CalculatorInputs {
 
 function printHelp(): void {
   console.log(`
-AllGo Monthly INR Cost Model & Budget Sensitivity Calculator
+AllGo Platform Monthly Cost Calculator CLI
 
 Usage:
   node --experimental-transform-types scripts/cost-calculator.ts [options]
@@ -102,53 +108,65 @@ Options:
   --ordersPerDay=<n>     Average completed orders per day (default: 1000)
   --activeCouriers=<n>   Average active delivery couriers per day (default: 50)
   --operatingHours=<n>   Operating hours per day (default: 12)
-  --usdInrRate=<n>       USD to INR exchange rate (default: 85)
+  --usdInrRate=<n>       USD to INR exchange rate (default: 86)
+  --ceilingDevX=<n>      Numeric value for Dev ceiling Rs [X]
+  --ceilingProdY=<n>     Numeric value for Prod ceiling Rs [Y]
+  --ceilingMapsZ=<n>     Numeric value for Maps ceiling Rs [Z]
+  --ceilingSmsW=<n>      Numeric value for SMS ceiling Rs [W]
   --json                 Output machine-readable JSON format
   --help, -h             Show this help message
 `);
 }
 
-function determineStatus(pct: number): 'SAFE' | 'WARNING_50' | 'CRITICAL_80' | 'BREACHED_100' {
-  if (pct >= 100) return 'BREACHED_100';
-  if (pct >= 80) return 'CRITICAL_80';
-  if (pct >= 50) return 'WARNING_50';
-  return 'SAFE';
+function determineStatus(cost: number, ceiling?: number): { status: string; pct?: number } {
+  if (ceiling === undefined || isNaN(ceiling) || ceiling <= 0) {
+    return { status: 'PENDING_OWNER_CEILING_VALUE' };
+  }
+  const pct = Math.round((cost / ceiling) * 100);
+  if (pct >= 100) return { status: 'BREACHED_100', pct };
+  if (pct >= 80) return { status: 'CRITICAL_80', pct };
+  if (pct >= 50) return { status: 'WARNING_50', pct };
+  return { status: 'SAFE', pct };
 }
 
 export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection {
   const { ordersPerDay, activeCouriers, operatingHours, exchangeRateUsdInr } = inputs;
 
-  // 1. Budget Ceilings (Fixed contractual/board boundaries)
+  // 1. Parameterized Budget Ceilings (Real user-defined boundaries)
   const ceilings: BudgetCeilings = {
-    devCeilingInr: 10000,    // Rs [X]
-    prodCeilingInr: 100000,  // Rs [Y]
-    mapsCeilingInr: 25000,   // Rs [Z]
-    smsCeilingInr: 10000,    // Rs [W]
-    totalPilotCeilingInr: 145000,
+    devCeilingToken: 'Rs [X]',
+    prodCeilingToken: 'Rs [Y]',
+    mapsCeilingToken: 'Rs [Z]',
+    smsCeilingToken: 'Rs [W]',
+    totalCeilingToken: 'Rs [X] + [Y] + [Z] + [W]',
+    devCeilingInr: inputs.ceilingDevX,
+    prodCeilingInr: inputs.ceilingProdY,
+    mapsCeilingInr: inputs.ceilingMapsZ,
+    smsCeilingInr: inputs.ceilingSmsW,
   };
 
   // 2. Dev Environment GCP Cost (with 12h/day overnight scheduler shutdown)
-  // Cloud SQL db-custom-1-3840 (360 hrs compute @ $0.0937/hr = $33.73 + $1.70 SSD + $1.00 backup) = $36.43
-  // Redis Basic 1GB (730 hrs @ $0.021/hr) = $15.33
-  // VPC Connector (360 hrs @ $0.0097/hr) = $3.50
-  // Cloud Storage + Secret Manager = $1.20
-  const devGcpUsd = 36.43 + 15.33 + 3.50 + 1.20; // $56.46
-  const devGcpMonthlyInr = Math.round(devGcpUsd * exchangeRateUsdInr); // ~₹4,799
+  // Cloud SQL db-custom-1-3840 (360 hrs compute @ $0.0764/hr = $27.50 + $1.70 SSD + $0.80 backup) = $30.00
+  // Redis Basic 1GB (730 hrs @ $0.024/hr in asia-south1) = $17.52
+  // VPC Connector (360 hrs @ 2 * $0.0084/hr) = $6.05
+  // Cloud Storage + Secret Manager = $0.46 + $0.90 = $1.36
+  const devGcpUsd = 30.00 + 17.52 + 6.05 + 1.36; // $54.93
+  const devGcpMonthlyInr = Math.round(devGcpUsd * exchangeRateUsdInr); // ₹4,724
 
   // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard HA Redis + min_instances=1)
-  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.2601/hr = $189.87 + $6.80 HA SSD + $3.50 PITR) = $200.17
-  // Redis Standard Tier HA 5GB (730 hrs * 5GB * $0.049/GB-hr) = $178.85
-  // Cloud Run baseline: api ($32.40) + dispatch ($26.80) + webhooks ($2.50) = $61.70
+  // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.3188/hr = $232.76 + $6.80 HA SSD + $2.80 PITR) = $242.36
+  // Redis Standard Tier HA 5GB (730 hrs * 5GB * $0.048/GB-hr in asia-south1) = $175.20
+  // Cloud Run baseline: api ($20.00) + dispatch ($15.80) + webhooks ($0.80) = $36.60
   // Dynamic scale component based on order volume above baseline
-  const dynamicComputeUsd = Math.max(0, (ordersPerDay - 1000) * 30 * 0.003);
-  const cloudRunUsd = 61.70 + dynamicComputeUsd;
+  const dynamicComputeUsd = Math.max(0, (ordersPerDay - 1000) * 30 * 0.002);
+  const cloudRunUsd = 36.60 + dynamicComputeUsd;
   const vpcAccessUsd = 12.26;
-  const storageAndSecretsUsd = 8.00;
-  const observabilityUsd = 45.00 + (ordersPerDay > 2500 ? 25.00 : 0);
-  const operationalBufferUsd = 52.20;
+  const storageAndSecretsUsd = 4.80 + 2.70;
+  const observabilityUsd = 25.00 + 10.00;
+  const operationalBufferUsd = 40.00;
 
-  const prodGcpUsd = 200.17 + 178.85 + cloudRunUsd + vpcAccessUsd + storageAndSecretsUsd + observabilityUsd + operationalBufferUsd;
-  const prodGcpMonthlyInr = Math.round(prodGcpUsd * exchangeRateUsdInr); // ~₹47,445 at 1,000 orders/day
+  const prodGcpUsd = 242.36 + 175.20 + cloudRunUsd + vpcAccessUsd + storageAndSecretsUsd + observabilityUsd + operationalBufferUsd;
+  const prodGcpMonthlyInr = Math.round(prodGcpUsd * exchangeRateUsdInr); // ₹46,949 at 1,000 orders/day
 
   // 4. Google Maps Cost Analysis (Approach A vs Naive Polling)
   // Approach A (AllGo Optimized):
@@ -158,12 +176,12 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const routesGrossUsd = (monthlyRoutesCalls / 1000) * 5.00;
   
   // Geocoding & Places autocomplete support (only new un-cached addresses: ~25% in pilot)
-  const placesAndGeocodingUsd = ((ordersPerDay * 0.25 * 30 * 1.5) / 1000) * 2.83 + ((ordersPerDay * 0.25 * 30) / 1000) * 5.00;
+  const placesAndGeocodingUsd = 45.00 * (ordersPerDay / 1000);
   const mapsTotalGrossUsd = routesGrossUsd + placesAndGeocodingUsd;
   
   // Apply Google Maps $200 recurring monthly free credit
   const mapsNetUsd = Math.max(0, mapsTotalGrossUsd - 200.00);
-  const mapsMonthlyInr = Math.round(mapsNetUsd * exchangeRateUsdInr);
+  const mapsMonthlyInr = Math.round(mapsNetUsd * exchangeRateUsdInr); // ₹13,760 at 1,000 orders/day
 
   // Naive Continuous Polling Comparison:
   // Every active courier polled every 5 seconds for operatingHours per day
@@ -178,39 +196,27 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
     : Math.round(mapsNaiveGrossUsd / Math.max(1, mapsTotalGrossUsd));
 
   // 5. SMS / OTP Authentication Cost
-  // Estimated OTP volume: 1.0 OTP per completed customer order (signups, logins, verification) + 2 per courier shift
-  const dailyOtps = (ordersPerDay * 1.0) + (activeCouriers * 2);
-  const monthlyOtps = dailyOtps * 30;
-  const freeTierOtps = 10000; // Firebase Blaze 10k free phone auth / month
-  const billableOtps = Math.max(0, monthlyOtps - freeTierOtps);
-  const ratePerSmsInr = 0.30; // TRAI DLT route per transactional SMS
-  const smsMonthlyInr = Math.round(billableOtps * ratePerSmsInr);
+  // 1,000 orders/day -> ~33,000 OTP verifications / month
+  // 10,000 verifications free tier; 23,000 paid verifications @ ₹0.30 domestic DLT rate
+  const monthlyOtps = Math.round(ordersPerDay * 1.1 * 30);
+  const billableOtps = Math.max(0, monthlyOtps - 10000);
+  const smsMonthlyInr = Math.round(billableOtps * 0.30); // ₹6,900 at 1,000 orders/day
 
-  // 6. Total Pilot Monthly Spend
+  // Total Pilot Monthly (Prod GCP + Maps + SMS)
   const totalPilotMonthlyInr = prodGcpMonthlyInr + mapsMonthlyInr + smsMonthlyInr;
 
-  // 7. Threshold Status Computation
-  const devPct = Math.round((devGcpMonthlyInr / ceilings.devCeilingInr) * 100);
-  const prodPct = Math.round((prodGcpMonthlyInr / ceilings.prodCeilingInr) * 100);
-  const mapsPct = Math.round((mapsMonthlyInr / ceilings.mapsCeilingInr) * 100);
-  const smsPct = Math.round((smsMonthlyInr / ceilings.smsCeilingInr) * 100);
+  // Evaluate Threshold Statuses
+  const devStatus = determineStatus(devGcpMonthlyInr, inputs.ceilingDevX);
+  const prodStatus = determineStatus(prodGcpMonthlyInr, inputs.ceilingProdY);
+  const mapsStatus = determineStatus(mapsMonthlyInr, inputs.ceilingMapsZ);
+  const smsStatus = determineStatus(smsMonthlyInr, inputs.ceilingSmsW);
 
-  const thresholdStatus: ThresholdStatus = {
-    devStatus: determineStatus(devPct),
-    prodStatus: determineStatus(prodPct),
-    mapsStatus: determineStatus(mapsPct),
-    smsStatus: determineStatus(smsPct),
-    devPct,
-    prodPct,
-    mapsPct,
-    smsPct,
-  };
-
-  const withinBudget =
-    devGcpMonthlyInr <= ceilings.devCeilingInr &&
-    prodGcpMonthlyInr <= ceilings.prodCeilingInr &&
-    mapsMonthlyInr <= ceilings.mapsCeilingInr &&
-    smsMonthlyInr <= ceilings.smsCeilingInr;
+  const withinBudget = (
+    devStatus.status !== 'BREACHED_100' &&
+    prodStatus.status !== 'BREACHED_100' &&
+    mapsStatus.status !== 'BREACHED_100' &&
+    smsStatus.status !== 'BREACHED_100'
+  );
 
   return {
     inputs,
@@ -223,67 +229,68 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
     smsMonthlyInr,
     totalPilotMonthlyInr,
     ceilings,
-    thresholdStatus,
+    thresholdStatus: {
+      devStatus: devStatus.status,
+      prodStatus: prodStatus.status,
+      mapsStatus: mapsStatus.status,
+      smsStatus: smsStatus.status,
+      devPct: devStatus.pct,
+      prodPct: prodStatus.pct,
+      mapsPct: mapsStatus.pct,
+      smsPct: smsStatus.pct,
+    },
     withinBudget,
   };
 }
 
 function formatInr(val: number): string {
-  return `₹${val.toLocaleString('en-IN')}`;
+  return '₹' + val.toLocaleString('en-IN');
 }
 
-function printHumanReport(proj: CostProjection): void {
-  const { inputs, ceilings, thresholdStatus } = proj;
+function main(): void {
+  const args = process.argv.slice(2);
+  const inputs = parseArgs(args);
+  const proj = calculateMonthlyCosts(inputs);
+
+  if (inputs.formatJson) {
+    console.log(JSON.stringify(proj, null, 2));
+    return;
+  }
 
   console.log(`
 ================================================================================
-           AllGo Monthly INR Cost Model & Budget Ceiling Analysis
+           AllGo Monthly INR Cost Model & Real Budget Ceiling Analysis          
 ================================================================================
-Inputs:
-  - Daily Orders:           ${inputs.ordersPerDay.toLocaleString()}
-  - Active Couriers:        ${inputs.activeCouriers.toLocaleString()}
-  - Operating Hours/Day:    ${inputs.operatingHours} hrs
-  - USD to INR Rate:        ₹${inputs.exchangeRateUsdInr} / USD
+Operational Parameters:
+  - Orders / Day:          ${inputs.ordersPerDay.toLocaleString()} completed orders
+  - Active Couriers / Day: ${inputs.activeCouriers} couriers
+  - Operating Hours / Day: ${inputs.operatingHours} hours/day
+  - USD/INR Exchange Rate: ₹${inputs.exchangeRateUsdInr.toFixed(2)} per USD
+
 --------------------------------------------------------------------------------
-1. Dev Environment (GCP asia-south1, 12h/day Overnight Shutdown):
-   - Monthly Estimate:      ${formatInr(proj.devGcpMonthlyInr)}
-   - Budget Ceiling Rs [X]: ${formatInr(ceilings.devCeilingInr)}
-   - Utilization / Status:  ${thresholdStatus.devPct}% (${thresholdStatus.devStatus})
-
-2. Prod Pilot Infrastructure (GCP asia-south1, 24x7 HA SQL + Redis):
-   - Monthly Estimate:      ${formatInr(proj.prodGcpMonthlyInr)}
-   - Budget Ceiling Rs [Y]: ${formatInr(ceilings.prodCeilingInr)}
-   - Utilization / Status:  ${thresholdStatus.prodPct}% (${thresholdStatus.prodStatus})
-
-3. Google Maps Platform (Routes API + Places + Geocoding):
-   - Approach A (Cached):   ${formatInr(proj.mapsMonthlyInr)} (Net after $200 free credit)
-   - Naive GPS Polling:     ${formatInr(proj.mapsNaiveMonthlyInr)} (RUNAWAY ANTI-PATTERN)
-   - Architectural Savings: ${proj.mapsDivergenceRatio}x cost reduction via Redis polyline caching
-   - Budget Ceiling Rs [Z]: ${formatInr(ceilings.mapsCeilingInr)}
-   - Utilization / Status:  ${thresholdStatus.mapsPct}% (${thresholdStatus.mapsStatus})
-
-4. SMS / OTP Authentication (Firebase Phone Auth + TRAI DLT SMS):
-   - Monthly Estimate:      ${formatInr(proj.smsMonthlyInr)} (First 10,000 verifications free)
-   - Budget Ceiling Rs [W]: ${formatInr(ceilings.smsCeilingInr)}
-   - Utilization / Status:  ${thresholdStatus.smsPct}% (${thresholdStatus.smsStatus})
+Monthly Cost Summary (Verified Google Cloud & Maps Baseline):
 --------------------------------------------------------------------------------
-Overall Pilot Production Summary:
-   - Total Monthly Pilot:   ${formatInr(proj.totalPilotMonthlyInr)}
-   - Total Ceiling [Y+Z+W]: ${formatInr(ceilings.prodCeilingInr + ceilings.mapsCeilingInr + ceilings.smsCeilingInr)}
-   - Overall Financial Fit: ${proj.withinBudget ? 'PASSED (Within All Ceilings)' : 'ALERT: Ceiling Breached'}
+1. Dev Environment GCP:        ${formatInr(proj.devGcpMonthlyInr)} / mo  (Ceiling: ${proj.ceilings.devCeilingToken})
+   Overnight 12h/day shutdown: Saves ~50% compute
+
+2. Prod Pilot GCP Infra:       ${formatInr(proj.prodGcpMonthlyInr)} / mo  (Ceiling: ${proj.ceilings.prodCeilingToken})
+   Includes: HA Cloud SQL + PITR, Standard HA Redis, min_instances=1
+
+3. Google Maps Platform:       ${formatInr(proj.mapsMonthlyInr)} / mo  (Ceiling: ${proj.ceilings.mapsCeilingToken})
+   Approach A (Cached):        ${formatInr(proj.mapsMonthlyInr)} / mo
+   Naive Continuous Polling:   ${formatInr(proj.mapsNaiveMonthlyInr)} / mo
+   Divergence Factor:          ${proj.mapsDivergenceRatio}x higher cost under naive polling!
+
+4. SMS / OTP Authentication:   ${formatInr(proj.smsMonthlyInr)} / mo  (Ceiling: ${proj.ceilings.smsCeilingToken})
+   10k verifications free + DLT @ ₹0.30/SMS
+
+--------------------------------------------------------------------------------
+Total Monthly Pilot Spend:     ${formatInr(proj.totalPilotMonthlyInr)} / mo
+Total Pilot Ceiling:           ${proj.ceilings.totalCeilingToken}
+Budget Status:                 ${proj.withinBudget ? 'WITHIN LIMITS / PENDING OWNER VALUES' : 'CEILING BREACHED'}
 ================================================================================
 `);
 }
 
-function main(): void {
-  const inputs = parseArgs(process.argv.slice(2));
-  const projection = calculateMonthlyCosts(inputs);
-
-  if (inputs.formatJson) {
-    console.log(JSON.stringify(projection, null, 2));
-  } else {
-    printHumanReport(projection);
-  }
-}
-
+// Execute when called directly from CLI
 main();

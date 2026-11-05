@@ -717,4 +717,55 @@ BEGIN
     END IF;
 END $$;
 
+-- 10. IMMUTABILITY ENFORCEMENT & INTEGRITY TRIGGERS
+
+-- Enforce append-only immutability on order_events audit trail
+CREATE OR REPLACE FUNCTION prevent_order_events_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'order_events is an immutable audit log: % operations are strictly prohibited', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_order_events_immutable ON order_events;
+CREATE TRIGGER trg_order_events_immutable
+BEFORE UPDATE OR DELETE ON order_events
+FOR EACH ROW
+EXECUTE FUNCTION prevent_order_events_mutation();
+
+-- Enforce double-entry accounting balance per transaction_reference
+-- Evaluated at COMMIT time (DEFERRABLE INITIALLY DEFERRED) so multi-leg journal entries can be inserted within a transaction
+CREATE OR REPLACE FUNCTION verify_ledger_entry_balance()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_net_balance DECIMAL(14,2);
+BEGIN
+    SELECT COALESCE(SUM(
+        CASE 
+            WHEN direction = 'DEBIT' THEN amount_inr 
+            WHEN direction = 'CREDIT' THEN -amount_inr 
+            ELSE 0.00 
+        END
+    ), 0.00)
+    INTO v_net_balance
+    FROM ledger_entries
+    WHERE transaction_reference = NEW.transaction_reference;
+
+    IF v_net_balance <> 0.00 THEN
+        RAISE EXCEPTION 'Ledger transaction % is unbalanced: net sum is % INR (must balance to 0.00)', 
+            NEW.transaction_reference, v_net_balance;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ledger_entries_balance_check ON ledger_entries;
+CREATE CONSTRAINT TRIGGER trg_ledger_entries_balance_check
+AFTER INSERT OR UPDATE ON ledger_entries
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION verify_ledger_entry_balance();
+
+
 
