@@ -767,5 +767,21 @@ DEFERRABLE INITIALLY DEFERRED
 FOR EACH ROW
 EXECUTE FUNCTION verify_ledger_entry_balance();
 
+-- Enforce append-only immutability on ledger_entries financial records
+-- Corrections must be posted as new reversing/compensating ledger entries
+CREATE OR REPLACE FUNCTION prevent_ledger_entries_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'ledger_entries is an immutable financial audit trail: % operations are strictly prohibited. Record corrections using compensating journal entries.', TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ledger_entries_immutable ON ledger_entries;
+CREATE TRIGGER trg_ledger_entries_immutable
+BEFORE UPDATE OR DELETE ON ledger_entries
+FOR EACH ROW
+EXECUTE FUNCTION prevent_ledger_entries_mutation();
+
+
 
 

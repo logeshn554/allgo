@@ -29,6 +29,7 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /cloud\.google\.com\/run\/pricing/i, 'Must link to Cloud Run pricing page');
       assert.match(content, /developers\.google\.com\/maps\/billing-credits/i, 'Must link to Google Maps billing credits');
       assert.match(content, /firebase\.google\.com\/pricing/i, 'Must link to Firebase pricing page');
+      assert.match(content, /cloud\.google\.com\/run\/docs\/configuring\/vpc-direct-vpc/i, 'Must link to Direct VPC egress doc');
       assert.match(content, /\[UNVERIFIED/i, 'Must flag unverified items explicitly');
     });
 
@@ -41,16 +42,33 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       
       // Memorystore Redis has NO free tier
       assert.match(content, /Memorystore[\s\S]*?NO\s*Free\s*Tier/i, 'Memorystore Redis must be explicitly marked as having NO free tier');
-      
-      // Firebase Phone Auth has 10,000 free verifications
-      assert.match(content, /Firebase[\s\S]*?10,?000[\s\S]*?FREE/i, 'Firebase Phone Auth must document 10,000 free verifications / month on Blaze');
-      
-      // Google Maps $200 recurring credit
-      assert.match(content, /\$200(?:\.00)?[\s\S]*?credit/i, 'Google Maps must document $200 recurring monthly credit');
+
+      // Direct VPC Egress has $0 infrastructure fee
+      assert.match(content, /Direct VPC Egress[\s\S]*?\$0\s*Infrastructure\s*Fee/i, 'Direct VPC Egress must be marked as $0 infrastructure fee');
+
+      // Firebase Phone Auth: No 10,000 free tier; 10 SMS/day (~300/mo) globally
+      assert.match(content, /Firebase Phone Auth[\s\S]*?NO\s*10,?000\s*Free\s*Tier/i, 'Firebase Phone Auth must state NO 10,000 free tier');
+      assert.match(content, /10\s*SMS\/day/i, 'Must document 10 SMS/day global free allowance');
+      assert.match(content, /\$0\.07/i, 'Must document $0.07 USD per SMS Identity Platform tariff for India');
+
+      // Google Maps per-SKU 70,000 free monthly caps under India pricing
+      assert.match(content, /70,?000\s*free\s*(?:Compute\s*)?Routes/i, 'Google Maps must document 70,000 free Routes calls under India pricing');
+      assert.match(content, /70,?000\s*free\s*Geocoding/i, 'Google Maps must document 70,000 free Geocoding calls');
+      assert.match(content, /70,?000\s*free\s*Places/i, 'Google Maps must document 70,000 free Places Autocomplete calls');
+      assert.match(content, /unlimited\s*free\s*mobile\s*map\s*loads/i, 'Maps SDK for Android/iOS must document unlimited free mobile map loads');
     });
   });
 
-  describe('Budget Ceilings Governance (Optional Configuration Variables)', () => {
+  describe('Exchange Rate & Budget Ceilings Governance', () => {
+    it('should document verified USD/INR exchange rate with date and source', () => {
+      assert.ok(fs.existsSync(COST_DOC_PATH));
+      const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
+
+      assert.match(content, /94\.40/i, 'Must use verified exchange rate 1 USD = ₹94.40 INR');
+      assert.match(content, /FBIL|Reserve Bank of India/i, 'Must record source (FBIL / Reserve Bank of India)');
+      assert.match(content, /November 2026/i, 'Must record baseline date (November 2026)');
+    });
+
     it('should treat budget ceilings as optional config variables empty by default without placeholders', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
@@ -71,13 +89,13 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
       assert.match(content, /asia-south1|mumbai/i, 'Must specify asia-south1 (Mumbai) pricing');
-      assert.match(content, /8[56]/, 'Must document USD to INR exchange rate baseline (~85-86 INR/USD)');
       assert.match(content, /Cloud SQL/i, 'Must include Cloud SQL in dev breakdown');
       assert.match(content, /db-custom-1-3840/i, 'Must specify dev database tier');
       assert.match(content, /Memorystore|Redis/i, 'Must include Memorystore Redis in dev breakdown');
-      assert.match(content, /Serverless VPC Access|VPC Connector/i, 'Must include Serverless VPC Access connector');
+      assert.match(content, /Direct VPC Egress/i, 'Must document Direct VPC Egress in dev breakdown');
       assert.match(content, /overnight|shutdown|scheduler/i, 'Must detail overnight scheduler shutdown mechanism');
       assert.match(content, /50%|half/i, 'Must reflect compute savings from scheduled shutdown (~50% compute reduction)');
+      assert.match(content, /₹4,633/i, 'Must calculate dev monthly spend as ₹4,633 / month');
     });
 
     it('should document prod pilot environment line items (HA SQL + PITR, Standard HA Redis, min_instances=1)', () => {
@@ -89,11 +107,14 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /PITR|Point-in-Time Recovery/i, 'Must model Point-in-Time Recovery (PITR) backup retention');
       assert.match(content, /Standard\s*(?:Tier|HA)?|5\s*GB/i, 'Must model Memorystore Redis Standard HA tier');
       assert.match(content, /min_instances\s*=\s*1/i, 'Must model Cloud Run min_instances=1 for api and dispatch');
+      assert.match(content, /Direct VPC Egress/i, 'Must model Direct VPC Egress ($0 setup fee)');
+      assert.match(content, /Cross-Zone Network Egress/i, 'Must model Cross-Zone Network Egress');
+      assert.match(content, /₹50,756/i, 'Must calculate prod pilot GCP spend as ₹50,756 / month');
     });
   });
 
-  describe('Google Maps Platform Routes API Architecture & Mathematical Comparison', () => {
-    it('should contrast Approach A (single call cached in Redis) vs continuous polling runaway costs', () => {
+  describe('Google Maps Platform Modernized India Pricing & Usage Model', () => {
+    it('should contrast Approach A (inside free cap) vs continuous polling runaway costs', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
@@ -101,27 +122,37 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       assert.match(content, /Approach A|Optimized/i, 'Must identify Approach A / Single-call architecture');
       assert.match(content, /100\s*m(?:eters?)?/i, 'Must mention 100m displacement threshold');
       assert.match(content, /60\s*s(?:econds?)?|cooldown|flapping/i, 'Must mention cooldown / flapping guard');
+      assert.match(content, /63,?000\s*(?:requests|calls)/i, 'Must document 63,000 monthly calls for 1,000 orders/day');
+      assert.match(content, /₹0(?:\.00)?\s*\/\s*month/i, 'Must document ₹0.00 / month under 70,000 free cap');
       assert.match(content, /polling|continuous|naive/i, 'Must contrast with naive continuous GPS polling');
-      assert.match(content, /runaway|divergence/i, 'Must explain the dramatic cost divergence/runaway risk');
+      assert.match(content, /12,?960,?000/i, 'Must calculate 12.96M calls for naive polling');
+      assert.match(content, /16,?11,?250|16\.1\s*Lakhs/i, 'Must document ~₹16.1 Lakhs runaway cost for naive polling');
     });
   });
 
-  describe('Firebase Phone Auth & SMS Pumping Defense', () => {
-    it('should model Indian SMS verification pricing and SMS pumping attack defense', () => {
+  describe('Firebase Phone Auth vs Domestic DLT SMS & Toll Fraud Defense', () => {
+    it('should contrast direct Firebase against Indian DLT SMS and detail toll fraud mitigation', () => {
       assert.ok(fs.existsSync(COST_DOC_PATH));
       const content = fs.readFileSync(COST_DOC_PATH, 'utf-8');
 
+      // Cost comparison
+      assert.match(content, /2,16,082/i, 'Must document ~₹2.16 Lakhs for direct Firebase phone authentication');
+      assert.match(content, /8,250/i, 'Must document ₹8,250 for domestic DLT SMS + Custom Token');
+      assert.match(content, /26x/i, 'Must highlight ~26x cost divergence between approaches');
+
+      // Toll fraud defense
       assert.match(content, /SMS pumping|toll fraud/i, 'Must detail SMS pumping / toll fraud attack vector');
       assert.match(content, /App Check/i, 'Must specify Firebase App Check mitigation');
       assert.match(content, /Play Integrity/i, 'Must specify Play Integrity for Android');
       assert.match(content, /DeviceCheck|App Attest/i, 'Must specify DeviceCheck or App Attest for iOS');
       assert.match(content, /reCAPTCHA Enterprise/i, 'Must specify reCAPTCHA Enterprise for web');
+      assert.match(content, /\+91/i, 'Must specify +91 Indian country code restriction');
       assert.match(content, /rate limit/i, 'Must specify rate limiting per IP / device / phone number');
     });
   });
 
   describe('CLI Cost Calculator Script (scripts/cost-calculator.ts)', () => {
-    it('should execute successfully with --json flag and return valid numeric cost estimates', () => {
+    it('should execute successfully with --json flag and return exact Revision 4.0.0 cost estimates', () => {
       assert.ok(fs.existsSync(CALCULATOR_SCRIPT_PATH));
 
       const cmd = 'node --experimental-transform-types scripts/cost-calculator.ts --json';
@@ -132,10 +163,14 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
         parsed = JSON.parse(output.trim());
       }, 'Script output with --json must be valid JSON');
 
-      assert.ok(typeof parsed.devGcpMonthlyInr === 'number' && parsed.devGcpMonthlyInr > 0, 'devGcpMonthlyInr must be positive');
-      assert.ok(typeof parsed.prodGcpMonthlyInr === 'number' && parsed.prodGcpMonthlyInr > 0, 'prodGcpMonthlyInr must be positive');
-      assert.ok(typeof parsed.mapsMonthlyInr === 'number' && parsed.mapsMonthlyInr >= 0, 'mapsMonthlyInr must be valid');
-      assert.ok(typeof parsed.smsMonthlyInr === 'number' && parsed.smsMonthlyInr >= 0, 'smsMonthlyInr must be valid');
+      assert.strictEqual(parsed.exchangeRateUsdInr, 94.40, 'Default exchange rate must be 94.40');
+      assert.strictEqual(parsed.devGcpMonthlyInr, 4633, 'devGcpMonthlyInr must match doc: ₹4,633');
+      assert.strictEqual(parsed.prodGcpMonthlyInr, 50756, 'prodGcpMonthlyInr must match doc: ₹50,756');
+      assert.strictEqual(parsed.mapsMonthlyInr, 0, 'mapsMonthlyInr must match doc: ₹0 (inside 70k free cap)');
+      assert.strictEqual(parsed.smsMonthlyInr, 8250, 'smsMonthlyInr must match doc: ₹8,250 (DLT route)');
+      assert.strictEqual(parsed.smsDirectFirebaseMonthlyInr, 216082, 'smsDirectFirebaseMonthlyInr must match doc: ₹2,16,082');
+      assert.strictEqual(parsed.totalPilotMonthlyInr, 59006, 'totalPilotMonthlyInr must match doc: ₹59,006');
+
       assert.ok(parsed.ceilings, 'Must include ceilings object');
       assert.strictEqual(parsed.ceilings.devCeilingConfigured, false, 'devCeilingConfigured must be false by default');
       assert.strictEqual(parsed.ceilings.prodCeilingConfigured, false, 'prodCeilingConfigured must be false by default');
@@ -164,10 +199,10 @@ describe('Task 7: Itemized Monthly INR Cost Model & Operational Estimates Valida
       const output = execSync(cmd, { cwd: ROOT_DIR, encoding: 'utf-8' });
 
       assert.match(output, /AllGo Platform Monthly Operational Cost Estimates/i, 'Should print human-readable header');
-      assert.match(output, /Dev Environment/i, 'Should include Dev Environment');
-      assert.match(output, /Prod Pilot/i, 'Should include Prod Pilot');
-      assert.match(output, /Google Maps/i, 'Should include Google Maps');
-      assert.match(output, /SMS \/ OTP/i, 'Should include SMS');
+      assert.match(output, /Dev Environment GCP/i, 'Should include Dev Environment GCP');
+      assert.match(output, /Prod Pilot GCP Infra/i, 'Should include Prod Pilot GCP Infra');
+      assert.match(output, /Google Maps Platform/i, 'Should include Google Maps Platform');
+      assert.match(output, /SMS \/ OTP Authentication/i, 'Should include SMS / OTP Authentication');
       assert.match(output, /₹|INR/i, 'Should format currency with INR or ₹ symbol');
     });
   });

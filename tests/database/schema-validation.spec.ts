@@ -205,5 +205,14 @@ describe('Database Schema, PostGIS Migrations & Dev Seed Validation', () => {
       assert.match(sql, /CREATE\s+CONSTRAINT\s+TRIGGER\s+trg_ledger_entries_balance_check/i, 'Must define trg_ledger_entries_balance_check constraint trigger');
       assert.match(sql, /DEFERRABLE\s+INITIALLY\s+DEFERRED/i, 'Ledger balance trigger must be DEFERRABLE INITIALLY DEFERRED');
     });
+
+    it('should define an immutability trigger preventing UPDATE and DELETE on ledger_entries', () => {
+      const filePath = path.join(MIGRATIONS_DIR, '001_initial_schema.sql');
+      const sql = fs.readFileSync(filePath, 'utf-8');
+
+      assert.match(sql, /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_ledger_entries_mutation/i, 'Must define prevent_ledger_entries_mutation function');
+      assert.match(sql, /CREATE\s+TRIGGER\s+trg_ledger_entries_immutable/i, 'Must define trg_ledger_entries_immutable trigger');
+      assert.match(sql, /BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+ledger_entries/i, 'Trigger must attach BEFORE UPDATE OR DELETE ON ledger_entries');
+    });
   });
 });
