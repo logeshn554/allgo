@@ -27,3 +27,4 @@ output "sa_worker_email" {
   description = "Email of sa-worker service account"
   value       = google_service_account.worker.email
 }
+

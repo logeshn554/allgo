@@ -47,3 +47,4 @@ variable "sms_quota_threshold_requests" {
   type        = number
   default     = 10000
 }
+

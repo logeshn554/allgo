@@ -85,3 +85,4 @@ resource "google_project_iam_member" "worker_roles" {
   role    = each.value
   member  = "serviceAccount:${google_service_account.worker.email}"
 }
+

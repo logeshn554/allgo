@@ -22,3 +22,4 @@ output "db_user" {
   description = "Username for application access"
   value       = google_sql_user.user.name
 }
+

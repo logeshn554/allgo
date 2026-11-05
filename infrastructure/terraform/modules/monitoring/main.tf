@@ -33,10 +33,13 @@ resource "google_billing_budget" "budget" {
     spend_basis       = "CURRENT_SPEND"
   }
 
-  all_updates_rule {
-    pubsub_topic                     = var.pubsub_budget_topic
-    monitoring_notification_channels = []
-    disable_default_iam_recipients   = false
+  dynamic "all_updates_rule" {
+    for_each = var.pubsub_budget_topic != null ? [var.pubsub_budget_topic] : []
+    content {
+      pubsub_topic                     = all_updates_rule.value
+      monitoring_notification_channels = []
+      disable_default_iam_recipients   = false
+    }
   }
 }
 
@@ -113,3 +116,4 @@ resource "google_cloud_scheduler_job" "overnight_shutdown" {
     }
   }
 }
+

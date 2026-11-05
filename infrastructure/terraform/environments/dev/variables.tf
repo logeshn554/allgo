@@ -28,3 +28,4 @@ variable "db_password" {
   sensitive   = true
   default     = "dev-insecure-db-password-replace-via-secretmanager"
 }
+

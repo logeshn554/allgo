@@ -11,3 +11,4 @@ output "service_names" {
     for k, v in google_cloud_run_v2_service.service : k => v.name
   }
 }
+

@@ -9,8 +9,6 @@ resource "google_sql_database_instance" "instance" {
   project             = var.project_id
   deletion_protection = var.deletion_protection
 
-  depends_on = [var.network_connection_dependency]
-
   settings {
     tier              = var.tier
     availability_type = var.availability_type
@@ -55,3 +53,4 @@ resource "google_sql_user" "user" {
   password = var.db_password
   project  = var.project_id
 }
+

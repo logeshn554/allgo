@@ -32,3 +32,4 @@ output "google_service_networking_connection_id" {
   description = "ID of the Service Networking connection"
   value       = google_service_networking_connection.private_vpc_connection.id
 }
+

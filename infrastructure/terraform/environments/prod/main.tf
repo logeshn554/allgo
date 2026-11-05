@@ -36,6 +36,7 @@ module "iam" {
 # 3. Cloud SQL PostgreSQL 15 (Prod: Regional HA, PITR enabled, db-custom-4-16384)
 module "cloudsql" {
   source                        = "../../modules/cloudsql"
+  depends_on                    = [module.vpc]
   project_id                    = var.project_id
   environment                   = "prod"
   region                        = var.region

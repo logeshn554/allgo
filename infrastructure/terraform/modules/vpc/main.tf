@@ -41,3 +41,4 @@ resource "google_vpc_access_connector" "connector" {
   min_instances = 2
   max_instances = 3
 }
+
