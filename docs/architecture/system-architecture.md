@@ -133,21 +133,18 @@ To prevent severe Google Maps platform cost runaway:
 
 ## 6. Database & Extension Compatibility (Cloud SQL)
 
-Facts verified against official Google Cloud SQL documentation:
-- **Database Engine Version:** PostgreSQL 15 (`POSTGRES_15`).
+Facts verified directly against official Google Cloud SQL documentation:
+- **Database Engine Version Range:** PostgreSQL 9.6, 10, 11, 12, 13, 14, 15, 16, 17, and 18.
   - *Official Source:* [Google Cloud SQL for PostgreSQL Database Versions](https://cloud.google.com/sql/docs/postgres/db-versions).
-  - Cloud SQL supports major versions 9.6 through 17. PostgreSQL 15 is selected as the production baseline for stability and compatibility.
+  - PostgreSQL 15 (`POSTGRES_15`) is selected as the production baseline. Its Regular Support runs until February 1, 2028, and Extended Support runs until February 1, 2031.
 - **PostGIS Extension Support:**
   - *Official Source:* [Supported PostgreSQL Extensions in Cloud SQL](https://cloud.google.com/sql/docs/postgres/extensions).
-  - Cloud SQL officially supports the following spatial extensions under PostgreSQL 15:
-    - `postgis` (Core spatial data types: geometry, geography, spatial indexing GiST/SP-GiST).
-    - `postgis_raster` (Raster spatial data types and functions).
-    - `postgis_topology` (Topology data types and functions).
-    - `address_standardizer` and `address_standardizer_data_us` (Rules-based address standardizer).
-  - *PostGIS Minor Version:* **[UNVERIFIED - exact minor build is managed automatically by Google Cloud maintenance releases for POSTGRES_15]**.
+  - PostGIS is supported across all major PostgreSQL versions on Cloud SQL. Installation requires executing `CREATE EXTENSION postgis;` using a database user granted the `cloudsqlsuperuser` role.
+  - The Cloud SQL PostGIS suite includes: `postgis`, `postgis_raster`, `postgis_sfcgal`, `postgis_tiger_geocoder`, `postgis_topology`, `address_standardizer`, `address_standardizer_data_us`, and `pgrouting`.
+  - *PostGIS Minor Version:* **[UNVERIFIED - Google Cloud documentation does not pin a single static minor version string; minor extension builds are managed and updated by Cloud SQL maintenance updates]**.
 - **Extension & Flag Verification:**
-  - `cloudsql.enable_pg_bigm`: **[UNVERIFIED - pg_bigm is not listed in Cloud SQL standard supported extensions table (https://cloud.google.com/sql/docs/postgres/extensions); Cloud SQL officially provides pg_trgm for text/trigram matching. Verify pg_bigm availability on target engine release before enabling or standardize on pg_trgm]**.
-  - `max_connections`: Cloud SQL dynamically computes default connections using `LEAST(DB_RAM_IN_MB / 14, 5000)` ([Google Cloud SQL Flags Reference](https://cloud.google.com/sql/docs/postgres/flags)). Static overrides (Dev: 100, Prod: 500) are valid flags in Terraform, but connection ceiling per instance size is **[UNVERIFIED - derived from RAM formula, must be benchmarked under connection pooler/PgBouncer]**.
+  - `cloudsql.enable_pg_bigm`: **[UNVERIFIED - pg_bigm is not listed in Cloud SQL standard supported extensions table (https://cloud.google.com/sql/docs/postgres/extensions); Cloud SQL officially provides pg_trgm for text/trigram matching. We standardize on pg_trgm for search indexing]**.
+  - `max_connections`: Cloud SQL dynamically computes default connections using `LEAST(DB_RAM_IN_MB / 14, 5000)` ([Google Cloud SQL Flags Reference](https://cloud.google.com/sql/docs/postgres/flags)). Custom overrides (Dev: 100, Prod: 500) can be configured via database flags, but exact connection ceiling per instance size without triggering memory pressure is **[UNVERIFIED - derived from RAM formula, must be benchmarked with PgBouncer connection pooling]**.
 
 ---
 
