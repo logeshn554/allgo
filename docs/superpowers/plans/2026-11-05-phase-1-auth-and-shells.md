@@ -8,7 +8,7 @@
 
 **Architecture:** A centralized NestJS authentication service (`apps/api`) verifies Firebase ID tokens, checks user roles against PostgreSQL 15, and issues asymmetric RS256 session tokens with Redis-backed session management. On mobile, a modular Flutter architecture (`mobile/packages/allgo_ui`, `mobile/packages/allgo_auth`) provides reusable design tokens, components, and authenticated network interceptors to three distinct app shells (`customer`, `partner`, `merchant`).
 
-**Tech Stack:** NestJS, Firebase Admin SDK, PostgreSQL 15, Memorystore Redis 7.0, RS256 JWT (`jose`), Flutter 3.29+ / Dart 3.7+, Flutter Riverpod 2.6+, Dio 5.7+, `flutter_secure_storage`, `flutter_localizations` (ARB: `en`, `ta`).
+**Tech Stack:** NestJS, Firebase Admin SDK (Local test phone numbers / Auth Emulator), Local PostgreSQL 15 + PostGIS (Docker), Local Redis 7.0 (Docker), RS256 JWT (`jose`), Flutter 3.29+ / Dart 3.7+ (Android First), Flutter Riverpod 2.6+, Dio 5.7+, `flutter_secure_storage`, `flutter_localizations` (ARB: `en`, `ta`). Zero cloud resources provisioned in Phase 1.
 
 **Spec:** `delivery-super-app-prompt.md`, `docs/design-decisions.md`, `docs/api/openapi.yaml`, `docs/security/secrets-inventory.md`.
 
@@ -68,11 +68,11 @@ Before Phase 1 implementation code can be executed on physical devices or emulat
 
 ## Global Constraints
 
+- **Zero Cloud Cost & Zero Cloud Resources in Phase 1:** All Phase 1 deliverables run 100% locally. PostgreSQL 15 with PostGIS and Redis 7 execute in local Docker containers. Authentication uses Firebase pre-configured test phone numbers (or the Firebase Auth emulator) that incur ₹0 SMS cost. **No cloud resources (Cloud Run, Cloud SQL, Memorystore) are provisioned in Phase 1.**
 - **Language Support:** Tamil (`ta`) and English (`en`) supported at launch across all apps; Hindi (`hi`) prepared in localization tables.
-- **Zero Real Secrets in Source Control:** All API keys, Firebase service accounts, and private keys loaded via environment variables or Secret Manager; `.gitignore` enforced.
+- **Zero Real Secrets in Source Control:** All API keys, Firebase service accounts, and private keys loaded via environment variables; `.gitignore` enforced (including `secrets/`).
 - **Asymmetric JWT Signing:** Access tokens signed via RS256 (`JWT_PRIVATE_KEY` on `api`, `JWT_PUBLIC_KEY` on `dispatch`); 15-minute access token TTL; 7-day refresh token TTL with single-use rotation.
 - **Zero Location Writes to Firestore:** Location pings stream strictly via WebSocket to Redis GEO; Firestore reserved solely for coarse status state transitions.
-- **No Unapproved Cloud Resources:** Development and testing proceed locally using mock providers, test phone numbers, and local SQLite/PostgreSQL.
 
 ---
 
@@ -88,7 +88,13 @@ Before Phase 1 implementation code can be executed on physical devices or emulat
 
 ### Task 1: Backend Authentication Service & Token Exchange (`apps/api`)
 
+**Zero-Cloud Execution Architecture:**
+- Spins up local `docker-compose.yml` containing PostgreSQL 15 + PostGIS (`postgis/postgis:15-3.3`) and Redis 7 (`redis:7-alpine`).
+- Zero cloud database or Redis provisioning; zero GCP billing incurred.
+- Firebase Phone login uses pre-registered free test phone numbers (e.g., `+91 98765 43210` with OTP `123456`) or the Firebase Auth Local Emulator (`firebase emulators:start --only auth`).
+
 **Files:**
+- Create: `docker-compose.yml` (Local PostGIS + Redis stack)
 - Create: `apps/api/src/auth/auth.module.ts`
 - Create: `apps/api/src/auth/auth.controller.ts`
 - Create: `apps/api/src/auth/auth.service.ts`
