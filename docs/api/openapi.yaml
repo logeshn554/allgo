@@ -1,0 +1,1266 @@
+openapi: 3.1.0
+info:
+  title: AllGo Multi-Vertical Super-App REST API
+  version: 1.0.0
+  description: >-
+    Authoritative OpenAPI 3.1.0 specification for AllGo multi-vertical on-demand
+    delivery and mobility platform microservices (api, dispatch, webhooks).
+  contact:
+    name: AllGo Platform Engineering
+    email: engineering@allgo.in
+servers:
+  - url: https://api.allgo.in
+    description: Core REST API microservice (apps/api) - Carts, Checkout, Catalog, Orders, Auth
+  - url: https://dispatch.allgo.in
+    description: Dispatch & Partner Continuity microservice (apps/dispatch) - Partner Mode, Jobs Feed, Steps
+  - url: https://webhooks.allgo.in
+    description: External Webhooks microservice (apps/webhooks) - Razorpay Inbound Callbacks
+
+tags:
+  - name: auth
+    description: Firebase authentication exchange and session lifecycle
+  - name: zones
+    description: Spatial serviceability and geographic boundary queries
+  - name: merchants
+    description: Merchant outlets and localized bilingual catalogs
+  - name: checkout
+    description: Section 5A unified cart, quote pricing lock, and payment execution
+  - name: orders
+    description: Order group hierarchy, sub-order tracking, and partial cancellations
+  - name: partner
+    description: Section 5B partner mode switcher, dispatch feeds, offer acceptance, and step transitions
+  - name: webhooks
+    description: Inbound third-party payment gateway callbacks (Razorpay)
+
+paths:
+  /v1/auth/session:
+    post:
+      tags:
+        - auth
+      summary: Exchange Firebase ID token for AllGo session tokens
+      description: >-
+        Authenticates a user via their Firebase ID token (derived from phone SMS OTP).
+        Issues an asymmetric-signed AllGo access JWT and refresh token.
+      security:
+        - FirebaseAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionExchangeRequest'
+      responses:
+        '200':
+          description: Session tokens and user profile successfully issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionExchangeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/zones/serviceable:
+    get:
+      tags:
+        - zones
+      summary: Retrieve active serviceable zones
+      description: >-
+        Returns all active PostGIS service zones. When query coordinates (lat, lng) are provided,
+        evaluates ST_Contains to return the specific enclosing serviceable zone.
+      parameters:
+        - name: latitude
+          in: query
+          required: false
+          description: WGS84 latitude coordinate
+          schema:
+            type: number
+            format: double
+            minimum: -90.0
+            maximum: 90.0
+        - name: longitude
+          in: query
+          required: false
+          description: WGS84 longitude coordinate
+          schema:
+            type: number
+            format: double
+            minimum: -180.0
+            maximum: 180.0
+        - name: city_slug
+          in: query
+          required: false
+          description: City identifier (e.g. chennai)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of serviceable zones
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - serviceable
+                  - zones
+                properties:
+                  serviceable:
+                    type: boolean
+                    description: True if the queried coordinate falls within an active zone
+                  zones:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ServiceableZone'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /v1/merchants/{id}/catalog:
+    get:
+      tags:
+        - merchants
+      summary: Retrieve localized catalog for a merchant outlet
+      description: >-
+        Retrieves active categories and items for the specified merchant outlet.
+        Supports Accept-Language header for Tamil (ta) and English (en) localized item names and descriptions.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Merchant outlet UUID
+          schema:
+            type: string
+            format: uuid
+        - name: Accept-Language
+          in: header
+          required: false
+          description: Requested language preference (ta for Tamil, en for English). Defaults to en.
+          schema:
+            type: string
+            default: en
+            enum:
+              - en
+              - ta
+              - hi
+      responses:
+        '200':
+          description: Merchant catalog with localized item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantCatalogResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/checkout/quote:
+    post:
+      tags:
+        - checkout
+      summary: Generate ephemeral checkout quote with 10-minute price-lock
+      description: >-
+        Section 5A Unified Cart & Quote: Computes item subtotals, packaging fees, platform fee,
+        and GST taxes for items across multiple merchants. Evaluates merchant proximity (1.5 km threshold)
+        to offer Mode A (SEPARATE) and Mode B (DELIVER_TOGETHER). Establishes soft inventory reservations with 10m TTL.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutQuoteRequest'
+      responses:
+        '201':
+          description: Quote generated and locked with 10-minute validity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          description: Inventory stockout or merchant currently paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/checkout/pay:
+    post:
+      tags:
+        - checkout
+      summary: Create order group and initiate payment order
+      description: >-
+        Section 5A Checkout Pay: Idempotently converts an active checkout_session into a persistent order_group,
+        sub-orders, and delivery legs. Creates a Razorpay payment order for the net payable amount.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Unique UUID idempotency key to prevent double charging on retry
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutPayRequest'
+      responses:
+        '200':
+          description: Order group created and Razorpay payment order initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutPayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '409':
+          description: Quote expired or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/orders/{orderGroupId}:
+    get:
+      tags:
+        - orders
+      summary: Retrieve order group hierarchy with sub-orders and delivery legs
+      description: >-
+        Section 5A Order Tracking: Retrieves the parent order_group container along with independent
+        sub_orders (merchant preparation states) and delivery_legs (courier tracking states).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderGroupId
+          in: path
+          required: true
+          description: UUID of the order group container
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Order group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderGroup'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/orders/{orderGroupId}/sub-orders/{subOrderId}/cancel:
+    post:
+      tags:
+        - orders
+      summary: Partially cancel an individual merchant sub-order
+      description: >-
+        Section 5A Partial Cancellation: Cancels a single sub-order within an order group if permitted
+        by merchant state. Triggers automated partial refund allocation to ORIGINAL_METHOD or WALLET.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orderGroupId
+          in: path
+          required: true
+          description: UUID of the parent order group
+          schema:
+            type: string
+            format: uuid
+        - name: subOrderId
+          in: path
+          required: true
+          description: UUID of the specific sub-order to cancel
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSubOrderRequest'
+      responses:
+        '200':
+          description: Sub-order cancelled and refund scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelSubOrderResponse'
+        '400':
+          description: Sub-order already past cancellation cutoff window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /v1/partner/mode:
+    put:
+      tags:
+        - partner
+      summary: Switch partner operational mode with mutual exclusion check
+      description: >-
+        Section 5B Partner Mode Switcher: Toggles partner mode between DELIVERIES_ONLY, RIDES_ONLY,
+        and ALL_JOBS. Enforces strict mutual exclusion (returns 409 Conflict if partner holds an active
+        conflicting delivery or passenger ride lock).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerModeSwitchRequest'
+      responses:
+        '200':
+          description: Mode successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerModeResponse'
+        '400':
+          description: Partner lacks required vehicle compliance or commercial permits for requested mode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - Partner currently has an active conflicting job lock (cannot switch to RIDES while delivering food)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/partner/jobs/feed:
+    get:
+      tags:
+        - partner
+      summary: Retrieve unified job-type-agnostic dispatch feed
+      description: >-
+        Section 5B Unified Dispatch Feed: Returns available nearby jobs across all enabled verticals
+        (delivery_leg, parcel, ride, hire_booking) matching the partner active mode and vertical lock.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: radius_km
+          in: query
+          required: false
+          description: Search radius in kilometers (default 3.0 km)
+          schema:
+            type: number
+            default: 3.0
+        - name: latitude
+          in: query
+          required: false
+          description: Current partner latitude
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          in: query
+          required: false
+          description: Current partner longitude
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: List of available dispatch offers
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - jobs
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PartnerJob'
+
+  /v1/partner/jobs/{id}/accept:
+    post:
+      tags:
+        - partner
+      summary: Accept offered dispatch job within 20s timeout window
+      description: >-
+        Section 5B Job Acceptance: Commits the partner to an offered job. Must be invoked within the 20-second
+        offer window before job expiration or reallocation. Engages the partner active vertical lock.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the partner_job offer
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job successfully accepted and assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerJob'
+        '409':
+          description: Job already accepted by another partner or active vertical conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: Job offer expired (20s timeout window elapsed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/partner/jobs/{id}/step:
+    post:
+      tags:
+        - partner
+      summary: Transition lifecycle step for an active job
+      description: >-
+        Section 5B Step Transition: Advances the job through arrival at store, pickup with photo proof,
+        transit, arrival at customer, and handover OTP verification.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the active partner job
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerJobStepRequest'
+      responses:
+        '200':
+          description: Step transition confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerJob'
+        '400':
+          description: Invalid OTP or prerequisite step incomplete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/webhooks/razorpay:
+    post:
+      tags:
+        - webhooks
+      summary: Inbound Razorpay webhook callback with signature verification
+      description: >-
+        Receives payment lifecycle callbacks (payment.captured, payment.failed, refund.processed).
+        Requires X-Razorpay-Signature validation and guarantees idempotent order group commitment.
+      security:
+        - RazorpayWebhookSignature: []
+      parameters:
+        - name: X-Razorpay-Signature
+          in: header
+          required: true
+          description: HMAC SHA256 signature generated with the Razorpay webhook secret
+          schema:
+            type: string
+        - name: X-Razorpay-Event-Id
+          in: header
+          required: false
+          description: Unique webhook event identifier for idempotency deduplication
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RazorpayWebhookPayload'
+      responses:
+        '200':
+          description: Webhook received and event queued for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - received
+                  - event_id
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+                  event_id:
+                    type: string
+                    example: evt_xyz123
+        '400':
+          description: Invalid signature or corrupt payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Standard AllGo session token issued by /v1/auth/session
+    FirebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token issued by Firebase Client SDK after SMS OTP verification
+    RazorpayWebhookSignature:
+      type: apiKey
+      in: header
+      name: X-Razorpay-Signature
+      description: HMAC SHA256 signature calculated across the raw request body
+
+  responses:
+    BadRequestError:
+      description: Bad request - invalid query parameters or payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Authentication required or token invalid/expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Unprocessable entity - payload failed validation rules
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    FulfillmentMode:
+      type: string
+      description: Section 5A Fulfillment Mode selection
+      enum:
+        - SEPARATE
+        - DELIVER_TOGETHER
+
+    PartnerMode:
+      type: string
+      description: Section 5B Partner operational preference
+      enum:
+        - DELIVERIES_ONLY
+        - RIDES_ONLY
+        - ALL_JOBS
+
+    SessionExchangeRequest:
+      type: object
+      required:
+        - firebase_token
+        - device_id
+        - platform
+      properties:
+        firebase_token:
+          type: string
+          description: Firebase ID token
+        device_id:
+          type: string
+          description: Unique client hardware or app installation UUID
+        platform:
+          type: string
+          enum:
+            - ANDROID
+            - IOS
+            - WEB
+        fcm_token:
+          type: string
+          description: Push notification registration token
+
+    SessionExchangeResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - token_type
+        - expires_in
+        - user
+      properties:
+        access_token:
+          type: string
+          description: Asymmetric JWT access token
+        refresh_token:
+          type: string
+          description: Long-lived refresh token
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    UserProfile:
+      type: object
+      required:
+        - id
+        - phone
+        - status
+        - default_language
+      properties:
+        id:
+          type: string
+          format: uuid
+        phone:
+          type: string
+          example: "+919876543210"
+        email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - SUSPENDED
+            - BLOCKED
+            - PENDING_VERIFICATION
+        default_language:
+          type: string
+          example: en
+          enum:
+            - en
+            - ta
+            - hi
+
+    ServiceableZone:
+      type: object
+      required:
+        - id
+        - city_id
+        - name
+        - code
+        - is_active
+        - coordinates
+      properties:
+        id:
+          type: string
+          format: uuid
+        city_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: T. Nagar Central
+        code:
+          type: string
+          example: TN-CHN-TNAGAR
+        is_active:
+          type: boolean
+        coordinates:
+          type: array
+          description: GeoJSON polygon boundary coordinates
+          items:
+            type: array
+            items:
+              type: number
+              format: double
+
+    MerchantCatalogResponse:
+      type: object
+      required:
+        - outlet_id
+        - business_name
+        - language
+        - categories
+      properties:
+        outlet_id:
+          type: string
+          format: uuid
+        business_name:
+          type: string
+        language:
+          type: string
+          example: ta
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogCategory'
+
+    CatalogCategory:
+      type: object
+      required:
+        - id
+        - name
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+
+    CatalogItem:
+      type: object
+      required:
+        - id
+        - name
+        - base_price_inr
+        - is_veg
+        - is_perishable
+        - preparation_time_minutes
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Localized name according to Accept-Language header
+        description:
+          type: string
+          description: Localized description according to Accept-Language header
+        base_price_inr:
+          type: number
+          format: double
+        is_veg:
+          type: boolean
+        is_perishable:
+          type: boolean
+        preparation_time_minutes:
+          type: integer
+        image_url:
+          type: string
+          format: uri
+
+    CheckoutQuoteRequest:
+      type: object
+      required:
+        - customer_id
+        - delivery_address_id
+        - items
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+        delivery_address_id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - outlet_id
+              - item_id
+              - quantity
+            properties:
+              outlet_id:
+                type: string
+                format: uuid
+              item_id:
+                type: string
+                format: uuid
+              variant_id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+                minimum: 1
+
+    CheckoutQuoteResponse:
+      type: object
+      required:
+        - checkout_session_id
+        - ttl_seconds
+        - expires_at
+        - fulfillment_options
+        - pricing_breakdown
+      properties:
+        checkout_session_id:
+          type: string
+          format: uuid
+        ttl_seconds:
+          type: integer
+          example: 600
+          description: Locked quote validity duration (10 minutes)
+        expires_at:
+          type: string
+          format: date-time
+        fulfillment_options:
+          type: array
+          description: Available fulfillment modes evaluated against merchant proximity
+          items:
+            $ref: '#/components/schemas/FulfillmentOption'
+        pricing_breakdown:
+          type: object
+          required:
+            - items_subtotal_inr
+            - packaging_fee_inr
+            - platform_fee_inr
+            - gst_tax_inr
+            - final_payable_inr
+          properties:
+            items_subtotal_inr:
+              type: number
+              format: double
+            packaging_fee_inr:
+              type: number
+              format: double
+            platform_fee_inr:
+              type: number
+              format: double
+            gst_tax_inr:
+              type: number
+              format: double
+            discount_inr:
+              type: number
+              format: double
+            final_payable_inr:
+              type: number
+              format: double
+
+    FulfillmentOption:
+      type: object
+      required:
+        - mode
+        - is_available
+        - delivery_fee_inr
+      properties:
+        mode:
+          $ref: '#/components/schemas/FulfillmentMode'
+        is_available:
+          type: boolean
+          description: False if distance between merchants exceeds 1.5 km threshold
+        unavailable_reason:
+          type: string
+          example: Outlets are further than 1.5 km apart
+        delivery_fee_inr:
+          type: number
+          format: double
+        estimated_delivery_minutes:
+          type: integer
+
+    CheckoutPayRequest:
+      type: object
+      required:
+        - checkout_session_id
+        - selected_fulfillment_mode
+        - payment_method
+      properties:
+        checkout_session_id:
+          type: string
+          format: uuid
+        selected_fulfillment_mode:
+          $ref: '#/components/schemas/FulfillmentMode'
+        payment_method:
+          type: string
+          enum:
+            - UPI
+            - CARD
+            - NETBANKING
+            - WALLET
+            - SPLIT
+        use_wallet_balance_inr:
+          type: number
+          format: double
+          default: 0.00
+
+    CheckoutPayResponse:
+      type: object
+      required:
+        - order_group_id
+        - order_group_number
+        - razorpay_order_id
+        - amount_inr
+        - currency
+        - status
+      properties:
+        order_group_id:
+          type: string
+          format: uuid
+        order_group_number:
+          type: string
+          example: OG-20261105-0012
+        razorpay_order_id:
+          type: string
+          example: order_Nzx73bB2
+        amount_inr:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: INR
+        status:
+          type: string
+          example: PLACED
+
+    OrderGroup:
+      type: object
+      required:
+        - id
+        - order_group_number
+        - status
+        - fulfillment_mode
+        - total_paid_amount_inr
+        - sub_orders
+        - delivery_legs
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_group_number:
+          type: string
+        status:
+          type: string
+          enum:
+            - PLACED
+            - CONFIRMED
+            - COMPLETED
+            - PARTIALLY_CANCELLED
+            - CANCELLED
+            - FAILED
+        fulfillment_mode:
+          $ref: '#/components/schemas/FulfillmentMode'
+        total_paid_amount_inr:
+          type: number
+          format: double
+        sub_orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubOrder'
+        delivery_legs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryLeg'
+
+    SubOrder:
+      type: object
+      required:
+        - id
+        - sub_order_number
+        - outlet_id
+        - vertical_type
+        - status
+        - items_total_inr
+      properties:
+        id:
+          type: string
+          format: uuid
+        sub_order_number:
+          type: string
+        outlet_id:
+          type: string
+          format: uuid
+        vertical_type:
+          type: string
+          enum:
+            - FOOD
+            - GROCERY
+            - HOME_MADE
+        status:
+          type: string
+          enum:
+            - PLACED
+            - PAYMENT_CONFIRMED
+            - MERCHANT_ACCEPTED
+            - PREPARING
+            - READY
+            - PARTNER_ASSIGNED
+            - PARTNER_AT_STORE
+            - PICKED_UP
+            - OUT_FOR_DELIVERY
+            - ARRIVED
+            - DELIVERED
+            - CANCELLED
+            - REFUNDED
+        items_total_inr:
+          type: number
+          format: double
+        prep_time_minutes:
+          type: integer
+        estimated_ready_at:
+          type: string
+          format: date-time
+
+    DeliveryLeg:
+      type: object
+      required:
+        - id
+        - fulfillment_mode
+        - status
+        - courier_fee_inr
+        - handover_otp
+        - stops
+      properties:
+        id:
+          type: string
+          format: uuid
+        partner_id:
+          type: string
+          format: uuid
+        fulfillment_mode:
+          $ref: '#/components/schemas/FulfillmentMode'
+        status:
+          type: string
+          enum:
+            - OFFERED
+            - ASSIGNED
+            - ARRIVED_PICKUP
+            - PICKED_UP
+            - OUT_FOR_DELIVERY
+            - ARRIVED
+            - DELIVERED
+            - CANCELLED
+            - FAILED
+        courier_fee_inr:
+          type: number
+          format: double
+        handover_otp:
+          type: string
+          example: "482910"
+        polyline_cache:
+          type: string
+          description: Cached Google Routes polyline string
+        stops:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryLegStop'
+
+    DeliveryLegStop:
+      type: object
+      required:
+        - stop_type
+        - stop_sequence
+        - address_text
+        - status
+      properties:
+        stop_type:
+          type: string
+          enum:
+            - PICKUP
+            - DROPOFF
+        stop_sequence:
+          type: integer
+        address_text:
+          type: string
+        status:
+          type: string
+          enum:
+            - PENDING
+            - ARRIVED
+            - COMPLETED
+            - FAILED
+
+    CancelSubOrderRequest:
+      type: object
+      required:
+        - reason
+        - refund_destination
+      properties:
+        reason:
+          type: string
+          example: Item preparation delay exceeded customer tolerance
+        refund_destination:
+          type: string
+          enum:
+            - ORIGINAL_METHOD
+            - WALLET
+
+    CancelSubOrderResponse:
+      type: object
+      required:
+        - sub_order_id
+        - status
+        - refund_id
+        - refund_amount_inr
+        - refund_destination
+      properties:
+        sub_order_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: CANCELLED
+        refund_id:
+          type: string
+          format: uuid
+        refund_amount_inr:
+          type: number
+          format: double
+        refund_destination:
+          type: string
+          example: ORIGINAL_METHOD
+
+    PartnerModeSwitchRequest:
+      type: object
+      required:
+        - mode
+      properties:
+        mode:
+          $ref: '#/components/schemas/PartnerMode'
+        is_online:
+          type: boolean
+          default: true
+
+    PartnerModeResponse:
+      type: object
+      required:
+        - partner_id
+        - current_mode
+        - is_online
+        - active_vertical_lock
+      properties:
+        partner_id:
+          type: string
+          format: uuid
+        current_mode:
+          $ref: '#/components/schemas/PartnerMode'
+        is_online:
+          type: boolean
+        active_vertical_lock:
+          type: string
+          nullable: true
+          example: FOOD
+
+    PartnerJob:
+      type: object
+      required:
+        - id
+        - job_type
+        - status
+        - pickup_address
+        - drop_address
+        - estimated_earnings_inr
+        - expires_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_type:
+          type: string
+          enum:
+            - delivery_leg
+            - parcel
+            - ride
+            - hire_booking
+        status:
+          type: string
+          enum:
+            - OFFERED
+            - ACCEPTED
+            - ARRIVED_PICKUP
+            - IN_PROGRESS
+            - ARRIVED_DROPOFF
+            - COMPLETED
+            - CANCELLED
+            - EXPIRED
+        pickup_address:
+          type: string
+        drop_address:
+          type: string
+        estimated_earnings_inr:
+          type: number
+          format: double
+        timeout_seconds:
+          type: integer
+          example: 20
+        expires_at:
+          type: string
+          format: date-time
+
+    PartnerJobStepRequest:
+      type: object
+      required:
+        - step
+      properties:
+        step:
+          type: string
+          enum:
+            - ARRIVED_PICKUP
+            - PICKED_UP
+            - ARRIVED_DROPOFF
+            - COMPLETED
+        handover_otp:
+          type: string
+          description: Delivery confirmation code supplied by customer
+        photo_proof_url:
+          type: string
+          format: uri
+          description: Photo verification upload URL
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+
+    RazorpayWebhookPayload:
+      type: object
+      required:
+        - entity
+        - account_id
+        - event
+        - payload
+        - created_at
+      properties:
+        entity:
+          type: string
+          example: event
+        account_id:
+          type: string
+        event:
+          type: string
+          example: payment.captured
+          enum:
+            - payment.captured
+            - payment.failed
+            - refund.processed
+        payload:
+          type: object
+        created_at:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - error
+        - message
+      properties:
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: BAD_REQUEST
+        message:
+          type: string
+          example: Invalid input parameters
+        details:
+          type: object
