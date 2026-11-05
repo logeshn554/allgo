@@ -118,3 +118,46 @@ Because Firebase ID tokens have a 1-hour lifespan, relying solely on cryptograph
   - Backend writes `DEL "user:session:<user_id>"`.
   - All existing mobile sessions are terminated.
 
+---
+
+## 6. Account Enumeration Defense & App Check Boundaries
+
+### 6.1 Account Enumeration Protection
+- **Uniform API Response:** The endpoint `POST /v1/auth/otp/send` returns an identical response payload regardless of whether the submitted phone number belongs to an existing registered user or a new prospective customer:
+  ```json
+  {
+    "status": "OTP_SENT",
+    "challenge_id": "chl_7f8a9b2c3d4e",
+    "cooldown_seconds": 60
+  }
+  ```
+- **Constant-Time Timing Parity:** The backend performs identical cryptographic HMAC operations regardless of user existence, preventing timing side-channel analysis from determining whether an account is registered.
+- **Brute-Force & Enumeration Rate Limits:**
+  - Per Phone Number: Maximum 1 OTP per 60 seconds; maximum 5 OTPs per rolling hour.
+  - Per Client IP Subnet: Maximum 20 OTP requests per hour across IPv4 `/24` or IPv6 `/48`.
+  - Per Device Fingerprint: Maximum 5 OTP requests per hour.
+
+### 6.2 Firebase App Check & Backend Authorization Boundaries
+- **Client Attestation via App Check:**
+  - Android client attestation: Google Play Integrity API.
+  - iOS client attestation: Apple DeviceCheck / App Attest.
+  - Web client attestation: reCAPTCHA Enterprise.
+- **Architectural Boundary:**
+  - Firebase App Check defends the network edge against automated headless bots, scraped endpoints, and SMS toll fraud exhaustion.
+  - **Critical Invariant:** App Check tokens verify *app authenticity only*, not *caller identity or permissions*. The backend strictly requires a valid verified Firebase ID token and evaluates PostgreSQL RBAC on every privileged API request.
+
+---
+
+## 7. OTP Verification Testing Architecture & Scope Classification
+
+To ensure complete transparency regarding test fidelity:
+- **Unit & Contract Testing Suite (`tests/auth/otp-concurrency.spec.ts`):**
+  - Executes against an in-memory single-threaded atomic challenge store simulator (`AtomicOtpChallengeStore`).
+  - Simulates Redis's single-threaded event loop and atomic Lua script execution semantics.
+  - **Scope:** Verifies the cryptographic entropy, HMAC hashing, attempt counter increment, 3-attempt lock, challenge expiry, and race-condition resistance algorithms.
+  - **Explicit Non-Claim:** This in-memory simulator proves algorithm and contract correctness, but is **NOT** a substitute for live Redis server execution.
+- **Live Integration Testing Suite (`tests/auth/redis-live-integration.spec.ts`):**
+  - Connects to a real Redis server daemon via TCP port `6379`.
+  - Evaluates the production Lua script (`ATOMIC_OTP_VERIFY_AND_CONSUME_LUA`) using live Redis `EVAL` commands.
+  - When Redis/Docker is offline on the local host, this test suite is marked **BLOCKED / PENDING** without false claims of integration readiness.
+

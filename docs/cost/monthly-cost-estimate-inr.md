@@ -171,6 +171,19 @@ Official Source: [Google Cloud Run Pricing](https://cloud.google.com/run/pricing
 - **Chosen Billing Mode:** **Request-Based Billing** (`cpu-throttling = true`, with `min_instances = 1` for latency-critical paths).
 - **Why Request-Based Was Selected:** Under request-based billing, CPU is allocated strictly during request processing. For warm instances (`min_instances = 1`), idle time is billed **only for memory** ($0.00000250/GiB-s), while idle CPU is completely free ($0.00). By contrast, instance-based billing (`cpu-allocation = always-on`) bills CPU continuously 24x7 ($49.93/instance-mo), which would cost ~$100/mo for 2 instances without providing any additional latency benefit. Request-based billing achieves instant response times while saving >50% compute expenditure.
 
+#### HTTP Requests vs WebSocket Streaming Lifetimes
+- **Ephemeral HTTP Requests (`api`, `webhooks`, `admin`):** Compute resources (vCPU and memory) are allocated only for the duration of the incoming request handler execution (typically 100ms to 150ms). When no requests are in flight, CPU throttles to zero.
+- **WebSocket Streaming Connections (`dispatch`):** Cloud Run treats open WebSocket streaming connections as continuous active request processing for their entire lifespan (up to the configurable 60-minute connection timeout limit). Because bi-directional telemetry and dispatch events can traverse the connection at any time, vCPU ($0.00002400/vCPU-s) and memory ($0.00000250/GiB-s) are billed actively for all open connection hours. That is why the `dispatch` service is modeled across the 12 active courier operational hours (1,296,000s active = $31.10 vCPU + $1.62 active RAM = $34.94/mo), rather than treating courier streams as ephemeral web requests.
+
+#### Cold-Start Minimization vs Zero-Cold-Start Guarantees
+- Setting `min_instances = 1` provides **cold-start minimization** for regular traffic by maintaining a warm container in memory ready to serve requests immediately.
+- **Explicit Non-Guarantee:** Cloud Run cannot guarantee absolute "zero cold starts" under all circumstances. Cold-start latency (typically 500ms to 1,500ms for lightweight Node.js containers) can still occur during container revision deployments, zonal rebalancing, host maintenance, or sudden traffic surges that exceed the concurrency limit of the single warm instance (default 80 concurrent connections), triggering the autoscaler to launch additional container instances.
+
+#### Billing Account-Level Free Tier Allocation
+- Google Cloud Run provides a monthly free tier: 180,000 vCPU-seconds, 360,000 GiB-seconds, and 2,000,000 requests.
+- **Application Rule:** This free tier applies **once per billing account across all services combined**, not per individual Cloud Run service.
+- **Allocation in AllGo Cost Model:** The free allowance is allocated against the primary ingress `api` service. Subsequent services (`dispatch`, `webhooks`, `admin`) are calculated at standard Tier 1 rates without double-counting the free tier.
+
 #### Service-by-Service Calculations:
 
 1. **`api` Service (REST Gateway):**
@@ -221,6 +234,13 @@ Official Documentation Source: [Google Maps Platform Billing & Pricing - India](
 3. **Billing Currency:** Billed directly in **Indian Rupees (INR)**.
 4. **Per-SKU Independent Free Allowances:** Each eligible SKU receives its own separate monthly free allowance (e.g. 70,000 requests for Essentials SKUs). Free allowances apply on an individual SKU basis per billing account, do NOT roll over, and cannot be shared or pooled across SKUs.
 
+#### SKU Tier Taxonomy & Allowance Hierarchy
+Google Maps Platform India pricing categorizes APIs into four distinct tiers:
+- **Essentials Tier (70,000 free requests / month per SKU):** Includes `Compute Routes Essentials`, `Compute Route Matrix Essentials`, `Geocoding`, `Places Autocomplete Requests`, `Places: Place Details Essentials`, and `Dynamic Maps for Web`.
+- **Pro Tier (35,000 free requests / month per SKU):** Includes `Compute Routes Preferred` (traffic-aware routing) and `Places: Place Details Pro`.
+- **Enterprise Tier (7,000 free requests / month per SKU):** Includes `Places: Nearby Search (Enterprise)` and `Places: Text Search (Enterprise)`.
+- **Native Mobile SDKs:** `Maps SDK for Android` and `Maps SDK for iOS` provide **unlimited free native mobile map loads** without drawing against REST or JavaScript API allowances.
+
 ---
 
 ### 5.2 Itemized Monthly Usage Table for Every Maps SKU Used
@@ -234,11 +254,32 @@ Official Documentation Source: [Google Maps Platform Billing & Pricing - India](
 | **Places: Place Details Essentials (India)** | Fetching place lat/lng & street components when user picks an autocomplete item | 12,000 requests | **70,000 requests / month** (Essentials tier) | 0 requests *(within free allowance)* | $1.50 / 1,000 requests (~₹142 / 1k) | **₹0.00** ($0.00) |
 | **Maps SDK for Android / iOS (India)** | Interactive native mobile map rendering on Flutter customer, courier, and merchant apps | ~150,000 map views | **Unlimited free mobile map loads** (Native mobile SDK) | 0 loads | $0.00 / load | **₹0.00** ($0.00) |
 | **Dynamic Maps for Web (India)** | Back-office web admin dispatch monitoring map views (JS Maps API) | ~1,500 map loads | **70,000 free map loads / month** | 0 loads *(within free allowance)* | $2.10 / 1,000 loads (~₹198 / 1k) | **₹0.00** ($0.00) |
-| **Total Estimated Maps Platform Spend** | | **260,100 total events** | | **0 billable events** | | **₹0.00 / month** |
+| **Total Estimated Maps Platform Spend** | | **270,100 total events** | | **0 billable events** | | **₹0.00 / month** |
 
 ---
 
-### 5.3 Multi-Vertical Routing Breakdown (66,600 Compute Routes Calls)
+### 5.3 Places Autocomplete: Per-Request vs Session Billing Evaluation
+- **Per-Request Billing (`Places: Autocomplete Requests`):** Billed per individual keystroke request ($0.85 / 1,000 requests after 70k free allowance). The AllGo mobile clients implement 300ms input debouncing and enforce a minimum 3-character search prefix, limiting average customer keystrokes to 3–5 requests per address search.
+- **Session-Based Billing (`Places: Autocomplete Sessions`):** Billed per user search session ($2.83 / 1,000 sessions after 70k free allowance), bundling all keystrokes and concluding with a Place Details call into a single billing transaction via a client-generated UUID session token.
+- **Billing Feasibility:** At the pilot scale of 1,000 orders/day generating ~15,000 monthly autocomplete searches, **both billing modes are 100% covered within the independent 70,000 free monthly allowance** of their respective SKUs.
+
+---
+
+### 5.4 Routing Options Changing SKU Classification (`TRAFFIC_AWARE` vs Essentials)
+- **Standard Routing (`routingPreference` omitted or `TRAFFIC_UNAWARE`):**
+  - Invocations are classified as **Compute Routes Essentials**.
+  - India pricing: **70,000 free requests / month**; subsequent calls at $1.50 / 1,000.
+  - Used for upfront delivery fee quotes, parcel estimations, and candidate courier ranking.
+- **Traffic-Aware Routing (`routingPreference: TRAFFIC_AWARE` or `TRAFFIC_AWARE_OPTIMAL`):**
+  - Invocations are classified as **Compute Routes Preferred (Pro Tier)**.
+  - India pricing: **35,000 free requests / month**; subsequent calls at $5.00 / 1,000.
+- **AllGo Multi-Vertical Architectural Policy:**
+  - Standard Essentials routing is used across Food, Grocery, and Parcel delivery where turn-by-turn traffic optimization during candidate ranking is unnecessary.
+  - For Passenger Mobility Rides, real-time traffic-aware routing can be selectively engaged. With 2,500 monthly rides generating 8,250 route calls, even if 100% of mobility rides use `TRAFFIC_AWARE`, the monthly volume (8,250 calls) consumes only **23.6% of the 35,000 Pro free cap**, resulting in **₹0.00 incremental cost**.
+
+---
+
+### 5.5 Multi-Vertical Routing Breakdown (66,600 Compute Routes Calls)
 1. **Food Delivery (18,000 orders/mo):**
    - Mode A (70% = 12,600 orders): 2.1 calls = 26,460 calls.
    - Mode B (30% = 5,400 orders): 3.15 calls = 17,010 calls.
@@ -257,7 +298,7 @@ Official Documentation Source: [Google Maps Platform Billing & Pricing - India](
 
 ---
 
-### 5.4 Excluded Operations & Anti-Pattern Cost Hazards
+### 5.6 Excluded Operations & Anti-Pattern Cost Hazards
 - **Strictly Excluded SKUs:** `Places: Place Details (Pro)` ($17/1,000 requests) and `Nearby Search` are **strictly excluded** from core customer and checkout flows via field masks (`id,formattedAddress,location`). Coordinates are resolved via `Geocoding` or `Place Details Essentials`.
 - **Scale Past 70,000 Free Cap (Growth Scenario at 2,500 orders/day):**
   - Volume = ~166,500 Routes calls.
