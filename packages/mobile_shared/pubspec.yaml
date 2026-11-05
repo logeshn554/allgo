@@ -1,0 +1,20 @@
+name: allgo_mobile_shared
+description: Shared Design System, Typed API Client, and Riverpod State Foundation for AllGo Flutter Apps
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+  http: ^1.2.0
+  flutter_secure_storage: ^9.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
