@@ -1,0 +1,10 @@
+{
+  "name": "@allgo/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Admin Web Panel",
+  "dependencies": {
+    "@allgo/common": "workspace:*"
+  }
+}

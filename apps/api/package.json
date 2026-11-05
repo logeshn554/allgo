@@ -1,0 +1,10 @@
+{
+  "name": "@allgo/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Core API Service (NestJS REST API)",
+  "dependencies": {
+    "@allgo/common": "workspace:*"
+  }
+}

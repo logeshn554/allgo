@@ -1,0 +1,13 @@
+{
+  "name": "@allgo/common",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AllGo Shared Domain Types, Enums, and Constants",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./enums/*": "./src/enums/*.ts",
+    "./i18n/*": "./src/i18n/*.ts"
+  }
+}

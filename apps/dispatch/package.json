@@ -1,0 +1,10 @@
+{
+  "name": "@allgo/dispatch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Dispatch Engine & Real-Time Tracking Service",
+  "dependencies": {
+    "@allgo/common": "workspace:*"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@allgo/webhooks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Inbound Webhooks Service (Payment & Partner Callbacks)",
+  "dependencies": {
+    "@allgo/common": "workspace:*"
+  }
+}

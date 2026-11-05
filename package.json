@@ -1,0 +1,16 @@
+{
+  "name": "@allgo/monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Multi-Vertical On-Demand Delivery and Mobility Platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --experimental-transform-types --test tests/**/*.spec.ts",
+    "test:workspace": "node --experimental-transform-types --test tests/workspace/*.spec.ts"
+  },
+  "packageManager": "pnpm@9.15.4"
+}
