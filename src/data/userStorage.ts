@@ -1,13 +1,18 @@
-// Job: Save and load the logged-in user profile and delivery address.
+// Job: Save and load user session, JWT token, and active address with disk persistence.
+
+import { getLocalItem, setLocalItem, removeLocalItem } from './localCache';
 
 export interface UserProfile {
+  id?: string;
   phone: string;
   name: string;
   role: 'customer' | 'driver';
   address: string;
+  token?: string;
 }
 
-let currentUser: UserProfile | null = {
+const DEFAULT_USER: UserProfile = {
+  id: 'usr_guest',
   phone: '+91 98765 43210',
   name: 'AllGo User',
   role: 'customer',
@@ -15,21 +20,38 @@ let currentUser: UserProfile | null = {
 };
 
 export function loadUserProfile(): UserProfile | null {
-  return currentUser ? { ...currentUser } : null;
+  const raw = getLocalItem('user_profile');
+  if (!raw) return DEFAULT_USER;
+  try {
+    return JSON.parse(raw);
+  } catch (_e) {
+    return DEFAULT_USER;
+  }
 }
 
-export function saveUserLogin(phone: string, name: string, role: 'customer' | 'driver'): UserProfile {
-  currentUser = {
+export function saveUserLogin(phone: string, name: string, role: 'customer' | 'driver', token?: string): UserProfile {
+  const profile: UserProfile = {
+    id: `usr_${Date.now()}`,
     phone,
     name: name || 'User',
     role,
-    address: currentUser?.address || 'MG Road, Bengaluru',
+    address: 'MG Road, Bengaluru',
+    token: token || `jwt_${Date.now()}`,
   };
-  return { ...currentUser };
+  setLocalItem('user_profile', JSON.stringify(profile));
+  if (profile.token) setLocalItem('auth_token', profile.token);
+  return profile;
 }
 
 export function saveUserAddress(newAddress: string): UserProfile | null {
-  if (!currentUser) return null;
-  currentUser.address = newAddress;
-  return { ...currentUser };
+  const current = loadUserProfile();
+  if (!current) return null;
+  current.address = newAddress;
+  setLocalItem('user_profile', JSON.stringify(current));
+  return current;
+}
+
+export function clearUserSession(): void {
+  removeLocalItem('user_profile');
+  removeLocalItem('auth_token');
 }

@@ -1,4 +1,6 @@
-// Job: Save and load cart items separately for grocery, food, and parcel.
+// Job: Save and load cart items with persistent local storage.
+
+import { getLocalItem, setLocalItem } from './localCache';
 
 export type ServiceType = 'grocery' | 'food' | 'parcel';
 
@@ -9,23 +11,30 @@ export interface CartItem {
   quantity: number;
 }
 
-const memoryCarts: Record<ServiceType, CartItem[]> = { grocery: [], food: [], parcel: [] };
-
 export function loadCartItems(service: ServiceType): CartItem[] {
-  return [...memoryCarts[service]];
+  const raw = getLocalItem(`cart_${service}`);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch (_e) {
+    return [];
+  }
 }
 
 export function saveItemToCart(service: ServiceType, newItem: CartItem): CartItem[] {
-  const list = memoryCarts[service];
-  const existing = list.find((i) => i.id === newItem.id);
+  const currentList = loadCartItems(service);
+  const existing = currentList.find((i) => i.id === newItem.id);
+
   if (existing) {
     existing.quantity += newItem.quantity;
   } else {
-    list.push({ ...newItem });
+    currentList.push({ ...newItem });
   }
-  return loadCartItems(service);
+
+  setLocalItem(`cart_${service}`, JSON.stringify(currentList));
+  return currentList;
 }
 
 export function clearSavedCart(service: ServiceType): void {
-  memoryCarts[service] = [];
+  setLocalItem(`cart_${service}`, JSON.stringify([]));
 }

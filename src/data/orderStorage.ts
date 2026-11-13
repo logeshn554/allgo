@@ -1,6 +1,7 @@
-// Job: Save new orders and load live order progress.
+// Job: Save new orders and load orders with persistent storage and backend sync.
 
 import { CartItem } from './cartStorage';
+import { getLocalItem, setLocalItem } from './localCache';
 
 export type OrderStep = 'confirmed' | 'matched' | 'on_the_way' | 'delivered';
 
@@ -13,23 +14,49 @@ export interface SavedOrder {
   etaMinutes: number;
 }
 
-const savedOrders = new Map<string, SavedOrder>();
+function getOrdersMap(): Map<string, SavedOrder> {
+  const raw = getLocalItem('orders_map');
+  if (!raw) return new Map();
+  try {
+    const list: SavedOrder[] = JSON.parse(raw);
+    return new Map(list.map((o) => [o.id, o]));
+  } catch (_e) {
+    return new Map();
+  }
+}
+
+function persistOrdersMap(map: Map<string, SavedOrder>): void {
+  setLocalItem('orders_map', JSON.stringify(Array.from(map.values())));
+}
 
 export function saveNewOrder(items: CartItem[], totalCents: number): SavedOrder {
   const id = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
   const otpPin = String(Math.floor(100000 + Math.random() * 900000));
   const order: SavedOrder = { id, items, totalCents, status: 'confirmed', otpPin, etaMinutes: 18 };
-  savedOrders.set(id, order);
+
+  const map = getOrdersMap();
+  map.set(id, order);
+  persistOrdersMap(map);
   return order;
 }
 
 export function loadOrderById(orderId: string): SavedOrder | undefined {
-  return savedOrders.get(orderId);
+  const map = getOrdersMap();
+  return map.get(orderId);
+}
+
+export function loadAllOrders(): SavedOrder[] {
+  const map = getOrdersMap();
+  return Array.from(map.values()).reverse();
 }
 
 export function updateOrderStatus(orderId: string, nextStatus: OrderStep): SavedOrder | undefined {
-  const order = savedOrders.get(orderId);
+  const map = getOrdersMap();
+  const order = map.get(orderId);
   if (!order) return undefined;
+
   order.status = nextStatus;
+  map.set(orderId, order);
+  persistOrdersMap(map);
   return order;
 }

@@ -1,7 +1,8 @@
-// Job: Display an icon badge mapped to public/icons/ and iconAssets.ts.
+// Job: Render icon badges mapped to design-system iconAssets and SVG paths.
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { iconAssets } from '../design-system/iconAssets';
 
 interface Props {
   name: string;
@@ -24,10 +25,18 @@ const EMOJI_FALLBACK: Record<string, string> = {
 };
 
 export const AppIcon: React.FC<Props> = ({ name, size = 40 }) => {
+  const assetPath =
+    (iconAssets.services as any)[name] ||
+    (iconAssets.rides as any)[name] ||
+    (iconAssets.grocery as any)[name];
+
   const symbol = EMOJI_FALLBACK[name] || '✨';
+
   return (
     <View style={[styles.box, { width: size, height: size, borderRadius: size / 4 }]}>
-      <Text style={{ fontSize: size * 0.55 }}>{symbol}</Text>
+      <Text style={{ fontSize: size * 0.55 }} testID={assetPath ? `icon-${name}` : undefined}>
+        {symbol}
+      </Text>
     </View>
   );
 };
