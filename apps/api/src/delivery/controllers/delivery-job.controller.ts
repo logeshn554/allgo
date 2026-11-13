@@ -10,11 +10,14 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
+import { OwnershipGuard } from '../../common/guards/ownership.guard.js';
+import { DeliveryOtpRateLimiterGuard } from '../../common/guards/delivery-otp-rate-limiter.guard.js';
 import { DeliveryJobService } from '../delivery-job.service.js';
 import {
   CreateDeliveryJobDto,
   CancelDeliveryDto,
   ReportExceptionDto,
+  CompleteDeliveryDto,
 } from '../dto/delivery.dto.js';
 
 @Controller('v1/delivery/jobs')
@@ -31,12 +34,14 @@ export class DeliveryJobController {
   }
 
   @Get(':id')
+  @UseGuards(OwnershipGuard)
   async getJob(@Request() req: any, @Param('id') id: string) {
     const role = req.user.roles?.[0] || 'CUSTOMER';
     return this.deliveryJobService.getJobTrackingDetails(req.user.userId, role, id);
   }
 
   @Post(':id/cancel')
+  @UseGuards(OwnershipGuard)
   async cancelJob(
     @Request() req: any,
     @Param('id') id: string,
@@ -47,6 +52,7 @@ export class DeliveryJobController {
   }
 
   @Post(':id/exception')
+  @UseGuards(OwnershipGuard)
   async reportException(
     @Request() req: any,
     @Param('id') id: string,
@@ -55,4 +61,26 @@ export class DeliveryJobController {
     const role = req.user.roles?.[0] || 'CUSTOMER';
     return this.deliveryJobService.reportException(req.user.userId, role, id, dto);
   }
+
+  @Post(':id/verify-otp')
+  @UseGuards(OwnershipGuard, DeliveryOtpRateLimiterGuard)
+  async verifyDeliveryOtp(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: CompleteDeliveryDto
+  ) {
+    try {
+      const res = await this.deliveryJobService.partnerCompleteDelivery(req.user.userId, id, dto);
+      if (req.otpRateLimit?.recordSuccess) {
+        await req.otpRateLimit.recordSuccess();
+      }
+      return res;
+    } catch (err) {
+      if (req.otpRateLimit?.recordFailure) {
+        await req.otpRateLimit.recordFailure();
+      }
+      throw err;
+    }
+  }
 }
+

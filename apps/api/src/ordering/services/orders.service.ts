@@ -116,6 +116,17 @@ export class OrdersService {
     return this.queryService.synchronizeDeliveryStatus(subOrderId, deliveryStatus);
   }
 
+  async verifyDeliveryOtp(subOrderId: string, otp: string, userId: string): Promise<any> {
+    const order = await this.queryService.getOrderDetails(subOrderId, userId, 'CUSTOMER');
+    if (!order.delivery?.jobId) {
+      throw new Error('ORDER_NO_DELIVERY_JOB: No delivery job associated with this order');
+    }
+    return this.deliveryJobService.partnerCompleteDelivery(userId, order.delivery.jobId, {
+      deliveryPin: otp,
+      proofType: 'OTP',
+    });
+  }
+
   async getOrderDetails(subOrderId: string, userId: string, role: string): Promise<any> {
     return this.queryService.getOrderDetails(subOrderId, userId, role);
   }

@@ -29,7 +29,7 @@ export class DispatchEngineService {
     this.matcher = matcherService ?? new DispatchCandidateMatcherService(redis, attemptRepo, partnerAvailability);
     this.offerLifecycle =
       offerLifecycleService ??
-      new DispatchOfferLifecycleService(db, gateway, partnerAvailability, attemptRepo, this.matcher);
+      new DispatchOfferLifecycleService(db, gateway, partnerAvailability, attemptRepo, this.matcher, redis);
     this.manualAssignment =
       manualAssignmentService ??
       new DispatchManualAssignmentService(db, gateway, partnerAvailability, attemptRepo);

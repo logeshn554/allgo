@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service.js';
+import { RedisService } from '../redis/redis.service.js';
 import { DeliveryGateway } from './delivery.gateway.js';
 import { PartnerAvailabilityService } from './partner-availability.service.js';
 import { DispatchAttemptRepository } from './data/dispatch-attempt.repository.js';
@@ -19,7 +20,8 @@ export class DispatchOfferLifecycleService {
     private readonly gateway: DeliveryGateway,
     private readonly partnerAvailabilityService: PartnerAvailabilityService,
     private readonly attemptRepo: DispatchAttemptRepository,
-    private readonly matcher: DispatchCandidateMatcherService
+    private readonly matcher: DispatchCandidateMatcherService,
+    private readonly redis?: RedisService
   ) {}
 
   async requestDispatch(jobId: string): Promise<any> {
@@ -122,43 +124,60 @@ export class DispatchOfferLifecycleService {
       throw new BadRequestException('Job offer has expired');
     }
 
-    const assignRes = await this.db.query(
-      `UPDATE delivery_jobs
-       SET assigned_partner_id = $1, status = 'PARTNER_ASSIGNED', updated_at = NOW()
-       WHERE id = $2 AND assigned_partner_id IS NULL RETURNING *;`,
-      [partner.id, attempt.delivery_job_id]
-    );
+    const orderId = attempt.delivery_job_id;
+    const lockKey = `lock:order_claim:${orderId}`;
 
-    if (assignRes.rows.length === 0) {
-      await this.attemptRepo.updateAttemptStatus(attemptId, 'CANCELLED');
-      throw new BadRequestException('Delivery job was already assigned to another partner');
+    // Redis Atomic Driver Claiming (SET NX EX 10)
+    if (this.redis) {
+      const lockAcquired = await this.redis.acquireLock(lockKey, partner.id, 10);
+      if (!lockAcquired) {
+        throw new BadRequestException('CLAIM_CONFLICT: Another driver is already claiming this order');
+      }
     }
 
-    const job = assignRes.rows[0];
+    try {
+      const assignRes = await this.db.query(
+        `UPDATE delivery_jobs
+         SET assigned_partner_id = $1, status = 'PARTNER_ASSIGNED', updated_at = NOW()
+         WHERE id = $2 AND assigned_partner_id IS NULL RETURNING *;`,
+        [partner.id, attempt.delivery_job_id]
+      );
 
-    await this.attemptRepo.updateAttemptStatus(attemptId, 'ACCEPTED');
-    await this.attemptRepo.cancelOtherOffers(job.id, attemptId);
-    await this.attemptRepo.updatePartnerSessionBusy(partner.id);
+      if (assignRes.rows.length === 0) {
+        await this.attemptRepo.updateAttemptStatus(attemptId, 'CANCELLED');
+        throw new BadRequestException('Delivery job was already assigned to another partner');
+      }
 
-    await this.db.query(
-      `INSERT INTO delivery_status_events (delivery_job_id, from_status, to_status, actor_id, actor_role, reason)
-       VALUES ($1, 'ASSIGNMENT_PENDING', 'PARTNER_ASSIGNED', $2, 'PARTNER', 'Partner accepted job offer');`,
-      [job.id, userId]
-    );
+      const job = assignRes.rows[0];
 
-    this.gateway.emitJobStatusChanged(job.id, 'PARTNER_ASSIGNED', {
-      jobId: job.id,
-      partnerId: partner.id,
-      partnerName: partner.full_name || 'Delivery Partner',
-      partnerPhone: partner.phone,
-    });
+      await this.attemptRepo.updateAttemptStatus(attemptId, 'ACCEPTED');
+      await this.attemptRepo.cancelOtherOffers(job.id, attemptId);
+      await this.attemptRepo.updatePartnerSessionBusy(partner.id);
 
-    return {
-      success: true,
-      jobId: job.id,
-      status: 'PARTNER_ASSIGNED',
-      assignedPartnerId: partner.id,
-    };
+      await this.db.query(
+        `INSERT INTO delivery_status_events (delivery_job_id, from_status, to_status, actor_id, actor_role, reason)
+         VALUES ($1, 'ASSIGNMENT_PENDING', 'PARTNER_ASSIGNED', $2, 'PARTNER', 'Partner accepted job offer');`,
+        [job.id, userId]
+      );
+
+      this.gateway.emitJobStatusChanged(job.id, 'PARTNER_ASSIGNED', {
+        jobId: job.id,
+        partnerId: partner.id,
+        partnerName: partner.full_name || 'Delivery Partner',
+        partnerPhone: partner.phone,
+      });
+
+      return {
+        success: true,
+        jobId: job.id,
+        status: 'PARTNER_ASSIGNED',
+        assignedPartnerId: partner.id,
+      };
+    } finally {
+      if (this.redis) {
+        await this.redis.releaseLock(lockKey, partner.id);
+      }
+    }
   }
 
   async rejectOffer(userId: string, attemptId: string, reason?: string): Promise<any> {

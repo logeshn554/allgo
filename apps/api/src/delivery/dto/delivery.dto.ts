@@ -109,6 +109,9 @@ export class PartnerLocationUpdateDto {
   @IsOptional()
   batteryPercentage?: number;
 
+  @IsOptional()
+  isMockProvider?: boolean;
+
   @IsString()
   @IsOptional()
   recordedAt?: string;

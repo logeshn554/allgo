@@ -20,6 +20,7 @@ import { OrderPlacementService } from './services/order-placement.service.js';
 import { OrderMerchantLifecycleService } from './services/order-merchant-lifecycle.service.js';
 import { OrderCancellationService } from './services/order-cancellation.service.js';
 import { OrderQueryService } from './services/order-query.service.js';
+import { OrderSagaOrchestratorService } from './services/order-saga-orchestrator.service.js';
 // Facades
 import { PricingService } from './services/pricing.service.js';
 import { CouponsService } from './services/coupons.service.js';
@@ -64,6 +65,7 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
     OrderMerchantLifecycleService,
     OrderCancellationService,
     OrderQueryService,
+    OrderSagaOrchestratorService,
     // Facades
     PricingService,
     CouponsService,
@@ -87,6 +89,7 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
     OrderMerchantLifecycleService,
     OrderCancellationService,
     OrderQueryService,
+    OrderSagaOrchestratorService,
     PricingService,
     CouponsService,
     OrdersService,

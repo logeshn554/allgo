@@ -8,6 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { OwnershipGuard } from '../../common/guards/ownership.guard.js';
 import { RidesService } from '../rides.service.js';
 import { MobilityFareService } from '../mobility-fare.service.js';
 import {
@@ -47,26 +48,31 @@ export class RidesController {
   }
 
   @Post(':id/driver-assign')
+  @UseGuards(OwnershipGuard)
   async driverAssign(@Request() req: any, @Param('id') rideId: string) {
     return this.ridesService.assignDriver(req.user.userId, rideId);
   }
 
   @Post(':id/assign')
+  @UseGuards(OwnershipGuard)
   async driverAssignAlias(@Request() req: any, @Param('id') rideId: string) {
     return this.ridesService.assignDriver(req.user.userId, rideId);
   }
 
   @Post(':id/driver-arrived')
+  @UseGuards(OwnershipGuard)
   async driverArrived(@Request() req: any, @Param('id') rideId: string) {
     return this.ridesService.driverArrived(req.user.userId, rideId);
   }
 
   @Post(':id/arrived')
+  @UseGuards(OwnershipGuard)
   async driverArrivedAlias(@Request() req: any, @Param('id') rideId: string) {
     return this.ridesService.driverArrived(req.user.userId, rideId);
   }
 
   @Post(':id/start')
+  @UseGuards(OwnershipGuard)
   async startTrip(
     @Request() req: any,
     @Param('id') rideId: string,
@@ -76,6 +82,7 @@ export class RidesController {
   }
 
   @Post(':id/start-trip')
+  @UseGuards(OwnershipGuard)
   async startTripAlias(
     @Request() req: any,
     @Param('id') rideId: string,
@@ -85,6 +92,7 @@ export class RidesController {
   }
 
   @Post(':id/complete')
+  @UseGuards(OwnershipGuard)
   async completeTrip(
     @Request() req: any,
     @Param('id') rideId: string,
@@ -94,6 +102,7 @@ export class RidesController {
   }
 
   @Post(':id/dispatch')
+  @UseGuards(OwnershipGuard)
   async requestDispatch(@Param('id') rideId: string) {
     return this.ridesService.requestDispatch(rideId);
   }
@@ -123,6 +132,7 @@ export class RidesController {
   }
 
   @Get(':id/events')
+  @UseGuards(OwnershipGuard)
   async getRideEvents(@Request() req: any, @Param('id') rideId: string) {
     const role = req.user.roles?.[0] || 'CUSTOMER';
     return this.ridesService.getRideEvents(req.user.userId, role, rideId);
@@ -135,6 +145,7 @@ export class RidesController {
   }
 
   @Post(':id/sos')
+  @UseGuards(OwnershipGuard)
   async triggerSos(
     @Request() req: any,
     @Param('id') rideId: string,
@@ -145,6 +156,7 @@ export class RidesController {
   }
 
   @Post(':id/cancel')
+  @UseGuards(OwnershipGuard)
   async cancelRide(
     @Request() req: any,
     @Param('id') rideId: string,
@@ -155,8 +167,10 @@ export class RidesController {
   }
 
   @Get(':id')
+  @UseGuards(OwnershipGuard)
   async getRideDetails(@Request() req: any, @Param('id') rideId: string) {
     const role = req.user.roles?.[0] || 'CUSTOMER';
     return this.ridesService.getRideDetails(req.user.userId, role, rideId);
   }
 }
+

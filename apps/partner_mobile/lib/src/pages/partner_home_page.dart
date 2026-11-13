@@ -10,6 +10,7 @@ import '../components/active_ride_card.dart';
 import '../components/active_hire_driver_card.dart';
 import '../components/partner_offers_banner.dart';
 import '../components/partner_metrics_card.dart';
+import '../components/proof_of_delivery_modal.dart';
 import '../data/partner_job_actions.dart';
 import '../screens/partner_earnings_screen.dart';
 import '../screens/partner_profile_screen.dart';
@@ -158,7 +159,19 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
             onArrivedPickup: () => _actions.arrivedPickup(_activeJob!.id),
             onStartDelivery: () => _actions.startDelivery(_activeJob!.id),
             onArrivedDestination: () => _actions.arrivedDestination(_activeJob!.id),
-            onCompleteDelivery: () => _actions.completeDelivery(_activeJob!.id, '1234'),
+            onCompleteDelivery: () {
+              showDialog(
+                context: context,
+                builder: (_) => ProofOfDeliveryModal(
+                  jobId: _activeJob!.id,
+                  customerName: _activeJob!.destinationAddress,
+                  onConfirmDelivery: (otp, photoKey) async {
+                    await _actions.completeDelivery(_activeJob!.id, otp);
+                    _pollAll();
+                  },
+                ),
+              );
+            },
             onReportException: () => clientReportException(_activeJob!.id),
           ),
           const SizedBox(height: 16),

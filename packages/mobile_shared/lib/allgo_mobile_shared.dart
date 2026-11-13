@@ -29,6 +29,7 @@ export 'src/api/api_client.dart';
 
 // State Management (Riverpod)
 export 'src/state/auth_notifier.dart';
+export 'src/state/multi_vertical_cart_state.dart';
 
 // Reusable UI Widgets
 export 'src/widgets/allgo_button.dart';

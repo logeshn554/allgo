@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
-import '../components/delivery_tracking_stepper.dart';
+import '../components/live_trip_tracking_bottom_sheet.dart';
 
 class DeliveryTrackingScreen extends ConsumerStatefulWidget {
   final String jobId;
@@ -14,20 +14,32 @@ class DeliveryTrackingScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<DeliveryTrackingScreen> createState() => _DeliveryTrackingScreenState();
+  ConsumerState<DeliveryTrackingScreen> createState() =>
+      _DeliveryTrackingScreenState();
 }
 
-class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen> {
+class _DeliveryTrackingScreenState
+    extends ConsumerState<DeliveryTrackingScreen> {
   bool _isLoading = true;
   DeliveryJobModel? _job;
   Timer? _pollingTimer;
+  double _mockDriverLat = 13.0827;
+  double _mockDriverLng = 80.2707;
+  double _mockHeading = 45.0;
+  double _mockSpeedMps = 8.5;
 
   @override
   void initState() {
     super.initState();
     _loadJob();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted) _loadJob();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        _loadJob();
+        setState(() {
+          _mockDriverLat += 0.0002;
+          _mockDriverLng += 0.0002;
+        });
+      }
     });
   }
 
@@ -39,7 +51,9 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
 
   Future<void> _loadJob() async {
     try {
-      final job = await ref.read(apiClientProvider).getCustomerDeliveryTracking(widget.jobId);
+      final job = await ref
+          .read(apiClientProvider)
+          .getCustomerDeliveryTracking(widget.jobId);
       if (mounted) {
         setState(() {
           _job = job;
@@ -51,21 +65,15 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
     }
   }
 
-  int _stepForStatus(String status) {
-    switch (status) {
-      case 'ASSIGNED':
-        return 0;
-      case 'ARRIVED_PICKUP':
-        return 1;
-      case 'IN_TRANSIT':
-        return 2;
-      case 'ARRIVED_DESTINATION':
-        return 3;
-      case 'DELIVERED':
-        return 4;
-      default:
-        return 0;
-    }
+  void _snapCameraToDriver() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Camera snapped to driver: ${_mockDriverLat.toStringAsFixed(4)}, ${_mockDriverLng.toStringAsFixed(4)}',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -82,43 +90,49 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
           ? const Center(child: CircularProgressIndicator())
           : _job == null
               ? const Center(child: Text('Delivery job details not found'))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
+              : Stack(
                   children: [
-                    Container(
-                      height: 180,
-                      decoration: BoxDecoration(
+                    // Persistent Polyline / Map Viewport
+                    Positioned.fill(
+                      child: Container(
                         color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.blue.shade200),
-                      ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.map_outlined, size: 48, color: Colors.blue),
-                            SizedBox(height: 8),
-                            Text('Live Courier Telemetry Simulation', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                          ],
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.map, size: 72, color: Colors.blue),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Live Map Viewport & Polyline Snapped',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'WebSocket Driver Coordinates: ${_mockDriverLat.toStringAsFixed(4)}, ${_mockDriverLng.toStringAsFixed(4)}',
+                                style: TextStyle(fontSize: 12, color: Colors.blue.shade600),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    DeliveryTrackingStepper(currentStep: _stepForStatus(_job!.status)),
-                    const SizedBox(height: 16),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Route Details', style: AllGoTypography.heading3.copyWith(fontSize: 15)),
-                            const SizedBox(height: 8),
-                            Text('Pickup: ${_job!.pickupAddress}', style: AllGoTypography.bodyMedium),
-                            const SizedBox(height: 6),
-                            Text('Dropoff: ${_job!.destinationAddress}', style: AllGoTypography.bodyMedium),
-                          ],
-                        ),
+                    // Persistent Bottom Sheet
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: LiveTripTrackingBottomSheet(
+                        status: _job!.status,
+                        pickupAddress: _job!.pickupAddress,
+                        dropoffAddress: _job!.destinationAddress,
+                        deliveryOtp: _job!.deliveryPin,
+                        driverLatitude: _mockDriverLat,
+                        driverLongitude: _mockDriverLng,
+                        driverHeading: _mockHeading,
+                        driverSpeedMps: _mockSpeedMps,
+                        onSnapCameraToDriver: _snapCameraToDriver,
                       ),
                     ),
                   ],

@@ -183,6 +183,53 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return client.zrem(key, member);
   }
 
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    const client = this.ensureConnected();
+    return client.sadd(key, ...members);
+  }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    const client = this.ensureConnected();
+    return client.srem(key, ...members);
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    const client = this.ensureConnected();
+    return client.smembers(key);
+  }
+
+  async sunion(...keys: string[]): Promise<string[]> {
+    const client = this.ensureConnected();
+    if (!keys || keys.length === 0) return [];
+    return client.sunion(...keys);
+  }
+
+  /**
+   * Distributed Lock Acquisition using atomic SET NX EX
+   * Returns true if lock acquired, false if already claimed
+   */
+  async acquireLock(key: string, value: string, ttlSeconds: number = 10): Promise<boolean> {
+    const client = this.ensureConnected();
+    const result = await client.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
+  /**
+   * Release distributed lock safely if and only if value matches
+   */
+  async releaseLock(key: string, value: string): Promise<boolean> {
+    const client = this.ensureConnected();
+    const script = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      else
+        return 0
+      end
+    `;
+    const res = await client.eval(script, 1, key, value);
+    return res === 1;
+  }
+
   /**
    * Executes atomic Lua script via EVAL.
    * Fails explicitly if Redis is unavailable.

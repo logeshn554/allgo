@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { latLngToH3Index, getH3KRing, getDriverH3RedisKey } from '@allgo/common';
 import { RedisService } from '../redis/redis.service.js';
 import { DispatchAttemptRepository } from './data/dispatch-attempt.repository.js';
 import {
@@ -24,16 +25,33 @@ export class DispatchCandidateMatcherService {
   ): Promise<{ selectedPartnerId: string | null; attemptsCount: number }> {
     let candidatePartnerIds: string[] = [];
 
+    // 1. Uber H3 Geospatial Partitioning Lookup (Res 8 / Res 9 k-ring sets in Redis)
     try {
-      candidatePartnerIds = await this.redis.georadius(
-        REDIS_ONLINE_PARTNERS_GEO_KEY,
-        Number(pickupLon),
-        Number(pickupLat),
-        Number(config.max_search_radius_meters),
-        25
-      );
+      const centerHex = latLngToH3Index(Number(pickupLat), Number(pickupLon), 8);
+      const kRingHexes = getH3KRing(centerHex, 1);
+      const h3Keys = kRingHexes.map(getDriverH3RedisKey);
+
+      const h3Partners = await this.redis.sunion(...h3Keys);
+      if (h3Partners && h3Partners.length > 0) {
+        candidatePartnerIds = h3Partners;
+      }
     } catch (err: any) {
-      this.logger.warn(`Redis GEORADIUS error, falling back to PostGIS spatial search: ${err.message}`);
+      this.logger.debug(`H3 set lookup skipped or empty: ${err.message}`);
+    }
+
+    // 2. Fallback to Redis GEORADIUS if H3 sets had no active candidates
+    if (candidatePartnerIds.length === 0) {
+      try {
+        candidatePartnerIds = await this.redis.georadius(
+          REDIS_ONLINE_PARTNERS_GEO_KEY,
+          Number(pickupLon),
+          Number(pickupLat),
+          Number(config.max_search_radius_meters),
+          25
+        );
+      } catch (err: any) {
+        this.logger.warn(`Redis GEORADIUS error, falling back to PostGIS spatial search: ${err.message}`);
+      }
     }
 
     if (candidatePartnerIds.length === 0) {
@@ -68,3 +86,4 @@ export class DispatchCandidateMatcherService {
     };
   }
 }
+

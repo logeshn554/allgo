@@ -124,13 +124,29 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
 
     client.join(`job:${data.jobId}`);
+    client.join(`order:${data.jobId}`);
     client.emit('job:subscribed', { jobId: data.jobId });
+  }
+
+  @SubscribeMessage('order:subscribe')
+  async handleOrderSubscribe(@ConnectedSocket() client: Socket, @MessageBody() data: { orderId: string }) {
+    if (!data?.orderId) return;
+    return this.handleJobSubscribe(client, { jobId: data.orderId });
   }
 
   @SubscribeMessage('job:unsubscribe')
   handleJobUnsubscribe(@ConnectedSocket() client: Socket, @MessageBody() data: { jobId: string }) {
     if (data?.jobId) {
       client.leave(`job:${data.jobId}`);
+      client.leave(`order:${data.jobId}`);
+    }
+  }
+
+  @SubscribeMessage('order:unsubscribe')
+  handleOrderUnsubscribe(@ConnectedSocket() client: Socket, @MessageBody() data: { orderId: string }) {
+    if (data?.orderId) {
+      client.leave(`job:${data.orderId}`);
+      client.leave(`order:${data.orderId}`);
     }
   }
 
@@ -146,14 +162,25 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   emitJobStatusChanged(jobId: string, status: string, payload: any) {
     if (this.server) {
-      this.server.to(`job:${jobId}`).emit('job:status_changed', { jobId, status, ...payload });
+      this.server.to(`job:${jobId}`).to(`order:${jobId}`).emit('job:status_changed', { jobId, status, ...payload });
       this.server.to('admin:dispatch').emit('admin:job_update', { jobId, status, ...payload });
     }
   }
 
   emitPartnerLocationUpdate(jobId: string, locationData: any) {
     if (this.server) {
-      this.server.to(`job:${jobId}`).emit('partner:location_update', locationData);
+      // Stream sanitized location coordinates, heading, and speed deltas to the customer client without exposing personal identifiers
+      const sanitized = {
+        orderId: jobId,
+        jobId,
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        heading: locationData.heading ?? null,
+        speedMps: locationData.speedMps ?? null,
+        recordedAt: locationData.recordedAt || new Date().toISOString(),
+      };
+      this.server.to(`job:${jobId}`).to(`order:${jobId}`).emit('partner:location_update', sanitized);
+      this.server.to(`job:${jobId}`).to(`order:${jobId}`).emit('order:driver_location', sanitized);
     }
   }
 
