@@ -1,0 +1,8 @@
+# Project Organization Rules (Strict)
+1. Keep this app organized so a beginner can read it.
+2. Screens go in `src/pages/`.
+3. Shared UI pieces go in `src/components/`.
+4. Saving, loading, and API logic goes in `src/data/`.
+5. One job per file. Never combine unrelated functions in the same file.
+6. No file over 300 lines. If a file approaches 300 lines, split it into smaller single-job files.
+7. Before writing anything new, check if it already exists in `public/icons/`, `src/design-system/iconAssets.ts`, `src/pages/`, `src/components/`, or `src/data/`.
