@@ -1,7 +1,6 @@
-// Job: Save and load current user session, profile, and active delivery address.
+// Job: Save and load the logged-in user profile and delivery address.
 
 export interface UserProfile {
-  id: string;
   phone: string;
   name: string;
   role: 'customer' | 'driver';
@@ -9,27 +8,28 @@ export interface UserProfile {
 }
 
 let currentUser: UserProfile | null = {
-  id: 'usr_guest',
   phone: '+91 98765 43210',
-  name: 'Demo Customer',
+  name: 'AllGo User',
   role: 'customer',
-  address: 'Indiranagar 100ft Road, Bengaluru',
+  address: 'MG Road, Bengaluru',
 };
 
-export function loadCurrentUser(): UserProfile | null {
+export function loadUserProfile(): UserProfile | null {
   return currentUser ? { ...currentUser } : null;
 }
 
-export function saveUserSession(user: UserProfile): void {
-  currentUser = { ...user };
-}
-
-export function updateUserAddress(newAddress: string): UserProfile | null {
-  if (!currentUser) return null;
-  currentUser.address = newAddress;
+export function saveUserLogin(phone: string, name: string, role: 'customer' | 'driver'): UserProfile {
+  currentUser = {
+    phone,
+    name: name || 'User',
+    role,
+    address: currentUser?.address || 'MG Road, Bengaluru',
+  };
   return { ...currentUser };
 }
 
-export function clearUserSession(): void {
-  currentUser = null;
+export function saveUserAddress(newAddress: string): UserProfile | null {
+  if (!currentUser) return null;
+  currentUser.address = newAddress;
+  return { ...currentUser };
 }

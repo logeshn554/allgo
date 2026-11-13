@@ -1,3 +1,5 @@
+// Job: Save new orders and load live order progress.
+
 import { CartItem } from './cartStorage';
 
 export type OrderStep = 'confirmed' | 'matched' | 'on_the_way' | 'delivered';
@@ -16,9 +18,9 @@ const savedOrders = new Map<string, SavedOrder>();
 export function saveNewOrder(items: CartItem[], totalCents: number): SavedOrder {
   const id = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
   const otpPin = String(Math.floor(100000 + Math.random() * 900000));
-  const newOrder: SavedOrder = { id, items, totalCents, status: 'confirmed', otpPin, etaMinutes: 18 };
-  savedOrders.set(id, newOrder);
-  return newOrder;
+  const order: SavedOrder = { id, items, totalCents, status: 'confirmed', otpPin, etaMinutes: 18 };
+  savedOrders.set(id, order);
+  return order;
 }
 
 export function loadOrderById(orderId: string): SavedOrder | undefined {

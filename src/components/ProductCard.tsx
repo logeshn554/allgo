@@ -1,48 +1,42 @@
-// Job: Display grocery product card with an Add to Cart button.
+// Job: Shared card displaying one grocery item with its price and Add button.
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { GroceryProduct } from '../data/catalogLoader';
+import { AppIcon } from './AppIcon';
 
 interface Props {
-  title: string;
-  priceCents: number;
-  onAdd: () => void;
+  product: GroceryProduct;
+  onAdd: (product: GroceryProduct) => void;
 }
 
-export const ProductCard: React.FC<Props> = ({ title, priceCents, onAdd }) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.info}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.price}>₹{(priceCents / 100).toFixed(2)}</Text>
-      </View>
-      <TouchableOpacity style={styles.button} onPress={onAdd}>
-        <Text style={styles.buttonText}>Add</Text>
-      </TouchableOpacity>
+export const ProductCard: React.FC<Props> = ({ product, onAdd }) => (
+  <View style={styles.card}>
+    <AppIcon name={product.iconKey} size={44} />
+    <View style={styles.info}>
+      <Text style={styles.title}>{product.title}</Text>
+      <Text style={styles.price}>₹{(product.priceCents / 100).toFixed(0)}</Text>
     </View>
-  );
-};
+    <TouchableOpacity style={styles.button} onPress={() => onAdd(product)}>
+      <Text style={styles.buttonText}>+ ADD</Text>
+    </TouchableOpacity>
+  </View>
+);
 
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 14,
     backgroundColor: '#FFFFFF',
+    padding: 12,
     borderRadius: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginBottom: 8,
   },
-  info: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  price: { fontSize: 13, color: '#059669', marginTop: 2, fontWeight: '700' },
-  button: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  info: { flex: 1, marginLeft: 12 },
+  title: { fontSize: 15, fontWeight: '600', color: '#111827' },
+  price: { fontSize: 13, fontWeight: '700', color: '#059669', marginTop: 2 },
+  button: { backgroundColor: '#10B981', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  buttonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
 });

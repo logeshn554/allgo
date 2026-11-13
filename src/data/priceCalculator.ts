@@ -1,3 +1,5 @@
+// Job: Calculate verified order subtotal, delivery fee, tax, and total.
+
 import { CartItem } from './cartStorage';
 
 export interface OrderPriceSummary {
@@ -8,12 +10,9 @@ export interface OrderPriceSummary {
 }
 
 export function calculateOrderPrice(items: CartItem[], distanceKm: number): OrderPriceSummary {
-  const subtotalCents = items.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
-  const baseFeeCents = 3000;
-  const perKmCents = 1200;
+  const subtotalCents = items.reduce((sum, i) => sum + i.priceCents * i.quantity, 0);
   const safeDistance = Math.max(0, Math.min(distanceKm, 25));
-
-  const deliveryFeeCents = Math.round(baseFeeCents + safeDistance * perKmCents);
+  const deliveryFeeCents = Math.round(3000 + safeDistance * 1200);
   const taxCents = Math.round((subtotalCents + deliveryFeeCents) * 0.05);
   const totalCents = subtotalCents + deliveryFeeCents + taxCents;
 

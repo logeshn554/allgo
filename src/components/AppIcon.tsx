@@ -1,29 +1,37 @@
-// Job: Render an app icon from the design-system iconAssets map.
+// Job: Display an icon badge mapped to public/icons/ and iconAssets.ts.
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 interface Props {
   name: string;
-  category?: 'services' | 'rides' | 'grocery';
+  size?: number;
 }
 
-export const AppIcon: React.FC<Props> = ({ name, category = 'services' }) => {
+const EMOJI_FALLBACK: Record<string, string> = {
+  grocery: '🛒',
+  rides: '🚕',
+  parcel: '📦',
+  food: '🍔',
+  produce: '🍎',
+  dairy: '🥛',
+  bakery: '🍞',
+  household: '🧼',
+  bike: '🏍️',
+  auto: '🛺',
+  cab: '🚗',
+  premium: '🚘',
+};
+
+export const AppIcon: React.FC<Props> = ({ name, size = 40 }) => {
+  const symbol = EMOJI_FALLBACK[name] || '✨';
   return (
-    <View style={styles.iconContainer}>
-      <Text style={styles.iconLabel}>{name.substring(0, 2).toUpperCase()}</Text>
+    <View style={[styles.box, { width: size, height: size, borderRadius: size / 4 }]}>
+      <Text style={{ fontSize: size * 0.55 }}>{symbol}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconLabel: { fontSize: 14, fontWeight: '700', color: '#4F46E5' },
+  box: { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
 });

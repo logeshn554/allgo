@@ -1,49 +1,33 @@
-// Job: Main landing screen to select Rides, Grocery, Food, or Parcel delivery.
+// Job: Main screen to pick Grocery, Rides, Parcel, or Driver Dashboard.
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ServiceCard } from '../components/ServiceCard';
+import { loadUserProfile } from '../data/userStorage';
 import { AddressBar } from '../components/AddressBar';
-import { loadCurrentUser } from '../data/userStorage';
+import { ServiceCard } from '../components/ServiceCard';
+
+export type ScreenName = 'login' | 'home' | 'grocery' | 'rides' | 'parcel' | 'checkout' | 'track' | 'driver';
 
 interface Props {
-  onNavigate: (page: string) => void;
+  onNavigate: (screen: ScreenName) => void;
 }
 
 export const HomePage: React.FC<Props> = ({ onNavigate }) => {
-  const user = loadCurrentUser();
+  const user = loadUserProfile();
 
   return (
     <View style={styles.screen}>
-      <AddressBar address={user?.address || 'Select delivery address'} />
-
-      <Text style={styles.brandTitle}>AllGo SuperApp</Text>
-      <Text style={styles.subtitle}>Fast delivery & quick rides</Text>
-
-      <View style={styles.servicesGrid}>
-        <ServiceCard
-          title="Rides"
-          iconName="rides"
-          onPress={() => onNavigate('rides')}
-        />
-        <ServiceCard
-          title="Grocery"
-          iconName="grocery"
-          onPress={() => onNavigate('grocery')}
-        />
-      </View>
-
-      <View style={styles.servicesGrid}>
-        <ServiceCard
-          title="Food"
-          iconName="food"
-          onPress={() => onNavigate('food')}
-        />
-        <ServiceCard
-          title="Parcel"
-          iconName="parcel"
-          onPress={() => onNavigate('parcel')}
-        />
+      <AddressBar
+        address={user?.address || 'Bengaluru'}
+        userName={user?.name || 'Guest'}
+        onSwitchRole={() => onNavigate('login')}
+      />
+      <Text style={styles.heading}>What do you need today?</Text>
+      <View style={styles.grid}>
+        <ServiceCard title="Instant Grocery" subtitle="15-min delivery" iconKey="grocery" onPress={() => onNavigate('grocery')} />
+        <ServiceCard title="Book a Ride" subtitle="Bike, Auto & Cab" iconKey="rides" onPress={() => onNavigate('rides')} />
+        <ServiceCard title="Send Parcel" subtitle="Door-to-door" iconKey="parcel" onPress={() => onNavigate('parcel')} />
+        <ServiceCard title="Driver Partner" subtitle="Verify & earn" iconKey="bike" onPress={() => onNavigate('driver')} />
       </View>
     </View>
   );
@@ -51,7 +35,6 @@ export const HomePage: React.FC<Props> = ({ onNavigate }) => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFFFF', padding: 20 },
-  brandTitle: { fontSize: 24, fontWeight: '800', color: '#111827' },
-  subtitle: { fontSize: 14, color: '#6B7280', marginTop: 4, marginBottom: 20 },
-  servicesGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  heading: { fontSize: 22, fontWeight: '800', color: '#111827', marginVertical: 16 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
 });

@@ -1,93 +1,58 @@
-// Job: Screen for the driver to view order, accept, navigate, and verify customer PIN.
+// Job: Screen for the driver to update trip status and verify customer's 6-digit PIN.
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { loadOrderById, updateOrderStatus } from '../data/orderStorage';
+import { updateOrderStatus } from '../data/orderStorage';
 import { verifyDeliveryPin } from '../data/otpVerifier';
 
 interface Props {
-  orderId: string;
-  onJobComplete: () => void;
+  activeOrderId: string | null;
+  onBack: () => void;
 }
 
-export const DriverJobPage: React.FC<Props> = ({ orderId, onJobComplete }) => {
+export const DriverJobPage: React.FC<Props> = ({ activeOrderId, onBack }) => {
+  const [orderId, setOrderId] = useState(activeOrderId || '');
   const [pin, setPin] = useState('');
-  const [message, setMessage] = useState('');
-  const order = loadOrderById(orderId);
-
-  const handleStartTrip = () => {
-    updateOrderStatus(orderId, 'on_the_way');
-    setMessage('Status: Out for delivery');
-  };
+  const [feedback, setFeedback] = useState('');
 
   const handleVerify = () => {
     const res = verifyDeliveryPin(orderId, pin);
-    setMessage(res.message);
-    if (res.ok) {
-      setTimeout(() => onJobComplete(), 1500);
-    }
+    setFeedback(res.message);
   };
-
-  if (!order) {
-    return (
-      <View style={styles.screen}>
-        <Text style={styles.title}>No active delivery job</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>Delivery Job #{order.id}</Text>
-      <Text style={styles.status}>Current Status: {order.status.toUpperCase()}</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Order Payout</Text>
-        <Text style={styles.payout}>₹{(order.totalCents / 100).toFixed(2)}</Text>
-        <Text style={styles.eta}>Customer ETA: {order.etaMinutes} mins</Text>
-      </View>
-
-      {order.status !== 'on_the_way' && order.status !== 'delivered' && (
-        <TouchableOpacity style={styles.actionBtn} onPress={handleStartTrip}>
-          <Text style={styles.btnText}>Start Delivery Trip</Text>
+      <TouchableOpacity onPress={onBack}>
+        <Text style={styles.back}>← Back to Home</Text>
+      </TouchableOpacity>
+      <Text style={styles.title}>Driver Partner Console</Text>
+      <TextInput style={styles.input} value={orderId} onChangeText={setOrderId} placeholder="Order ID (e.g. ORD-123456)" />
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.stepBtn} onPress={() => updateOrderStatus(orderId, 'matched')}>
+          <Text style={styles.stepText}>Accept Order</Text>
         </TouchableOpacity>
-      )}
-
-      {order.status === 'on_the_way' && (
-        <View style={styles.verifyBox}>
-          <Text style={styles.verifyLabel}>Enter Customer PIN at Door</Text>
-          <TextInput
-            style={styles.pinInput}
-            value={pin}
-            onChangeText={setPin}
-            keyboardType="number-pad"
-            maxLength={6}
-            placeholder="6-digit PIN"
-          />
-          <TouchableOpacity style={styles.verifyBtn} onPress={handleVerify}>
-            <Text style={styles.btnText}>Confirm Delivery</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {Boolean(message) && <Text style={styles.messageText}>{message}</Text>}
+        <TouchableOpacity style={styles.stepBtn} onPress={() => updateOrderStatus(orderId, 'on_the_way')}>
+          <Text style={styles.stepText}>Start Trip</Text>
+        </TouchableOpacity>
+      </View>
+      <TextInput style={styles.input} value={pin} onChangeText={setPin} placeholder="Enter Customer 6-Digit PIN" maxLength={6} />
+      <TouchableOpacity style={styles.verifyBtn} onPress={handleVerify}>
+        <Text style={styles.verifyText}>Verify PIN & Complete Drop-off</Text>
+      </TouchableOpacity>
+      {Boolean(feedback) && <Text style={styles.feedback}>{feedback}</Text>}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFFFF', padding: 24 },
-  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  status: { fontSize: 13, color: '#059669', fontWeight: '700', marginTop: 4, marginBottom: 16 },
-  card: { backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 20 },
-  cardTitle: { fontSize: 12, color: '#6B7280', textTransform: 'uppercase' },
-  payout: { fontSize: 24, fontWeight: '900', color: '#111827', marginVertical: 4 },
-  eta: { fontSize: 13, color: '#4B5563' },
-  actionBtn: { backgroundColor: '#10B981', padding: 16, borderRadius: 12, alignItems: 'center' },
-  verifyBox: { marginTop: 10 },
-  verifyLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
-  pinInput: { borderWidth: 1.5, borderColor: '#D1D5DB', borderRadius: 10, padding: 12, fontSize: 18, textAlign: 'center', letterSpacing: 4, marginBottom: 12 },
-  verifyBtn: { backgroundColor: '#2563EB', padding: 16, borderRadius: 12, alignItems: 'center' },
-  btnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
-  messageText: { marginTop: 16, textAlign: 'center', fontSize: 14, fontWeight: '600', color: '#D97706' },
+  screen: { flex: 1, backgroundColor: '#FFFFFF', padding: 20 },
+  back: { color: '#4F46E5', fontWeight: '600', marginBottom: 8 },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 16 },
+  input: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 10, padding: 12, marginBottom: 12 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  stepBtn: { flex: 0.48, backgroundColor: '#EEF2FF', padding: 12, borderRadius: 10, alignItems: 'center' },
+  stepText: { color: '#4F46E5', fontWeight: '700', fontSize: 13 },
+  verifyBtn: { backgroundColor: '#10B981', padding: 15, borderRadius: 12, alignItems: 'center' },
+  verifyText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  feedback: { marginTop: 14, fontSize: 14, fontWeight: '700', color: '#111827', textAlign: 'center' },
 });

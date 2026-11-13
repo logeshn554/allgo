@@ -1,28 +1,30 @@
-// Job: Selectable row showing Bike, Auto, or Cab with arrival time and price.
+// Job: Selectable row showing Bike, Auto, or Cab option with ETA and fare.
 
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { RideTier } from '../data/rideOptionsLoader';
+import { RideOption, calculateRideFareCents } from '../data/rideOptionsLoader';
+import { AppIcon } from './AppIcon';
 
 interface Props {
-  tier: RideTier;
-  priceCents: number;
-  isSelected: boolean;
-  onSelect: () => void;
+  option: RideOption;
+  distanceKm: number;
+  selected: boolean;
+  onSelect: (option: RideOption) => void;
 }
 
-export const RideTierRow: React.FC<Props> = ({ tier, priceCents, isSelected, onSelect }) => {
+export const RideTierRow: React.FC<Props> = ({ option, distanceKm, selected, onSelect }) => {
+  const fareCents = calculateRideFareCents(option, distanceKm);
   return (
     <TouchableOpacity
-      style={[styles.row, isSelected && styles.rowActive]}
-      onPress={onSelect}
-      activeOpacity={0.7}
+      style={[styles.row, selected && styles.rowSelected]}
+      onPress={() => onSelect(option)}
     >
-      <View style={styles.infoCol}>
-        <Text style={[styles.name, isSelected && styles.nameActive]}>{tier.name}</Text>
-        <Text style={styles.etaText}>{tier.etaMinutes} mins away</Text>
+      <AppIcon name={option.iconKey} size={44} />
+      <View style={styles.mid}>
+        <Text style={styles.title}>{option.title}</Text>
+        <Text style={styles.eta}>{option.etaMinutes} mins away</Text>
       </View>
-      <Text style={styles.priceText}>₹{(priceCents / 100).toFixed(2)}</Text>
+      <Text style={styles.fare}>₹{(fareCents / 100).toFixed(0)}</Text>
     </TouchableOpacity>
   );
 };
@@ -30,22 +32,16 @@ export const RideTierRow: React.FC<Props> = ({ tier, priceCents, isSelected, onS
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
     marginBottom: 10,
   },
-  rowActive: {
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
-  },
-  infoCol: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
-  nameActive: { color: '#065F46' },
-  etaText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  priceText: { fontSize: 16, fontWeight: '800', color: '#111827' },
+  rowSelected: { borderColor: '#4F46E5', backgroundColor: '#EEF2FF' },
+  mid: { flex: 1, marginLeft: 12 },
+  title: { fontSize: 15, fontWeight: '700', color: '#111827' },
+  eta: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  fare: { fontSize: 16, fontWeight: '800', color: '#111827' },
 });

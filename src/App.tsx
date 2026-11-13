@@ -1,66 +1,44 @@
-// Job: Root app router and view coordinator connecting all pages.
+// Job: Connect all screens in src/pages/ so the user can navigate the app.
 
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
+import { HomePage, ScreenName } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
-import { HomePage } from './pages/HomePage';
 import { GroceryPage } from './pages/GroceryPage';
 import { RideBookingPage } from './pages/RideBookingPage';
 import { ParcelPage } from './pages/ParcelPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { TrackOrderPage } from './pages/TrackOrderPage';
 import { DriverJobPage } from './pages/DriverJobPage';
-import { loadCurrentUser } from './data/userStorage';
 
-export const App: React.FC = () => {
-  const [activePage, setActivePage] = useState<string>('home');
+export default function App() {
+  const [screen, setScreen] = useState<ScreenName>('home');
   const [activeOrderId, setActiveOrderId] = useState<string>('');
-  const user = loadCurrentUser();
 
-  const handleOrderCreated = (orderId: string) => {
+  const openTracking = (orderId: string) => {
     setActiveOrderId(orderId);
-    setActivePage('track');
+    setScreen('track');
   };
 
-  const renderCurrentPage = () => {
-    switch (activePage) {
-      case 'login':
-        return <LoginPage onLoginSuccess={() => setActivePage('home')} />;
-      case 'grocery':
-      case 'food':
-        return <GroceryPage onGoToCheckout={() => setActivePage('checkout')} />;
-      case 'rides':
-        return <RideBookingPage onRideBooked={handleOrderCreated} />;
-      case 'parcel':
-        return <ParcelPage onParcelBooked={handleOrderCreated} />;
-      case 'checkout':
-        return <CheckoutPage onOrderPlaced={handleOrderCreated} />;
-      case 'track':
-        return <TrackOrderPage orderId={activeOrderId || 'ORD-DEFAULT'} />;
-      case 'driver_job':
-        return (
-          <DriverJobPage
-            orderId={activeOrderId || 'ORD-DEFAULT'}
-            onJobComplete={() => setActivePage('home')}
-          />
-        );
-      case 'home':
-      default:
-        return (
-          <HomePage
-            onNavigate={(page) => {
-              if (page === 'driver') setActivePage('driver_job');
-              else setActivePage(page);
-            }}
-          />
-        );
-    }
-  };
-
-  return <SafeAreaView style={styles.container}>{renderCurrentPage()}</SafeAreaView>;
-};
-
-export default App;
+  return (
+    <SafeAreaView style={styles.container}>
+      {screen === 'login' && <LoginPage onLoginSuccess={() => setScreen('home')} />}
+      {screen === 'home' && <HomePage onNavigate={setScreen} />}
+      {screen === 'grocery' && <GroceryPage onBack={() => setScreen('home')} onCheckout={() => setScreen('checkout')} />}
+      {screen === 'rides' && <RideBookingPage onBack={() => setScreen('home')} onRideBooked={openTracking} />}
+      {screen === 'parcel' && <ParcelPage onBack={() => setScreen('home')} onCheckout={() => setScreen('checkout')} />}
+      {screen === 'checkout' && <CheckoutPage onBack={() => setScreen('grocery')} onOrderPlaced={openTracking} />}
+      {screen === 'track' && (
+        <TrackOrderPage
+          orderId={activeOrderId}
+          onBackHome={() => setScreen('home')}
+          onOpenDriverView={() => setScreen('driver')}
+        />
+      )}
+      {screen === 'driver' && <DriverJobPage activeOrderId={activeOrderId} onBack={() => setScreen('home')} />}
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },

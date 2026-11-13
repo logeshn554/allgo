@@ -1,35 +1,32 @@
-// Job: Header bar showing current delivery address with quick edit trigger.
+// Job: Top bar showing the customer's delivery address and profile name.
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface Props {
   address: string;
-  onPressAddress?: () => void;
+  userName: string;
+  onSwitchRole?: () => void;
 }
 
-export const AddressBar: React.FC<Props> = ({ address, onPressAddress }) => {
-  return (
-    <TouchableOpacity style={styles.container} onPress={onPressAddress} activeOpacity={0.8}>
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>DELIVER TO</Text>
-      </View>
-      <Text style={styles.addressText} numberOfLines={1}>
-        {address || 'Select delivery location'}
-      </Text>
-    </TouchableOpacity>
-  );
-};
+export const AddressBar: React.FC<Props> = ({ address, userName, onSwitchRole }) => (
+  <View style={styles.bar}>
+    <View>
+      <Text style={styles.label}>DELIVERING TO</Text>
+      <Text style={styles.address}>{address}</Text>
+    </View>
+    {onSwitchRole && (
+      <TouchableOpacity style={styles.badge} onPress={onSwitchRole}>
+        <Text style={styles.badgeText}>Hi, {userName}</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+);
 
 const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  badge: { marginBottom: 2 },
-  badgeText: { fontSize: 10, fontWeight: '800', color: '#6B7280', letterSpacing: 0.8 },
-  addressText: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  bar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
+  label: { fontSize: 10, fontWeight: '700', color: '#6B7280', letterSpacing: 0.8 },
+  address: { fontSize: 15, fontWeight: '700', color: '#111827', marginTop: 2 },
+  badge: { backgroundColor: '#EEF2FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
+  badgeText: { fontSize: 12, fontWeight: '600', color: '#4F46E5' },
 });

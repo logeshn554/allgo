@@ -1,21 +1,23 @@
-// Job: Grocery browsing screen with catalog and cart controls.
+// Job: Screen to browse grocery products by category and add items to cart.
 
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
-import { loadGroceryCatalog, CatalogProduct } from '../data/catalogLoader';
-import { saveItemToCart, loadCartItems, CartItem } from '../data/cartStorage';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { loadGroceryCategories, loadGroceryProducts, GroceryProduct } from '../data/catalogLoader';
+import { loadCartItems, saveItemToCart } from '../data/cartStorage';
 import { ProductCard } from '../components/ProductCard';
 import { CartBar } from '../components/CartBar';
 
 interface Props {
-  onGoToCheckout: () => void;
+  onBack: () => void;
+  onCheckout: () => void;
 }
 
-export const GroceryPage: React.FC<Props> = ({ onGoToCheckout }) => {
-  const [products] = useState<CatalogProduct[]>(() => loadGroceryCatalog());
-  const [cart, setCart] = useState<CartItem[]>(() => loadCartItems('grocery'));
+export const GroceryPage: React.FC<Props> = ({ onBack, onCheckout }) => {
+  const [category, setCategory] = useState('All');
+  const [cart, setCart] = useState(() => loadCartItems('grocery'));
+  const products = loadGroceryProducts(category);
 
-  const handleAddToCart = (product: CatalogProduct) => {
+  const handleAdd = (product: GroceryProduct) => {
     const updated = saveItemToCart('grocery', {
       id: product.id,
       title: product.title,
@@ -25,39 +27,36 @@ export const GroceryPage: React.FC<Props> = ({ onGoToCheckout }) => {
     setCart(updated);
   };
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotalCents = cart.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
-
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>InstaGrocery Store</Text>
-      <Text style={styles.subtitle}>Delivered in 15 minutes</Text>
-
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ProductCard
-            title={item.title}
-            priceCents={item.priceCents}
-            onAdd={() => handleAddToCart(item)}
-          />
-        )}
-        contentContainerStyle={styles.list}
-      />
-
-      <CartBar
-        itemCount={totalItems}
-        subtotalCents={subtotalCents}
-        onViewCart={onGoToCheckout}
-      />
+      <TouchableOpacity onPress={onBack}>
+        <Text style={styles.back}>← Back to Home</Text>
+      </TouchableOpacity>
+      <Text style={styles.title}>Instant Grocery</Text>
+      <View style={styles.tabs}>
+        {loadGroceryCategories().map((cat) => (
+          <TouchableOpacity key={cat} style={[styles.tab, category === cat && styles.tabActive]} onPress={() => setCategory(cat)}>
+            <Text style={[styles.tabText, category === cat && styles.tabTextActive]}>{cat}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <ScrollView>
+        {products.map((p) => (
+          <ProductCard key={p.id} product={p} onAdd={handleAdd} />
+        ))}
+      </ScrollView>
+      <CartBar items={cart} onCheckout={onCheckout} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F9FAFB', padding: 16 },
-  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  subtitle: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
-  list: { paddingBottom: 100 },
+  screen: { flex: 1, backgroundColor: '#FFFFFF', padding: 20 },
+  back: { color: '#4F46E5', fontWeight: '600', marginBottom: 8 },
+  title: { fontSize: 22, fontWeight: '800', color: '#111827', marginBottom: 12 },
+  tabs: { flexDirection: 'row', marginBottom: 14, flexWrap: 'wrap' },
+  tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F3F4F6', marginRight: 8, marginBottom: 6 },
+  tabActive: { backgroundColor: '#111827' },
+  tabText: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  tabTextActive: { color: '#FFFFFF' },
 });

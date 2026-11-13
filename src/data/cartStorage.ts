@@ -1,3 +1,5 @@
+// Job: Save and load cart items separately for grocery, food, and parcel.
+
 export type ServiceType = 'grocery' | 'food' | 'parcel';
 
 export interface CartItem {
@@ -7,31 +9,20 @@ export interface CartItem {
   quantity: number;
 }
 
-const memoryCarts: Record<ServiceType, CartItem[]> = {
-  grocery: [],
-  food: [],
-  parcel: [],
-};
+const memoryCarts: Record<ServiceType, CartItem[]> = { grocery: [], food: [], parcel: [] };
 
 export function loadCartItems(service: ServiceType): CartItem[] {
   return [...memoryCarts[service]];
 }
 
 export function saveItemToCart(service: ServiceType, newItem: CartItem): CartItem[] {
-  const currentList = memoryCarts[service];
-  const existingItem = currentList.find((item) => item.id === newItem.id);
-  if (existingItem) {
-    existingItem.quantity += newItem.quantity;
+  const list = memoryCarts[service];
+  const existing = list.find((i) => i.id === newItem.id);
+  if (existing) {
+    existing.quantity += newItem.quantity;
   } else {
-    currentList.push({ ...newItem });
+    list.push({ ...newItem });
   }
-  return loadCartItems(service);
-}
-
-export function removeOneFromCart(service: ServiceType, itemId: string): CartItem[] {
-  memoryCarts[service] = memoryCarts[service]
-    .map((item) => (item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item))
-    .filter((item) => item.quantity > 0);
   return loadCartItems(service);
 }
 
