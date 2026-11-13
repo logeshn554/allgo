@@ -6,6 +6,7 @@
   "description": "AllGo Admin Web Panel",
   "scripts": {
     "dev": "next dev -p 3003",
+    "prebuild": "node -e \"try { fs.rmSync('.next', { recursive: true, force: true }); } catch {}\"",
     "build": "next build",
     "start": "next start -p 3003",
     "lint": "next lint"

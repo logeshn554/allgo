@@ -1,15 +1,18 @@
-import { Injectable, Logger, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  type OnModuleInit,
+  type OnModuleDestroy,
+} from '@nestjs/common';
 import { Redis } from 'ioredis';
-import { ConfigService } from '../config/config.service.ts';
+import { ConfigService } from '../config/config.service.js';
 
+@Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private isConnected: boolean = false;
-
-  // In-memory fallback challenge and cache store when local Redis daemon is offline
-  private inMemoryStore = new Map<string, { value: any; expiresAt?: number }>();
-  private inMemoryHashes = new Map<string, Map<string, any>>();
 
   constructor(private readonly config: ConfigService) {}
 
@@ -20,7 +23,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         maxRetriesPerRequest: 1,
         retryStrategy: (times) => {
           if (times > 2) {
-            return null; // Stop retrying quickly in local dev without Redis
+            return null; // Stop retrying quickly when Redis is offline
           }
           return 500;
         },
@@ -34,15 +37,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       this.client.on('error', (err) => {
         this.isConnected = false;
-        // Keep log quiet for standard local dev when Redis is offline
-        this.logger.debug(`Redis connection state: ${err.message}`);
+        this.logger.warn(`Redis connection error: ${err.message}`);
       });
 
-      await this.client.connect().catch((_err) => {
-        this.logger.warn(`Redis server not available at ${this.config.redisUrl}. Using local dev in-memory fallback.`);
+      await this.client.connect().catch((err) => {
+        this.isConnected = false;
+        this.logger.warn(`Redis connection failed: ${err.message}. Runtime commands will fail fast.`);
       });
     } catch (err: any) {
-      this.logger.warn(`Redis initialization failed: ${err.message}. Local in-memory fallback active.`);
+      this.isConnected = false;
+      this.logger.warn(`Redis initialization failed: ${err.message}.`);
     }
   }
 
@@ -57,13 +61,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     return this.isConnected && this.client?.status === 'ready';
   }
 
+  private ensureConnected(): Redis {
+    if (!this.client || !this.isConnected) {
+      throw new ServiceUnavailableException('Redis cache service is unavailable');
+    }
+    return this.client;
+  }
+
   async checkConnection(): Promise<{ connected: boolean; latencyMs: number; error?: string }> {
     const start = Date.now();
     if (!this.client || !this.isConnected) {
       return {
         connected: false,
-        latencyMs: Date.now() - start,
-        error: 'Redis client not connected to live daemon (operating in local fallback mode)',
+        latencyMs: 0,
+        error: 'Redis client not connected (daemon offline)',
       };
     }
 
@@ -83,168 +94,128 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get(key: string): Promise<string | null> {
-    if (this.isLive && this.client) {
-      return this.client.get(key);
-    }
-    const item = this.inMemoryStore.get(key);
-    if (!item) return null;
-    if (item.expiresAt && Date.now() > item.expiresAt) {
-      this.inMemoryStore.delete(key);
-      return null;
-    }
-    return item.value;
+    const client = this.ensureConnected();
+    return client.get(key);
   }
 
   async set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null> {
-    if (this.isLive && this.client) {
-      if (mode === 'EX' && duration) {
-        return this.client.set(key, value, 'EX', duration);
-      }
-      return this.client.set(key, value);
+    const client = this.ensureConnected();
+    if (mode === 'EX' && duration) {
+      return client.set(key, value, 'EX', duration);
     }
-    const expiresAt = mode === 'EX' && duration ? Date.now() + duration * 1000 : undefined;
-    this.inMemoryStore.set(key, { value, expiresAt });
-    return 'OK';
+    return client.set(key, value);
   }
 
   async setex(key: string, seconds: number, value: string): Promise<'OK'> {
-    if (this.isLive && this.client) {
-      return this.client.setex(key, seconds, value);
-    }
-    this.inMemoryStore.set(key, { value, expiresAt: Date.now() + seconds * 1000 });
-    return 'OK';
+    const client = this.ensureConnected();
+    return client.setex(key, seconds, value);
   }
 
   async del(key: string): Promise<number> {
-    if (this.isLive && this.client) {
-      return this.client.del(key);
-    }
-    const existed = this.inMemoryStore.delete(key) || this.inMemoryHashes.delete(key);
-    return existed ? 1 : 0;
+    const client = this.ensureConnected();
+    return client.del(key);
   }
 
   async exists(key: string): Promise<number> {
-    if (this.isLive && this.client) {
-      return this.client.exists(key);
-    }
-    if (this.inMemoryHashes.has(key)) return 1;
-    const item = this.inMemoryStore.get(key);
-    if (!item) return 0;
-    if (item.expiresAt && Date.now() > item.expiresAt) {
-      this.inMemoryStore.delete(key);
-      return 0;
-    }
-    return 1;
+    const client = this.ensureConnected();
+    return client.exists(key);
   }
 
   async hset(key: string, field: string, value: any): Promise<number> {
-    if (this.isLive && this.client) {
-      return this.client.hset(key, field, String(value));
-    }
-    let map = this.inMemoryHashes.get(key);
-    if (!map) {
-      map = new Map();
-      this.inMemoryHashes.set(key, map);
-    }
-    const isNew = !map.has(field);
-    map.set(field, String(value));
-    return isNew ? 1 : 0;
+    const client = this.ensureConnected();
+    return client.hset(key, field, String(value));
   }
 
   async hget(key: string, field: string): Promise<string | null> {
-    if (this.isLive && this.client) {
-      return this.client.hget(key, field);
-    }
-    const map = this.inMemoryHashes.get(key);
-    if (!map) return null;
-    return map.get(field) ?? null;
+    const client = this.ensureConnected();
+    return client.hget(key, field);
   }
 
   async hincrby(key: string, field: string, increment: number): Promise<number> {
-    if (this.isLive && this.client) {
-      return this.client.hincrby(key, field, increment);
-    }
-    let map = this.inMemoryHashes.get(key);
-    if (!map) {
-      map = new Map();
-      this.inMemoryHashes.set(key, map);
-    }
-    const current = parseInt(map.get(field) || '0', 10);
-    const updated = current + increment;
-    map.set(field, String(updated));
-    return updated;
+    const client = this.ensureConnected();
+    return client.hincrby(key, field, increment);
   }
 
   async expire(key: string, seconds: number): Promise<number> {
-    if (this.isLive && this.client) {
-      return this.client.expire(key, seconds);
-    }
-    return 1;
+    const client = this.ensureConnected();
+    return client.expire(key, seconds);
+  }
+
+  async ttl(key: string): Promise<number> {
+    const client = this.ensureConnected();
+    return client.ttl(key);
+  }
+
+  public getRawClient(): Redis {
+    return this.ensureConnected();
+  }
+
+  async geoadd(key: string, longitude: number, latitude: number, member: string): Promise<number> {
+    const client = this.ensureConnected();
+    return client.geoadd(key, longitude, latitude, member);
+  }
+
+  async georadius(
+    key: string,
+    longitude: number,
+    latitude: number,
+    radiusMeters: number,
+    count: number = 20
+  ): Promise<string[]> {
+    const client = this.ensureConnected();
+    // ioredis georadius: key, lon, lat, radius, unit, WITHDIST, COUNT, ASC
+    const results = await (client as any).georadius(
+      key,
+      longitude,
+      latitude,
+      radiusMeters,
+      'm',
+      'COUNT',
+      count,
+      'ASC'
+    );
+    if (!results || !Array.isArray(results)) return [];
+    return results.map((r: any) => (Array.isArray(r) ? r[0] : r));
+  }
+
+  async zrem(key: string, member: string): Promise<number> {
+    const client = this.ensureConnected();
+    return client.zrem(key, member);
   }
 
   /**
-   * Executes atomic Lua script.
-   * If live Redis is connected, delegates to EVAL.
-   * If in local development fallback mode, evaluates the atomic OTP challenge semantics directly.
+   * Executes atomic Lua script via EVAL.
+   * Fails explicitly if Redis is unavailable.
    */
   async evalLuaOtpVerify(
     key: string,
     expectedHmac: string,
     maxAttempts: number = 3
   ): Promise<number> {
-    if (this.isLive && this.client) {
-      const script = `
-        local exists = redis.call('EXISTS', KEYS[1])
-        if exists == 0 then return -1 end
-        local attempts = tonumber(redis.call('HGET', KEYS[1], 'attempts') or '0')
-        local max_attempts = tonumber(ARGV[2])
-        if attempts >= max_attempts then
-            redis.call('DEL', KEYS[1])
-            return -2
-        end
-        local stored_hmac = redis.call('HGET', KEYS[1], 'hmac')
-        if stored_hmac == ARGV[1] then
-            redis.call('DEL', KEYS[1])
-            return 1
-        else
-            local new_attempts = redis.call('HINCRBY', KEYS[1], 'attempts', 1)
-            if new_attempts >= max_attempts then
-                redis.call('DEL', KEYS[1])
-                return -2
-            end
-            return 0
-        end
-      `;
-      const res = await this.client.eval(script, 1, key, expectedHmac, String(maxAttempts));
-      return Number(res);
-    }
-
-    // In-Memory atomic evaluation (exact Lua contract replica)
-    const map = this.inMemoryHashes.get(key);
-    if (!map) {
-      return -1; // Not found / expired
-    }
-
-    const attempts = parseInt(map.get('attempts') || '0', 10);
-    if (attempts >= maxAttempts) {
-      this.inMemoryHashes.delete(key);
-      return -2; // Max attempts exceeded
-    }
-
-    const storedHmac = map.get('hmac');
-    if (storedHmac === expectedHmac) {
-      this.inMemoryHashes.delete(key);
-      return 1; // Success & atomic consumption!
-    } else {
-      const newAttempts = attempts + 1;
-      map.set('attempts', String(newAttempts));
-      if (newAttempts >= maxAttempts) {
-        this.inMemoryHashes.delete(key);
-        return -2; // Lockout
-      }
-      return 0; // Mismatch
-    }
+    const client = this.ensureConnected();
+    const script = `
+      local exists = redis.call('EXISTS', KEYS[1])
+      if exists == 0 then return -1 end
+      local attempts = tonumber(redis.call('HGET', KEYS[1], 'attempts') or '0')
+      local max_attempts = tonumber(ARGV[2])
+      if attempts >= max_attempts then
+          redis.call('DEL', KEYS[1])
+          return -2
+      end
+      local stored_hmac = redis.call('HGET', KEYS[1], 'hmac')
+      if stored_hmac == ARGV[1] then
+          redis.call('DEL', KEYS[1])
+          return 1
+      else
+          local new_attempts = redis.call('HINCRBY', KEYS[1], 'attempts', 1)
+          if new_attempts >= max_attempts then
+              redis.call('DEL', KEYS[1])
+              return -2
+          end
+          return 0
+      end
+    `;
+    const res = await client.eval(script, 1, key, expectedHmac, String(maxAttempts));
+    return Number(res);
   }
 }
-
-Injectable()(RedisService);

@@ -1,29 +1,39 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import jwt from 'jsonwebtoken';
-import { AuthService } from '../../apps/api/src/auth/auth.service.ts';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/src/auth/adapters/local-otp-delivery.adapter.ts';
-import { ConfigService } from '../../apps/api/src/config/config.service.ts';
-import { DatabaseService } from '../../apps/api/src/database/database.service.ts';
-import { RedisService } from '../../apps/api/src/redis/redis.service.ts';
-import { UsersService } from '../../apps/api/src/users/users.service.ts';
+import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
+import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { ConfigService } from '../../apps/api/dist/config/config.service.js';
+import { UsersService } from '../../apps/api/dist/users/users.service.js';
+import { UsersController } from '../../apps/api/dist/users/users.controller.js';
+import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
   let authService: AuthService;
   let usersService: UsersService;
-  let redisService: RedisService;
+  let redisService: InMemoryRedisTestDouble;
+  let dbService: MockDatabaseService;
   let configService: ConfigService;
   let otpAdapter: LocalOtpDeliveryAdapter;
 
   beforeEach(async () => {
     configService = new ConfigService();
-    const dbService = new DatabaseService(configService);
-    redisService = new RedisService(configService);
-    await redisService.onModuleInit();
+    dbService = new MockDatabaseService();
+    redisService = new InMemoryRedisTestDouble();
+
+    // Seed mockDb with initial admin user for directory retrieval tests
+    dbService.users.set('usr_admin_001', {
+      id: 'usr_admin_001',
+      phone: '+919876543210',
+      status: 'ACTIVE',
+      default_language: 'en',
+      created_at: new Date().toISOString(),
+    });
+    dbService.userRoles.set('usr_admin_001', new Set(['ADMIN', 'CUSTOMER']));
 
     otpAdapter = new LocalOtpDeliveryAdapter(configService);
-    authService = new AuthService(configService, dbService, redisService, otpAdapter);
-    usersService = new UsersService(dbService, redisService);
+    authService = new AuthService(configService, dbService as any, redisService as any, otpAdapter);
+    usersService = new UsersService(dbService as any, redisService as any);
   });
 
   describe('Session Creation & Refresh Token Rotation', () => {
@@ -115,6 +125,32 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
       assert.ok(result);
       assert.strictEqual(result.phone, '+919876543210');
       assert.ok(result.roles.includes('ADMIN'));
+    });
+
+    it('should enforce IDOR prevention on user profile endpoint', async () => {
+      const controller = new UsersController(usersService);
+      
+      // 1. Owner accessing their own profile should succeed
+      const ownerReq = { user: { userId: 'usr_admin_001', roles: ['CUSTOMER'] } };
+      const ownerResult = await controller.getUser(ownerReq, 'usr_admin_001');
+      assert.strictEqual(ownerResult.id, 'usr_admin_001');
+
+      // 2. Admin accessing another user profile should succeed
+      const adminReq = { user: { userId: 'usr_different_admin', roles: ['ADMIN'] } };
+      const adminResult = await controller.getUser(adminReq, 'usr_admin_001');
+      assert.strictEqual(adminResult.id, 'usr_admin_001');
+
+      // 3. Different non-admin user attempting cross-user IDOR access must be rejected with 403 Forbidden
+      const attackerReq = { user: { userId: 'usr_attacker_999', roles: ['CUSTOMER'] } };
+      await assert.rejects(
+        async () => {
+          await controller.getUser(attackerReq, 'usr_admin_001');
+        },
+        {
+          name: 'ForbiddenException',
+          message: 'Access denied: You do not have permission to view this profile.',
+        }
+      );
     });
   });
 });

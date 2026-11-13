@@ -1,15 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class RefreshTokenDto {
+  @ApiProperty({
+    description: 'Rotatable refresh token issued during login',
+  })
+  @IsString()
+  @IsNotEmpty()
   refreshToken!: string;
+
+  @ApiProperty({
+    description: 'Device identifier',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
   deviceId?: string;
 }
-
-ApiProperty({
-  description: 'Rotatable refresh token issued during login',
-})(RefreshTokenDto.prototype, 'refreshToken');
-
-ApiProperty({
-  description: 'Device identifier',
-  required: false,
-})(RefreshTokenDto.prototype, 'deviceId');

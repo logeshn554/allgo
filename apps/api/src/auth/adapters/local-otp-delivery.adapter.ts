@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '../../config/config.service.ts';
+import { ConfigService } from '../../config/config.service.js';
 
 export interface OtpDeliveryAdapter {
   deliverOtp(phone: string, otp: string): Promise<boolean>;
 }
 
+@Injectable()
 export class LocalOtpDeliveryAdapter implements OtpDeliveryAdapter {
   private readonly logger = new Logger(LocalOtpDeliveryAdapter.name);
   private readonly devOtpStore = new Map<string, { otp: string; sentAt: number }>();
@@ -24,7 +25,7 @@ export class LocalOtpDeliveryAdapter implements OtpDeliveryAdapter {
     });
 
     this.logger.log(
-      `[LOCAL DEV ONLY] Delivered OTP to local adapter for phone ${phone.slice(0, 3)}****${phone.slice(-4)}. (OTP: ${otp})`
+      `[LOCAL DEV ONLY] Delivered OTP to local adapter for phone ${phone.slice(0, 3)}****${phone.slice(-4)}. (OTP: [REDACTED_DEV_OTP])`
     );
 
     return true;
@@ -41,5 +42,3 @@ export class LocalOtpDeliveryAdapter implements OtpDeliveryAdapter {
     return this.devOtpStore.get(phone)?.otp;
   }
 }
-
-Injectable()(LocalOtpDeliveryAdapter);

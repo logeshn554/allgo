@@ -90,7 +90,7 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
   runMigrations()
     .then((result) => {
-      if (!result.success && !result.error?.includes('ECONNREFUSED')) {
+      if (!result.success) {
         process.exit(1);
       }
     })
@@ -99,3 +99,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
       process.exit(1);
     });
 }
+

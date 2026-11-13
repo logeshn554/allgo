@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'welcome_screen.dart';
+import 'wallet_screen.dart';
+import 'payments_and_refunds_screen.dart';
+import 'support_screen.dart';
+import 'notifications_screen.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -96,6 +100,26 @@ class AccountScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
+            // Wallet & Payments
+            _buildSectionHeader('Finances'),
+            _buildOptionTile(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'AllGo Wallet',
+              subtitle: 'Check balance, refunds, and promotional credits',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const WalletScreen()),
+              ),
+            ),
+            _buildOptionTile(
+              icon: Icons.receipt_long_outlined,
+              title: 'Payments & Refunds',
+              subtitle: 'Transaction history, payment modes, and refund tracking',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PaymentsAndRefundsScreen()),
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Settings Options
             _buildSectionHeader('Preferences'),
             _buildOptionTile(
@@ -108,7 +132,9 @@ class AccountScreen extends ConsumerWidget {
               icon: Icons.notifications_none,
               title: 'Notifications & Alerts',
               subtitle: 'Order and promotional SMS/Push notifications',
-              onTap: () {},
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -122,8 +148,10 @@ class AccountScreen extends ConsumerWidget {
             _buildOptionTile(
               icon: Icons.help_outline,
               title: 'Help & Customer Support',
-              subtitle: '24x7 customer support line',
-              onTap: () {},
+              subtitle: '24x7 customer support tickets & dispute resolution',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CustomerSupportScreen()),
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -180,3 +208,4 @@ class AccountScreen extends ConsumerWidget {
     );
   }
 }
+

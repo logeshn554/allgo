@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../lib/auth-context.js';
+import { useAuth } from '@/lib/auth-context';
 
 export default function IndexPage() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -24,3 +24,4 @@ export default function IndexPage() {
     </div>
   );
 }
+

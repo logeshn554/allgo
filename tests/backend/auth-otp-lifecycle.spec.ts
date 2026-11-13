@@ -1,26 +1,25 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import { OtpSecurityService, OtpVerificationStatus } from '@allgo/common';
-import { AuthService } from '../../apps/api/src/auth/auth.service.ts';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/src/auth/adapters/local-otp-delivery.adapter.ts';
-import { ConfigService } from '../../apps/api/src/config/config.service.ts';
-import { DatabaseService } from '../../apps/api/src/database/database.service.ts';
-import { RedisService } from '../../apps/api/src/redis/redis.service.ts';
+import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
+import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { ConfigService } from '../../apps/api/dist/config/config.service.js';
+import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract Tests)', () => {
   let authService: AuthService;
-  let redisService: RedisService;
+  let redisService: InMemoryRedisTestDouble;
+  let dbService: MockDatabaseService;
   let otpAdapter: LocalOtpDeliveryAdapter;
   let configService: ConfigService;
 
   beforeEach(async () => {
     configService = new ConfigService();
-    const dbService = new DatabaseService(configService);
-    redisService = new RedisService(configService);
-    await redisService.onModuleInit();
+    dbService = new MockDatabaseService();
+    redisService = new InMemoryRedisTestDouble();
 
     otpAdapter = new LocalOtpDeliveryAdapter(configService);
-    authService = new AuthService(configService, dbService, redisService, otpAdapter);
+    authService = new AuthService(configService, dbService as any, redisService as any, otpAdapter);
   });
 
   describe('Indian Mobile Phone Number Validation', () => {

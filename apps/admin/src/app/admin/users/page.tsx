@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { adminApi, UserSummary } from '../../../lib/api-client.js';
-import { StatusBadge } from '../../../components/StatusBadge.js';
+import { adminApi, UserSummary } from '@/lib/api-client';
+import { StatusBadge } from '@/components/StatusBadge';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserSummary[]>([]);
@@ -33,7 +33,7 @@ export default function UsersPage() {
     return (
       u.phone.toLowerCase().includes(q) ||
       (u.fullName && u.fullName.toLowerCase().includes(q)) ||
-      u.roles.some((r) => r.toLowerCase().includes(q))
+      u.roles.some((r: string) => r.toLowerCase().includes(q))
     );
   });
 
@@ -133,7 +133,7 @@ export default function UsersPage() {
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {u.roles.map((r) => (
+                      {u.roles.map((r: string) => (
                         <span
                           key={r}
                           style={{
@@ -178,3 +178,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

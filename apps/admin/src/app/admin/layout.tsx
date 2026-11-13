@@ -2,9 +2,9 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../lib/auth-context.js';
-import { Sidebar } from '../../components/Sidebar.js';
-import { Header } from '../../components/Header.js';
+import { useAuth } from '@/lib/auth-context';
+import { Sidebar } from '@/components/Sidebar';
+import { Header } from '@/components/Header';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
@@ -53,3 +53,4 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
+

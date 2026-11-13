@@ -25,3 +25,4 @@ class AllGoCustomerApp extends StatelessWidget {
     );
   }
 }
+

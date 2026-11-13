@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '../../../lib/auth-context.js';
+import { useAuth } from '@/lib/auth-context';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -90,3 +90,4 @@ function _buildMetricCard(title: string, value: string, subtitle: string, icon: 
     </div>
   );
 }
+

@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .superpowers/
+.agents/
+.next/
+*.tsbuildinfo
 .env
 .env.*.local
 *.local
@@ -13,3 +16,18 @@ secrets/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+
+# Flutter & Dart build artifacts
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/build/
+**/android/.gradle/
+**/android/local.properties
+**/ios/Flutter/
+**/ios/Runner/GeneratedPluginRegistrant.*
+*.lock
+apks/
+*.apk
+
+

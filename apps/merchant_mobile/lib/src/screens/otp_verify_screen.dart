@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'merchant_dashboard_shell.dart';
 import 'approval_status_screen.dart';
+import 'merchant_registration_screen.dart';
 
 class OtpVerifyScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -52,14 +53,27 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     if (!mounted) return;
 
     if (success) {
-      final user = ref.read(currentUserProvider);
-      final isApproved = (user?.hasRole('MERCHANT_ADMIN') == true || user?.hasRole('MERCHANT_OPERATOR') == true) &&
-          user?.status == AccountStatus.active;
+      final client = ref.read(apiClientProvider);
+      client.activeRole = 'MERCHANT_ADMIN';
 
+      Widget targetScreen;
+      try {
+        final profile = await client.getMerchantProfile();
+        final status = profile['status']?.toString() ?? 'NOT_REGISTERED';
+        if (status == 'NOT_REGISTERED' || profile['merchant'] == null) {
+          targetScreen = const MerchantRegistrationScreen();
+        } else if (status == 'APPROVED' || status == 'LIVE' || status == 'ACTIVE') {
+          targetScreen = const MerchantDashboardShell();
+        } else {
+          targetScreen = ApprovalStatusScreen(status: status);
+        }
+      } catch (_) {
+        targetScreen = const ApprovalStatusScreen(status: 'SUBMITTED');
+      }
+
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => isApproved ? const MerchantDashboardShell() : const ApprovalStatusScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => targetScreen),
         (route) => false,
       );
     } else {
@@ -116,3 +130,4 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     );
   }
 }
+

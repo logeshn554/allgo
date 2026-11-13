@@ -88,16 +88,22 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
   describe('Customer Mobile Application (apps/customer_mobile)', () => {
     const APP_DIR = path.join(ROOT_DIR, 'apps/customer_mobile');
 
-    it('should have valid Android and iOS manifests', () => {
+    it('should have valid Android and iOS manifests and build.gradle with in.allgo.customer', () => {
       const manifestPath = path.join(APP_DIR, 'android/app/src/main/AndroidManifest.xml');
       const plistPath = path.join(APP_DIR, 'ios/Runner/Info.plist');
+      const gradlePath = path.join(APP_DIR, 'android/app/build.gradle');
 
       assert.ok(fs.existsSync(manifestPath));
       assert.ok(fs.existsSync(plistPath));
+      assert.ok(fs.existsSync(gradlePath));
 
       const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
       assert.match(manifestContent, /in\.allgo\.customer/);
       assert.match(manifestContent, /android\.permission\.ACCESS_FINE_LOCATION/);
+
+      const gradleContent = fs.readFileSync(gradlePath, 'utf-8');
+      assert.match(gradleContent, /applicationId "in\.allgo\.customer"/);
+      assert.match(gradleContent, /namespace "in\.allgo\.customer"/);
     });
 
     it('should implement all required customer screens and clean navigation flow', () => {
@@ -127,13 +133,23 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
   describe('Partner Mobile Application (apps/partner_mobile)', () => {
     const APP_DIR = path.join(ROOT_DIR, 'apps/partner_mobile');
 
-    it('should have valid Android and iOS manifests with background location permissions', () => {
+    it('should have valid Android and iOS manifests and build.gradle with in.allgo.partner', () => {
       const manifestPath = path.join(APP_DIR, 'android/app/src/main/AndroidManifest.xml');
+      const plistPath = path.join(APP_DIR, 'ios/Runner/Info.plist');
+      const gradlePath = path.join(APP_DIR, 'android/app/build.gradle');
+
       assert.ok(fs.existsSync(manifestPath));
+      assert.ok(fs.existsSync(plistPath));
+      assert.ok(fs.existsSync(gradlePath));
+
       const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
       assert.match(manifestContent, /in\.allgo\.partner/);
       assert.match(manifestContent, /android\.permission\.ACCESS_BACKGROUND_LOCATION/);
       assert.match(manifestContent, /android\.permission\.FOREGROUND_SERVICE/);
+
+      const gradleContent = fs.readFileSync(gradlePath, 'utf-8');
+      assert.match(gradleContent, /applicationId "in\.allgo\.partner"/);
+      assert.match(gradleContent, /namespace "in\.allgo\.partner"/);
     });
 
     it('should enforce approval guard: new partner cannot go online before approval', () => {
@@ -159,11 +175,21 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
   describe('Merchant Mobile Application (apps/merchant_mobile)', () => {
     const APP_DIR = path.join(ROOT_DIR, 'apps/merchant_mobile');
 
-    it('should have valid Android and iOS manifests', () => {
+    it('should have valid Android and iOS manifests and build.gradle with in.allgo.merchant', () => {
       const manifestPath = path.join(APP_DIR, 'android/app/src/main/AndroidManifest.xml');
+      const plistPath = path.join(APP_DIR, 'ios/Runner/Info.plist');
+      const gradlePath = path.join(APP_DIR, 'android/app/build.gradle');
+
       assert.ok(fs.existsSync(manifestPath));
-      const content = fs.readFileSync(manifestPath, 'utf-8');
-      assert.match(content, /in\.allgo\.merchant/);
+      assert.ok(fs.existsSync(plistPath));
+      assert.ok(fs.existsSync(gradlePath));
+
+      const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
+      assert.match(manifestContent, /in\.allgo\.merchant/);
+
+      const gradleContent = fs.readFileSync(gradlePath, 'utf-8');
+      assert.match(gradleContent, /applicationId "in\.allgo\.merchant"/);
+      assert.match(gradleContent, /namespace "in\.allgo\.merchant"/);
     });
 
     it('should enforce approval guard: merchant cannot accept orders before approval', () => {
@@ -185,4 +211,98 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
       assert.match(content, /Ready for Courier/i);
     });
   });
+
+  describe('Three Independent Mobile Applications Architecture & Isolation', () => {
+    const apps = ['customer_mobile', 'merchant_mobile', 'partner_mobile'];
+
+    it('should maintain three strictly independent entry points with distinct branding and root widgets', () => {
+      const customerMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/customer_mobile/lib/main.dart'), 'utf-8');
+      const merchantMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/merchant_mobile/lib/main.dart'), 'utf-8');
+      const partnerMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/partner_mobile/lib/main.dart'), 'utf-8');
+
+      assert.match(customerMain, /class AllGoCustomerApp/);
+      assert.match(customerMain, /AllGo Customer/);
+
+      assert.match(merchantMain, /class AllGoMerchantApp/);
+      assert.match(merchantMain, /AllGo Merchant/);
+
+      assert.match(partnerMain, /class AllGoPartnerApp/);
+      assert.match(partnerMain, /AllGo Partner/);
+    });
+
+    it('should enforce distinct Package IDs and namespaces across all three applications', () => {
+      const packages = {
+        customer_mobile: 'in.allgo.customer',
+        merchant_mobile: 'in.allgo.merchant',
+        partner_mobile: 'in.allgo.partner',
+      };
+
+      for (const [app, pkgId] of Object.entries(packages)) {
+        const manifest = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/android/app/src/main/AndroidManifest.xml`), 'utf-8');
+        const gradle = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/android/app/build.gradle`), 'utf-8');
+        const plist = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/ios/Runner/Info.plist`), 'utf-8');
+
+        assert.match(manifest, new RegExp(`package="${pkgId}"`));
+        assert.match(gradle, new RegExp(`applicationId "${pkgId}"`));
+        assert.match(gradle, new RegExp(`namespace "${pkgId}"`));
+        assert.match(plist, new RegExp(`<string>${pkgId}</string>`));
+      }
+    });
+
+    it('should have zero cross-app dependencies or imports between customer, merchant, and partner', () => {
+      for (const app of apps) {
+        const libDir = path.join(ROOT_DIR, `apps/${app}/lib`);
+        const files = fs.readdirSync(libDir, { recursive: true }) as string[];
+
+        for (const file of files) {
+          if (!file.endsWith('.dart')) continue;
+          const fullPath = path.join(libDir, file);
+          const content = fs.readFileSync(fullPath, 'utf-8');
+
+          const otherApps = apps.filter((a) => a !== app);
+          for (const other of otherApps) {
+            assert.strictEqual(
+              content.includes(`package:${other}`),
+              false,
+              `Violation: ${app}/${file} must not import from ${other}`
+            );
+            assert.strictEqual(
+              content.includes(`apps/${other}`),
+              false,
+              `Violation: ${app}/${file} must not reference apps/${other}`
+            );
+          }
+        }
+      }
+    });
+
+    it('should not contain any combined login or multi-role selector screens', () => {
+      for (const app of apps) {
+        const libDir = path.join(ROOT_DIR, `apps/${app}/lib`);
+        const files = fs.readdirSync(libDir, { recursive: true }) as string[];
+
+        for (const file of files) {
+          if (!file.endsWith('.dart')) continue;
+          const fullPath = path.join(libDir, file);
+          const content = fs.readFileSync(fullPath, 'utf-8');
+
+          assert.strictEqual(
+            /select.*role|choose.*role|role.*select/i.test(content),
+            false,
+            `Violation: ${app}/${file} contains prohibited multi-role selection logic`
+          );
+        }
+      }
+    });
+
+    it('should enforce independent activeRole context headers in mobile client', () => {
+      const customerSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/customer_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
+      const merchantSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/merchant_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
+      const partnerSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/partner_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
+
+      assert.match(merchantSplash, /client\.activeRole = 'MERCHANT_ADMIN'/);
+      assert.match(partnerSplash, /client\.activeRole = 'PARTNER'/);
+    });
+  });
 });
+

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { type AppConfig, validateAndLoadConfig } from './configuration.ts';
+import { type AppConfig, validateAndLoadConfig } from './configuration.js';
 
+@Injectable()
 export class ConfigService {
   private readonly config: AppConfig;
 
@@ -60,5 +61,3 @@ export class ConfigService {
     return this.config.otpResendCooldownSeconds;
   }
 }
-
-Injectable()(ConfigService);

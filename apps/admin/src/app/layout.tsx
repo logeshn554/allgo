@@ -1,5 +1,5 @@
 import React from 'react';
-import { AuthProvider } from '../lib/auth-context.js';
+import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata = {
   title: 'AllGo Super App Admin Control Console',
@@ -22,3 +22,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+

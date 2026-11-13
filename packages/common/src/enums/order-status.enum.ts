@@ -4,23 +4,25 @@
  * Represents the discrete states of an order / sub-order from creation through
  * fulfillment or terminal failure.
  */
-export enum OrderStatus {
-  CART = 'CART',
-  PLACED = 'PLACED',
-  PAYMENT_CONFIRMED = 'PAYMENT_CONFIRMED',
-  MERCHANT_ACCEPTED = 'MERCHANT_ACCEPTED',
-  PREPARING = 'PREPARING',
-  READY = 'READY',
-  PARTNER_ASSIGNED = 'PARTNER_ASSIGNED',
-  PARTNER_AT_STORE = 'PARTNER_AT_STORE',
-  PICKED_UP = 'PICKED_UP',
-  OUT_FOR_DELIVERY = 'OUT_FOR_DELIVERY',
-  ARRIVED = 'ARRIVED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-  REFUNDED = 'REFUNDED',
-  FAILED = 'FAILED',
-}
+export const OrderStatus = {
+  CART: 'CART',
+  PLACED: 'PLACED',
+  PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
+  MERCHANT_ACCEPTED: 'MERCHANT_ACCEPTED',
+  PREPARING: 'PREPARING',
+  READY: 'READY',
+  PARTNER_ASSIGNED: 'PARTNER_ASSIGNED',
+  PARTNER_AT_STORE: 'PARTNER_AT_STORE',
+  PICKED_UP: 'PICKED_UP',
+  OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
+  ARRIVED: 'ARRIVED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+  FAILED: 'FAILED',
+} as const;
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 /**
  * Terminal states where no further standard forward transitions can occur

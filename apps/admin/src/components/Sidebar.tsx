@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/navigation';
 import { usePathname } from 'next/navigation';
 
 export function Sidebar() {
@@ -9,10 +8,18 @@ export function Sidebar() {
 
   const navItems = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
+    { label: 'Partner Approvals', href: '/admin/partners', icon: '🛵' },
+    { label: 'Merchant Approvals', href: '/admin/merchants', icon: '🏪' },
+    { label: 'Catalog Moderation', href: '/admin/catalog', icon: '🍽️' },
+    { label: 'Dispatch Operations', href: '/admin/dispatch', icon: '🚚' },
+    { label: 'Mobility & Rides', href: '/admin/mobility', icon: '🚗' },
+    { label: 'Parcel Courier', href: '/admin/parcels', icon: '📫' },
     { label: 'Users & Roles', href: '/admin/users', icon: '👥' },
     { label: 'Pilot Service Zones', href: '/admin/zones', icon: '📍' },
     { label: 'Multi-Vertical Orders', href: '/admin/orders', icon: '📦' },
-    { label: 'Financial Ledger', href: '/admin/ledger', icon: '💳' },
+    { label: 'Financial Management', href: '/admin/finance', icon: '💰' },
+    { label: 'Customer Support', href: '/admin/support', icon: '🎧' },
+    { label: 'Ratings & Reviews', href: '/admin/ratings', icon: '⭐' },
   ];
 
   return (
@@ -91,3 +98,4 @@ export function Sidebar() {
     </aside>
   );
 }
+

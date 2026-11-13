@@ -47,13 +47,16 @@ else
 end
 `.trim();
 
-export enum OtpVerificationStatus {
-  SUCCESS = 'SUCCESS',
-  INVALID_OTP = 'INVALID_OTP',
-  EXPIRED_OR_NOT_FOUND = 'EXPIRED_OR_NOT_FOUND',
-  MAX_ATTEMPTS_EXCEEDED = 'MAX_ATTEMPTS_EXCEEDED',
-  RATE_LIMITED = 'RATE_LIMITED',
-}
+export const OtpVerificationStatus = {
+  SUCCESS: 'SUCCESS',
+  INVALID_OTP: 'INVALID_OTP',
+  EXPIRED_OR_NOT_FOUND: 'EXPIRED_OR_NOT_FOUND',
+  MAX_ATTEMPTS_EXCEEDED: 'MAX_ATTEMPTS_EXCEEDED',
+  RATE_LIMITED: 'RATE_LIMITED',
+} as const;
+
+export type OtpVerificationStatus =
+  (typeof OtpVerificationStatus)[keyof typeof OtpVerificationStatus];
 
 export interface OtpChallengeData {
   phone: string;

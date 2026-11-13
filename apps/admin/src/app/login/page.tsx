@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../lib/auth-context.js';
-import { adminApi } from '../../lib/api-client.js';
+import { useAuth } from '@/lib/auth-context';
+import { adminApi } from '@/lib/api-client';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('+919876543210');
@@ -228,3 +228,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service.ts';
-import { RedisService } from '../redis/redis.service.ts';
+import { DatabaseService } from '../database/database.service.js';
+import { RedisService } from '../redis/redis.service.js';
 
 export interface HealthCheckResult {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -14,13 +14,14 @@ export interface HealthCheckResult {
       error?: string;
     };
     redis: {
-      status: 'up' | 'down' | 'in_memory_fallback';
+      status: 'up' | 'down';
       latencyMs: number;
       error?: string;
     };
   };
 }
 
+@Injectable()
 export class HealthService {
   constructor(
     private readonly db: DatabaseService,
@@ -55,7 +56,7 @@ export class HealthService {
           error: dbResult.error,
         },
         redis: {
-          status: isRedisLive ? 'up' : 'in_memory_fallback',
+          status: isRedisLive ? 'up' : 'down',
           latencyMs: redisResult.latencyMs,
           error: redisResult.error,
         },
@@ -63,5 +64,3 @@ export class HealthService {
     };
   }
 }
-
-Injectable()(HealthService);

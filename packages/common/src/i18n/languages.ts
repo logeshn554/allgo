@@ -4,11 +4,13 @@
  * Launch languages: Tamil ('ta') and English ('en')
  * Next rollout: Hindi ('hi')
  */
-export enum SupportedLanguage {
-  EN = 'en',
-  TA = 'ta',
-  HI = 'hi',
-}
+export const SupportedLanguage = {
+  EN: 'en',
+  TA: 'ta',
+  HI: 'hi',
+} as const;
+
+export type SupportedLanguage = (typeof SupportedLanguage)[keyof typeof SupportedLanguage];
 
 export const SupportedLanguages = {
   EN: 'en',

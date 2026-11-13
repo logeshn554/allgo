@@ -1,13 +1,23 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module.js';
 import { ConfigService } from './config/config.service.js';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
+
+  // Register Global Validation Pipe
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Trust upstream proxy (Cloudflare/Load Balancer/Nginx)
+  try {
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  } catch {
+    // Adapter may not support trust proxy in non-express environments
+  }
 
   const configService = app.get(ConfigService);
 
@@ -48,3 +58,4 @@ if (process.argv[1] && process.argv[1].includes('main')) {
 }
 
 export { bootstrap };
+

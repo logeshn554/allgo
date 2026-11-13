@@ -4,14 +4,16 @@
  * Mobility verticals (RIDE, HIRE_DRIVER) are gated behind per-state feature flags
  * and disabled by default until regulatory clearances are obtained.
  */
-export enum VerticalType {
-  FOOD = 'FOOD',
-  GROCERY = 'GROCERY',
-  PARCEL = 'PARCEL',
-  RIDE = 'RIDE',
-  HIRE_DRIVER = 'HIRE_DRIVER',
-  HOME_MADE = 'HOME_MADE',
-}
+export const VerticalType = {
+  FOOD: 'FOOD',
+  GROCERY: 'GROCERY',
+  PARCEL: 'PARCEL',
+  RIDE: 'RIDE',
+  HIRE_DRIVER: 'HIRE_DRIVER',
+  HOME_MADE: 'HOME_MADE',
+} as const;
+
+export type VerticalType = (typeof VerticalType)[keyof typeof VerticalType];
 
 export const ALL_VERTICALS: readonly VerticalType[] = Object.values(VerticalType);
 

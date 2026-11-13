@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { adminApi, UserSummary } from '../../../../lib/api-client.js';
-import { StatusBadge } from '../../../../components/StatusBadge.js';
+import { adminApi, UserSummary } from '@/lib/api-client';
+import { StatusBadge } from '@/components/StatusBadge';
+import { UserRolesCard } from '@/components/users/UserRolesCard';
+import { UserStatusCard } from '@/components/users/UserStatusCard';
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -13,6 +15,7 @@ export default function UserDetailPage() {
   const [user, setUser] = useState<UserSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [roleToAssign, setRoleToAssign] = useState('ADMIN');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +48,44 @@ export default function UserDetailPage() {
       setMessage(`Account status successfully updated to ${newStatus}. Immediate Redis revocation enforced.`);
     } catch (err: any) {
       setError(err.message || 'Status update failed');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleAssignRole = async () => {
+    if (!user || !roleToAssign) return;
+    if (user.roles.includes(roleToAssign)) {
+      setMessage(`User already has the '${roleToAssign}' role.`);
+      return;
+    }
+    setUpdating(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      await adminApi.assignRole(user.id, roleToAssign);
+      setUser({ ...user, roles: [...user.roles, roleToAssign] });
+      setMessage(`Role '${roleToAssign}' assigned successfully.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to assign role');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRevokeRole = async (roleToRevoke: string) => {
+    if (!user) return;
+    setUpdating(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      await adminApi.revokeRole(user.id, roleToRevoke);
+      setUser({ ...user, roles: user.roles.filter((r: string) => r !== roleToRevoke) });
+      setMessage(`Role '${roleToRevoke}' revoked successfully.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to revoke role');
     } finally {
       setUpdating(false);
     }
@@ -129,85 +170,20 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* Roles Card */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px', marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 12px 0' }}>Assigned Platform Roles</h2>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {user.roles.map((r) => (
-            <span
-              key={r}
-              style={{
-                backgroundColor: '#F1F5F9',
-                color: '#334155',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontWeight: '600',
-                fontSize: '13px',
-              }}
-            >
-              {r}
-            </span>
-          ))}
-        </div>
-      </div>
+      <UserRolesCard
+        roles={user.roles}
+        roleToAssign={roleToAssign}
+        setRoleToAssign={setRoleToAssign}
+        updating={updating}
+        onAssignRole={handleAssignRole}
+        onRevokeRole={handleRevokeRole}
+      />
 
-      {/* Account Status Administration */}
-      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 8px 0' }}>Account Status & Access Control</h2>
-        <p style={{ color: '#64748B', fontSize: '13px', margin: '0 0 16px 0' }}>
-          Changing status will immediately invalidate active device JWT sessions in Redis and reject downstream requests.
-        </p>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => handleStatusChange('ACTIVE')}
-            disabled={updating || user.status === 'ACTIVE'}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #16A34A',
-              backgroundColor: user.status === 'ACTIVE' ? '#16A34A' : '#FFFFFF',
-              color: user.status === 'ACTIVE' ? '#FFFFFF' : '#16A34A',
-              fontWeight: '600',
-              cursor: updating ? 'not-allowed' : 'pointer',
-            }}
-          >
-            Mark ACTIVE
-          </button>
-
-          <button
-            onClick={() => handleStatusChange('SUSPENDED')}
-            disabled={updating || user.status === 'SUSPENDED'}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #D97706',
-              backgroundColor: user.status === 'SUSPENDED' ? '#D97706' : '#FFFFFF',
-              color: user.status === 'SUSPENDED' ? '#FFFFFF' : '#D97706',
-              fontWeight: '600',
-              cursor: updating ? 'not-allowed' : 'pointer',
-            }}
-          >
-            SUSPEND (Temporary Lock)
-          </button>
-
-          <button
-            onClick={() => handleStatusChange('BLOCKED')}
-            disabled={updating || user.status === 'BLOCKED'}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: '1px solid #DC2626',
-              backgroundColor: user.status === 'BLOCKED' ? '#DC2626' : '#FFFFFF',
-              color: user.status === 'BLOCKED' ? '#FFFFFF' : '#DC2626',
-              fontWeight: '600',
-              cursor: updating ? 'not-allowed' : 'pointer',
-            }}
-          >
-            BLOCK (Permanent Revocation)
-          </button>
-        </div>
-      </div>
+      <UserStatusCard
+        status={user.status}
+        updating={updating}
+        onStatusChange={handleStatusChange}
+      />
     </div>
   );
 }

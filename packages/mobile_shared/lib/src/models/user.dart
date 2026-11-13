@@ -44,4 +44,6 @@ class User {
   }
 
   bool hasRole(String role) => roles.contains(role);
+  String get phoneNumber => phone;
 }
+

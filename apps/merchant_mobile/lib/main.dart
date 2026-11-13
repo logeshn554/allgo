@@ -32,3 +32,4 @@ class AllGoMerchantApp extends StatelessWidget {
     );
   }
 }
+

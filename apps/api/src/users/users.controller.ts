@@ -3,10 +3,13 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Param,
   Body,
   Query,
+  Req,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { UsersService } from './users.service.js';
@@ -42,8 +45,17 @@ export class UsersController {
   @Get(':id')
   @ApiOperation({ summary: 'Retrieve specific user profile by UUID' })
   @ApiResponse({ status: 200, description: 'User profile details' })
+  @ApiResponse({ status: 403, description: 'Forbidden - IDOR prevention (owner or ADMIN only)' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUser(@Param('id') id: string) {
+  async getUser(@Req() req: any, @Param('id') id: string) {
+    const requester = req.user;
+    const isOwner = requester && requester.userId === id;
+    const isAdmin = requester && Array.isArray(requester.roles) && requester.roles.includes('ADMIN');
+
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException('Access denied: You do not have permission to view this profile.');
+    }
+
     return this.usersService.getUserById(id);
   }
 
@@ -71,4 +83,17 @@ export class UsersController {
   ) {
     return this.usersService.assignUserRole(id, role);
   }
+
+  @Delete(':id/roles/:role')
+  @Roles('ADMIN')
+  @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (ADMIN)', required: true })
+  @ApiOperation({ summary: 'Revoke a role from a user (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Role successfully revoked' })
+  async revokeRole(
+    @Param('id') id: string,
+    @Param('role') role: string
+  ) {
+    return this.usersService.revokeUserRole(id, role);
+  }
 }
+

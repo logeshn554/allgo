@@ -51,3 +51,4 @@ networks:
   allgo-network:
     name: allgo-network
     driver: bridge
+

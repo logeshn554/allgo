@@ -1,0 +1,75 @@
+{
+  "FOOD_DELIVERY": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["BICYCLE", "MOTORCYCLE", "SCOOTER"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 18,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Standard commercial food delivery permitted nationwide with valid license and vehicle registration."
+  },
+  "GROCERY_DELIVERY": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["BICYCLE", "MOTORCYCLE", "SCOOTER", "AUTO_RICKSHAW"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 18,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Standard grocery delivery permitted nationwide."
+  },
+  "PARCEL": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["BICYCLE", "MOTORCYCLE", "SCOOTER", "AUTO_RICKSHAW"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 18,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Point-to-point courier and parcel delivery."
+  },
+  "BIKE_TAXI": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "COMMERCIAL_INSURANCE", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["MOTORCYCLE", "SCOOTER"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 18,
+    "isPermittedNationwide": false,
+    "legalReviewNotes": "LEGAL RESTRICTIONS APPLY: Bike taxi legality varies significantly by state. Explicitly permitted in Goa, Karnataka, West Bengal; banned or restricted in Delhi and Tamil Nadu pending state aggregator rules. Disabled by default pending municipal legal clearance.",
+    "permittedStates": ["GOA", "KARNATAKA", "WEST_BENGAL"]
+  },
+  "AUTO_RICKSHAW": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "COMMERCIAL_PERMIT", "FITNESS_CERTIFICATE", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["AUTO_RICKSHAW"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 20,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Requires commercial passenger auto permit and badge from relevant state RTO."
+  },
+  "CAB_SEDAN": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "COMMERCIAL_PERMIT", "TOURIST_PERMIT", "FITNESS_CERTIFICATE", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["CAB_SEDAN"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 21,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Requires commercial yellow-plate registration, passenger permit, and CMV Rules LMV-TR transport endorsement."
+  },
+  "CAB_HATCHBACK": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "COMMERCIAL_PERMIT", "TOURIST_PERMIT", "FITNESS_CERTIFICATE", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["CAB_HATCHBACK"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 21,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Requires commercial yellow-plate registration and CMV Rules LMV-TR transport endorsement."
+  },
+  "CAB_SUV": {
+    "requiredDocuments": ["DRIVING_LICENSE", "VEHICLE_RC", "COMMERCIAL_PERMIT", "TOURIST_PERMIT", "FITNESS_CERTIFICATE", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["CAB_SUV"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 21,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Requires commercial yellow-plate registration, passenger permit, and CMV Rules LMV-TR endorsement."
+  },
+  "HIRE_DRIVER": {
+    "requiredDocuments": ["DRIVING_LICENSE", "POLICE_VERIFICATION", "PAN", "BANK_ACCOUNT", "PROFILE_PHOTO"],
+    "allowedVehicleTypes": ["CAB_SEDAN", "CAB_HATCHBACK", "CAB_SUV"],
+    "backgroundCheckRequired": true,
+    "minimumAge": 23,
+    "isPermittedNationwide": true,
+    "legalReviewNotes": "Driver-only service for customer-owned vehicles. Requires comprehensive criminal record and background check."
+  }
+}

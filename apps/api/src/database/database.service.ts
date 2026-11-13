@@ -1,7 +1,8 @@
 import { Injectable, Logger, type OnModuleInit, type OnModuleDestroy } from '@nestjs/common';
 import pg from 'pg';
-import { ConfigService } from '../config/config.service.ts';
+import { ConfigService } from '../config/config.service.js';
 
+@Injectable()
 export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private pool: pg.Pool | null = null;
@@ -95,5 +96,3 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 }
-
-Injectable()(DatabaseService);

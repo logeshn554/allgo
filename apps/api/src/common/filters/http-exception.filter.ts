@@ -33,7 +33,8 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
       }
     } else if (exception instanceof Error) {
       this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
-      message = exception.message;
+      message = 'An unexpected internal server error occurred.';
+      error = 'Internal Server Error';
     }
 
     const errorPayload = {
@@ -47,3 +48,4 @@ export class GlobalHttpExceptionFilter implements ExceptionFilter {
     response.status(status).json(errorPayload);
   }
 }
+

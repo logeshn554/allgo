@@ -61,7 +61,7 @@ export async function runSeeds(): Promise<{ success: boolean; error?: string }> 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
   runSeeds()
     .then((result) => {
-      if (!result.success && !result.error?.includes('ECONNREFUSED')) {
+      if (!result.success) {
         process.exit(1);
       }
     })
@@ -70,3 +70,4 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
       process.exit(1);
     });
 }
+

@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { HealthService } from '../../apps/api/src/health/health.service.ts';
-import { DatabaseService } from '../../apps/api/src/database/database.service.ts';
-import { RedisService } from '../../apps/api/src/redis/redis.service.ts';
-import { ConfigService } from '../../apps/api/src/config/config.service.ts';
+import { HealthService } from '../../apps/api/dist/health/health.service.js';
+import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
+import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
+import { ConfigService } from '../../apps/api/dist/config/config.service.js';
 
 describe('Phase 1 Backend: Real Infrastructure Health Check Specification', () => {
   it('should accurately report status and dependencies without simulated healthy claims', async () => {

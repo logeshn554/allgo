@@ -28,7 +28,15 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'OTP dispatched successfully' })
   @ApiResponse({ status: 400, description: 'Invalid phone or rate limit exceeded' })
   async sendOtp(@Body() dto: SendOtpDto, @Req() req: Request) {
-    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const rawForwarded = req.headers['x-forwarded-for'];
+    let clientIp = '127.0.0.1';
+    if (typeof rawForwarded === 'string') {
+      clientIp = rawForwarded.split(',')[0]?.trim() || '127.0.0.1';
+    } else if (Array.isArray(rawForwarded) && rawForwarded[0]) {
+      clientIp = rawForwarded[0].split(',')[0]?.trim() || '127.0.0.1';
+    } else if (req.socket?.remoteAddress) {
+      clientIp = req.socket.remoteAddress;
+    }
     return this.authService.sendOtp(dto, clientIp);
   }
 
@@ -57,9 +65,13 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Log out current session and invalidate token' })
   @ApiResponse({ status: 200, description: 'Session successfully revoked' })
-  async logout(@Req() req: any, @Headers('authorization') authHeader: string) {
+  async logout(
+    @Req() req: any,
+    @Headers('authorization') authHeader: string,
+    @Body('refreshToken') refreshToken?: string
+  ) {
     const token = authHeader ? authHeader.substring(7) : '';
-    return this.authService.logout(token, req.user.userId, req.user.deviceId);
+    return this.authService.logout(token, req.user.userId, req.user.deviceId, refreshToken);
   }
 
   @Get('me')
@@ -72,3 +84,4 @@ export class AuthController {
     return user || req.user;
   }
 }
+

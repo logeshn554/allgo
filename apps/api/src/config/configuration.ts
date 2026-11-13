@@ -54,3 +54,4 @@ export function validateAndLoadConfig(): AppConfig {
     otpResendCooldownSeconds: 60,
   };
 }
+

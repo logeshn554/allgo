@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'phone_login_screen.dart';
+import 'partner_earnings_screen.dart';
+import 'partner_support_screen.dart';
+import 'partner_notifications_screen.dart';
 
 class PartnerProfileScreen extends ConsumerWidget {
   const PartnerProfileScreen({super.key});
@@ -86,17 +89,39 @@ class PartnerProfileScreen extends ConsumerWidget {
                     ],
                   ),
                   OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PartnerEarningsScreen()),
+                    ),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       side: const BorderSide(color: AllGoColors.secondary),
                     ),
-                    child: const Text('Deposit Cash', style: TextStyle(color: AllGoColors.secondary)),
+                    child: const Text('Manage & Deposit', style: TextStyle(color: AllGoColors.secondary)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
+            _buildActionTile(
+              'Unified Earnings & Settlements',
+              'Weekly payouts, statements, and commission breakdown',
+              Icons.account_balance_wallet,
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerEarningsScreen())),
+            ),
+            _buildActionTile(
+              'Partner Notifications & Alerts',
+              'Duty updates, batch offers, and payout confirmations',
+              Icons.notifications_active,
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerNotificationsScreen())),
+            ),
+            _buildActionTile(
+              'Partner Support & Disputes',
+              '24/7 dedicated fleet support and fare adjustments',
+              Icons.support_agent,
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerSupportScreen())),
+            ),
+            const SizedBox(height: 16),
 
             _buildTile('Assigned Vehicle', 'TVS Apache 160 (TN 09 AB 1234)', Icons.motorcycle),
             _buildTile('Bank Account Details', 'HDFC Bank ending in •••• 4012 (Penny-drop verified)', Icons.account_balance),
@@ -114,6 +139,24 @@ class PartnerProfileScreen extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionTile(String title, String subtitle, IconData icon, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: AllGoColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AllGoColors.divider, width: 0.6),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: AllGoColors.secondary, size: 22),
+        title: Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle, style: AllGoTypography.caption),
+        trailing: const Icon(Icons.chevron_right, size: 18, color: AllGoColors.textTertiary),
+        onTap: onTap,
       ),
     );
   }
@@ -147,3 +190,4 @@ class PartnerProfileScreen extends ConsumerWidget {
     );
   }
 }
+

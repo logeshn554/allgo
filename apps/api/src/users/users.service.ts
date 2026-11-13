@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service.ts';
-import { RedisService } from '../redis/redis.service.ts';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import crypto from 'node:crypto';
+import { DatabaseService } from '../database/database.service.js';
+import { RedisService } from '../redis/redis.service.js';
 
 export interface UserSummary {
   id: string;
@@ -13,6 +19,7 @@ export interface UserSummary {
   createdAt: string;
 }
 
+@Injectable()
 export class UsersService {
   constructor(
     private readonly db: DatabaseService,
@@ -66,38 +73,8 @@ export class UsersService {
         users,
         total: parseInt(countRes.rows[0]?.count || '0', 10),
       };
-    } catch {
-      // Return dev baseline users if PostgreSQL is offline
-      const mockUsers: UserSummary[] = [
-        {
-          id: 'usr_admin_001',
-          phone: '+919876543210',
-          fullName: 'System Administrator',
-          status: 'ACTIVE',
-          roles: ['ADMIN', 'CUSTOMER'],
-          defaultLanguage: 'en',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'usr_partner_002',
-          phone: '+919876543211',
-          fullName: 'Karthik Delivery Partner',
-          status: 'ACTIVE',
-          roles: ['PARTNER'],
-          defaultLanguage: 'ta',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 'usr_merchant_003',
-          phone: '+919876543212',
-          fullName: 'Anjappar Chettinad Owner',
-          status: 'ACTIVE',
-          roles: ['MERCHANT_ADMIN'],
-          defaultLanguage: 'en',
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      return { users: mockUsers, total: mockUsers.length };
+    } catch (err: any) {
+      throw new ServiceUnavailableException(`Database service unavailable: ${err?.message || err}`);
     }
   }
 
@@ -131,15 +108,7 @@ export class UsersService {
       };
     } catch (err: any) {
       if (err instanceof NotFoundException) throw err;
-      return {
-        id,
-        phone: '+919876543210',
-        fullName: 'Local Developer Account',
-        status: 'ACTIVE',
-        roles: ['ADMIN', 'CUSTOMER'],
-        defaultLanguage: 'en',
-        createdAt: new Date().toISOString(),
-      };
+      throw new ServiceUnavailableException(`Database service unavailable: ${err?.message || err}`);
     }
   }
 
@@ -149,11 +118,7 @@ export class UsersService {
       throw new BadRequestException(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
 
-    try {
-      await this.db.query(`UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2;`, [newStatus, id]);
-    } catch {
-      // Local dev DB offline
-    }
+    await this.db.query(`UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2;`, [newStatus, id]);
 
     // Instantly update Redis blocklist (<1ms revocation)
     await this.redis.set(`user:status:${id}`, newStatus, 'EX', 86400);
@@ -166,29 +131,39 @@ export class UsersService {
   }
 
   async assignUserRole(userId: string, roleName: string): Promise<{ success: boolean; userId: string; role: string }> {
-    try {
-      await this.db.transaction(async (client) => {
-        let roleRes = await client.query(`SELECT id FROM roles WHERE name = $1;`, [roleName]);
-        let roleId: string;
-        if (roleRes.rows.length === 0) {
-          const newRoleId = crypto.randomUUID();
-          await client.query(`INSERT INTO roles (id, name) VALUES ($1, $2);`, [newRoleId, roleName]);
-          roleId = newRoleId;
-        } else {
-          roleId = roleRes.rows[0].id;
-        }
-
-        await client.query(
-          `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-          [userId, roleId]
-        );
-      });
-    } catch {
-      // Local dev DB offline
+    const validRoles = ['CUSTOMER', 'PARTNER', 'MERCHANT', 'ADMIN', 'DRIVER', 'RESTAURANT_OWNER', 'STORE_MANAGER'];
+    if (!validRoles.includes(roleName)) {
+      throw new BadRequestException(`Invalid role name '${roleName}'. Must be one of: ${validRoles.join(', ')}`);
     }
+
+    await this.db.transaction(async (client) => {
+      let roleRes = await client.query(`SELECT id FROM roles WHERE name = $1;`, [roleName]);
+      let roleId: string;
+      if (roleRes.rows.length === 0) {
+        const newRoleId = crypto.randomUUID();
+        await client.query(`INSERT INTO roles (id, name) VALUES ($1, $2);`, [newRoleId, roleName]);
+        roleId = newRoleId;
+      } else {
+        roleId = roleRes.rows[0].id;
+      }
+
+      await client.query(
+        `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
+        [userId, roleId]
+      );
+    });
+
+    return { success: true, userId, role: roleName };
+  }
+
+  async revokeUserRole(userId: string, roleName: string): Promise<{ success: boolean; userId: string; role: string }> {
+    await this.db.transaction(async (client) => {
+      const roleRes = await client.query(`SELECT id FROM roles WHERE name = $1;`, [roleName]);
+      if (roleRes.rows.length > 0) {
+        await client.query(`DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2;`, [userId, roleRes.rows[0].id]);
+      }
+    });
 
     return { success: true, userId, role: roleName };
   }
 }
-
-Injectable()(UsersService);

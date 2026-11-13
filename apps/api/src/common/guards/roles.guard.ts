@@ -3,12 +3,13 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
   evaluateAuthoritativeAccess,
-  UserRole,
-  UserIdentity,
+  type UserRole,
+  type UserIdentity,
 } from '@allgo/common';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -66,36 +67,31 @@ export class RolesGuard implements CanActivate {
       );
 
       if (userRes.rows.length === 0) {
-        // Fallback to token payload if DB is in disconnected dev mode
-        identity = {
-          userId: user.userId,
-          phoneNumber: user.phone || '+919999999999',
-          accountStatus: user.status || 'ACTIVE',
-          roles: (user.roles || ['CUSTOMER']).map((r: string) => ({
-            role: r as UserRole,
-            status: 'ACTIVE',
-          })),
-        };
-      } else {
-        const row = userRes.rows[0];
-        identity = {
-          userId: row.id,
-          phoneNumber: row.phone,
-          accountStatus: row.status,
-          roles: row.roles,
-        };
+        throw new ForbiddenException('User record not found in authoritative database');
       }
-    } catch {
-      // In local dev when Postgres is offline, use token claims
+
+      const row = userRes.rows[0];
+      const rawRoles = Array.isArray(row.roles) ? row.roles : [];
+      const expandedRoles: any[] = [];
+      for (const r of rawRoles) {
+        expandedRoles.push(r);
+        if (r.role === 'MERCHANT') {
+          expandedRoles.push({ role: 'MERCHANT_ADMIN', status: r.status });
+          expandedRoles.push({ role: 'MERCHANT_OPERATOR', status: r.status });
+        }
+        if (r.role === 'SUPER_ADMIN') {
+          expandedRoles.push({ role: 'ADMIN', status: r.status });
+        }
+      }
       identity = {
-        userId: user.userId,
-        phoneNumber: user.phone || '+919999999999',
-        accountStatus: user.status || 'ACTIVE',
-        roles: (user.roles || ['CUSTOMER']).map((r: string) => ({
-          role: r as UserRole,
-          status: 'ACTIVE',
-        })),
+        userId: row.id,
+        phoneNumber: row.phone,
+        accountStatus: row.status,
+        roles: expandedRoles,
       };
+    } catch (err: any) {
+      if (err instanceof ForbiddenException) throw err;
+      throw new ServiceUnavailableException(`Authoritative database is unavailable: ${err?.message || err}`);
     }
 
     // 3. Authoritatively evaluate access via common logic
@@ -113,3 +109,4 @@ export class RolesGuard implements CanActivate {
     return true;
   }
 }
+

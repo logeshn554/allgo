@@ -26,7 +26,14 @@ export class JwtAuthGuard implements CanActivate {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, this.config.jwtSecret) as any;
+      const decoded = jwt.verify(token, this.config.jwtSecret, {
+        algorithms: ['HS256'],
+      }) as any;
+
+      // Check token payload account status
+      if (decoded.status === 'BLOCKED' || decoded.status === 'SUSPENDED') {
+        throw new UnauthorizedException(`Account is ${decoded.status.toLowerCase()}`);
+      }
 
       // Check immediate revocation blocklist in Redis (<1ms)
       const isRevoked = await this.redis.get(`token:revoked:${token}`);
@@ -49,3 +56,4 @@ export class JwtAuthGuard implements CanActivate {
     }
   }
 }
+

@@ -4,6 +4,7 @@ import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'phone_login_screen.dart';
 import 'merchant_dashboard_shell.dart';
 import 'approval_status_screen.dart';
+import 'merchant_registration_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -33,19 +34,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final authState = ref.read(authNotifierProvider);
 
     if (authState.isAuthenticated) {
-      final user = authState.user;
-      final isApproved = (user?.hasRole('MERCHANT_ADMIN') == true || user?.hasRole('MERCHANT_OPERATOR') == true) &&
-          user?.status == AccountStatus.active;
-
-      if (isApproved) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MerchantDashboardShell()),
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ApprovalStatusScreen()),
-        );
+      Widget targetScreen;
+      try {
+        final profile = await client.getMerchantProfile();
+        final status = profile['status']?.toString() ?? 'NOT_REGISTERED';
+        if (status == 'NOT_REGISTERED' || profile['merchant'] == null) {
+          targetScreen = const MerchantRegistrationScreen();
+        } else if (status == 'APPROVED' || status == 'LIVE' || status == 'ACTIVE') {
+          targetScreen = const MerchantDashboardShell();
+        } else {
+          targetScreen = ApprovalStatusScreen(status: status);
+        }
+      } catch (_) {
+        targetScreen = const ApprovalStatusScreen(status: 'SUBMITTED');
       }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => targetScreen),
+      );
     } else {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const PhoneLoginScreen()),
@@ -99,3 +106,4 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     );
   }
 }
+
