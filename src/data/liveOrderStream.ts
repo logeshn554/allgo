@@ -1,34 +1,44 @@
-// Job: WebSocket stream listener for real-time order and driver telemetry.
+// Job: Listen for live order status and driver GPS updates over WebSockets.
 
-type Listener = (payload: any) => void;
-const listeners = new Map<string, Set<Listener>>();
-let socket: WebSocket | null = null;
+import { loadFromCache } from './localCache';
+import { OrderStep } from './orderStorage';
 
-export function connectOrderStream(orderId: string, onUpdate: Listener): () => void {
-  const channel = `order:${orderId}`;
-  if (!listeners.has(channel)) {
-    listeners.set(channel, new Set());
-  }
-  listeners.get(channel)!.add(onUpdate);
+export interface LiveOrderUpdate {
+  orderId: string;
+  status: OrderStep;
+  driverLat?: number;
+  driverLng?: number;
+  etaMinutes?: number;
+}
 
-  if (!socket && typeof WebSocket !== 'undefined') {
-    const wsUrl = process.env.EXPO_PUBLIC_WS_URL || 'wss://api.allgo.internal/ws';
-    try {
-      socket = new WebSocket(wsUrl);
-      socket.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          const channelListeners = listeners.get(msg.channel);
-          if (channelListeners) {
-            channelListeners.forEach((fn) => fn(msg.data));
-          }
-        } catch (_e) {}
-      };
-    } catch (_e) {}
+const WS_BASE_URL = process.env.EXPO_PUBLIC_WS_URL || 'wss://api.allgo.app/ws/tracking';
+
+export function subscribeToOrderUpdates(
+  orderId: string,
+  onUpdate: (update: LiveOrderUpdate) => void
+): () => void {
+  const token = loadFromCache<string>('allgo_auth_token', '');
+  const url = `${WS_BASE_URL}?orderId=${encodeURIComponent(orderId)}&token=${encodeURIComponent(token)}`;
+
+  let socket: WebSocket | null = null;
+
+  try {
+    socket = new WebSocket(url);
+    socket.onmessage = (event) => {
+      try {
+        const parsed = JSON.parse(event.data) as LiveOrderUpdate;
+        onUpdate(parsed);
+      } catch {
+        // Ignore malformed socket packets
+      }
+    };
+  } catch {
+    // Fallback if offline
   }
 
   return () => {
-    const set = listeners.get(channel);
-    if (set) set.delete(onUpdate);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.close();
+    }
   };
 }

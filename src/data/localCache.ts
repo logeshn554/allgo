@@ -1,36 +1,43 @@
-// Job: Persist and load key-value data on phone disk with memory fallback.
+// Job: Save and load data on the device so it survives app restarts.
 
-const inMemoryStore = new Map<string, string>();
+const memoryBackup = new Map<string, string>();
 
-export function getLocalItem(key: string): string | null {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      return localStorage.getItem(key);
-    }
-  } catch (_e) {
-    // Ignore and fallback to in-memory
+function getStorage(): Storage | null {
+  if (typeof globalThis !== 'undefined' && 'localStorage' in globalThis) {
+    return globalThis.localStorage;
   }
-  return inMemoryStore.get(key) || null;
+  return null;
 }
 
-export function setLocalItem(key: string, value: string): void {
+export function saveToCache<T>(key: string, value: T): void {
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(key, value);
+    const raw = JSON.stringify(value);
+    const storage = getStorage();
+    if (storage) {
+      storage.setItem(key, raw);
+    } else {
+      memoryBackup.set(key, raw);
     }
-  } catch (_e) {
-    // Ignore and fallback
+  } catch {
+    // Ignore storage quota errors
   }
-  inMemoryStore.set(key, value);
 }
 
-export function removeLocalItem(key: string): void {
+export function loadFromCache<T>(key: string, fallback: T): T {
   try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(key);
-    }
-  } catch (_e) {
-    // Ignore
+    const storage = getStorage();
+    const raw = storage ? storage.getItem(key) : memoryBackup.get(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
   }
-  inMemoryStore.delete(key);
+}
+
+export function removeFromCache(key: string): void {
+  const storage = getStorage();
+  if (storage) {
+    storage.removeItem(key);
+  }
+  memoryBackup.delete(key);
 }
