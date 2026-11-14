@@ -1,6 +1,6 @@
-// Job: Verify the 6-digit delivery PIN and lock after 3 wrong tries.
+// Job: Verify the 4-digit handover PIN and lock after 3 wrong tries to prevent false drop-offs.
 
-import { loadOrderById, updateOrderStatus } from './orderStorage';
+import { loadOrderById, updateOrderStatus } from './orderStorage.ts';
 
 const failedTriesByOrder = new Map<string, number>();
 

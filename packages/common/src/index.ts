@@ -1,5 +1,8 @@
+export { VerticalType } from './enums/vertical.enum.ts';
 export * from './enums/vertical.enum.ts';
+export { OrderStatus } from './enums/order-status.enum.ts';
 export * from './enums/order-status.enum.ts';
+export { FulfillmentMode } from './enums/fulfillment-mode.enum.ts';
 export * from './enums/fulfillment-mode.enum.ts';
 export * from './i18n/languages.ts';
 export * from './auth/otp-service.ts';
@@ -8,3 +11,7 @@ export * from './security/price-integrity.ts';
 export * from './security/webhook-verifier.ts';
 export * from './security/telemetry-sanitizer.ts';
 export * from './geospatial/h3-utils.ts';
+export * from './geospatial/redis-geo-index.ts';
+export * from './notifications/notification-gateway.ts';
+export * from './payments/marketplace-fund-splitter.ts';
+export * from './kyc/driver-kyc-verifier.ts';

@@ -1,4 +1,4 @@
-// Job: Connect all screens in src/pages/ with full navigation, history, and offline state.
+// Job: Connect all screens in src/pages/ across Customer, Driver, Merchant KDS, and Admin God View.
 
 import React, { useState } from 'react';
 import { SafeAreaView, StyleSheet } from 'react-native';
@@ -13,12 +13,14 @@ import { TrackOrderPage } from './pages/TrackOrderPage';
 import { DriverJobPage } from './pages/DriverJobPage';
 import { OrderHistoryPage } from './pages/OrderHistoryPage';
 import { AddressPickerPage } from './pages/AddressPickerPage';
+import { MerchantKdsPage } from './pages/MerchantKdsPage';
+import { AdminGodViewPage } from './pages/AdminGodViewPage';
 import { OfflineBanner } from './components/OfflineBanner';
 import { loadUserProfile } from './data/userStorage';
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenName>('home');
-  const [activeOrderId, setActiveOrderId] = useState<string>('');
+  const [activeOrderId, setActiveOrderId] = useState<string>('ORD-774412');
   const [authPhone, setAuthPhone] = useState<string>('+91 98765 43210');
   const [authRole, setAuthRole] = useState<'customer' | 'driver'>('customer');
 
@@ -71,6 +73,12 @@ export default function App() {
       )}
       {screen === 'driver' && (
         <DriverJobPage activeOrderId={activeOrderId} onBack={() => setScreen('home')} />
+      )}
+      {screen === 'kds' && (
+        <MerchantKdsPage onBack={() => setScreen('home')} />
+      )}
+      {screen === 'admin_dispatch' && (
+        <AdminGodViewPage onBack={() => setScreen('home')} />
       )}
       {screen === 'history' && (
         <OrderHistoryPage onBack={() => setScreen('home')} onSelectOrder={openTracking} />

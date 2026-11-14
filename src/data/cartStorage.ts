@@ -1,6 +1,6 @@
 // Job: Save and load cart items with persistent local storage.
 
-import { getLocalItem, setLocalItem } from './localCache';
+import { getLocalItem, setLocalItem } from './localCache.ts';
 
 export type ServiceType = 'grocery' | 'food' | 'parcel';
 

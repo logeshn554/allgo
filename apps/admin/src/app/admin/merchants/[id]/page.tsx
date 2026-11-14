@@ -132,6 +132,17 @@ export default function MerchantDetailPage() {
         </div>
       )}
 
+      {/* Statutory Compliance Checklist:
+          - FSSAI Food License Number
+          - Permanent Account Number (PAN)
+          - Bank Settlement Account
+          Supported Actions:
+          - Approve & Activate Merchant
+          - Reject Application
+          - Request Additional Documents
+          - Suspend Merchant
+          - Reactivate Suspended Merchant
+      */}
       <MerchantInfoCards merchant={merchant} />
 
       <MerchantOutletsList

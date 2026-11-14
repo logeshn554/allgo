@@ -37,6 +37,7 @@ export default function UserDetailPage() {
   }, [userId]);
 
   const handleStatusChange = async (newStatus: string) => {
+    // Allows admin to SUSPEND (SUSPENDED) or BLOCK (BLOCKED) user account
     if (!user) return;
     setUpdating(true);
     setMessage(null);

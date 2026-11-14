@@ -41,3 +41,21 @@ export function removeFromCache(key: string): void {
   }
   memoryBackup.delete(key);
 }
+
+export function getLocalItem(key: string): string | null {
+  const storage = getStorage();
+  return storage ? storage.getItem(key) : memoryBackup.get(key) || null;
+}
+
+export function setLocalItem(key: string, value: string): void {
+  const storage = getStorage();
+  if (storage) {
+    storage.setItem(key, value);
+  } else {
+    memoryBackup.set(key, value);
+  }
+}
+
+export function removeLocalItem(key: string): void {
+  removeFromCache(key);
+}

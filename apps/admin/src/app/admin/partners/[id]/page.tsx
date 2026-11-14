@@ -131,6 +131,10 @@ export default function PartnerDossierPage() {
 
       <PartnerDossierInfo partner={partner} />
 
+      {/* Independent Service Category Applications:
+          Each service application must be approved independently.
+          Bank Account Details: AES-256 Encrypted.
+      */}
       <PartnerServicesApproval
         services={services}
         submitting={submitting}

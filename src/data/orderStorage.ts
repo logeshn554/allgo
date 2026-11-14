@@ -1,7 +1,8 @@
 // Job: Save new orders and load orders with persistent storage and backend sync.
 
-import { CartItem } from './cartStorage';
-import { getLocalItem, setLocalItem } from './localCache';
+import type { CartItem } from './cartStorage.ts';
+import { getLocalItem, setLocalItem } from './localCache.ts';
+import { recordOrderCreatedAt } from './orderModificationService.ts';
 
 export type OrderStep = 'confirmed' | 'matched' | 'on_the_way' | 'delivered';
 
@@ -31,9 +32,11 @@ function persistOrdersMap(map: Map<string, SavedOrder>): void {
 
 export function saveNewOrder(items: CartItem[], totalCents: number): SavedOrder {
   const id = `ORD-${Math.floor(100000 + Math.random() * 900000)}`;
-  const otpPin = String(Math.floor(100000 + Math.random() * 900000));
+  // 4-digit verification handover PIN to prevent false drop-offs
+  const otpPin = String(Math.floor(1000 + Math.random() * 9000));
   const order: SavedOrder = { id, items, totalCents, status: 'confirmed', otpPin, etaMinutes: 18 };
 
+  recordOrderCreatedAt(id);
   const map = getOrdersMap();
   map.set(id, order);
   persistOrdersMap(map);
