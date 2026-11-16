@@ -1,8 +1,9 @@
 // Job: Order grace period tracking (60-120s window) for penalty-free modification and instant refund cancellation.
 
-import { loadOrderById, updateOrderStatus } from './orderStorage.ts';
+import { loadOrderById, updateOrderStatus, updateOrderItems } from './orderStorage.ts';
 import type { SavedOrder } from './orderStorage.ts';
-import { creditWallet } from './walletStorage.ts';
+import type { CartItem } from './cartStorage.ts';
+import { creditWallet, debitWallet } from './walletStorage.ts';
 
 export interface GracePeriodStatus {
   orderId: string;
@@ -83,8 +84,8 @@ export function cancelOrderWithinGracePeriod(
     };
   }
 
-  // Cancel order
-  updateOrderStatus(orderId, 'delivered'); // Mark finished/cancelled in local state
+  // Cancel order with explicit cancelled state
+  updateOrderStatus(orderId, 'cancelled');
   // 100% Instant refund to customer digital wallet
   creditWallet(order.totalCents, `100% Instant Refund for Cancelled Order ${orderId}`, orderId);
 
@@ -92,5 +93,60 @@ export function cancelOrderWithinGracePeriod(
     success: true,
     message: `Order successfully cancelled within grace period. ₹${(order.totalCents / 100).toFixed(0)} credited instantly to your wallet.`,
     refundedAmountCents: order.totalCents,
+  };
+}
+
+export function modifyOrderItemsWithinGracePeriod(
+  orderId: string,
+  newItems: CartItem[]
+): { success: boolean; message: string; updatedOrder?: SavedOrder; priceDifferenceCents: number } {
+  const status = getOrderGracePeriodStatus(orderId);
+  const order = loadOrderById(orderId);
+
+  if (!order) {
+    return { success: false, message: 'Order not found.', priceDifferenceCents: 0 };
+  }
+
+  if (!status.canModifyItems) {
+    return {
+      success: false,
+      message: 'Modification grace period expired or order has already been accepted.',
+      priceDifferenceCents: 0,
+    };
+  }
+
+  if (!newItems || newItems.length === 0) {
+    return {
+      success: false,
+      message: 'Order must contain at least one item. To cancel, please use cancel order.',
+      priceDifferenceCents: 0,
+    };
+  }
+
+  const newTotalCents = newItems.reduce((acc, it) => acc + it.priceCents * it.quantity, 0);
+  const diffCents = newTotalCents - order.totalCents;
+
+  if (diffCents < 0) {
+    // New total is less: refund difference to customer wallet
+    const refundCents = Math.abs(diffCents);
+    creditWallet(refundCents, `Refund for modified order ${orderId}`, orderId);
+  } else if (diffCents > 0) {
+    // New total is higher: debit wallet if balance permits
+    const debitRes = debitWallet(diffCents, `Additional charge for modified order ${orderId}`, orderId);
+    if (!debitRes.success) {
+      return {
+        success: false,
+        message: `Insufficient wallet balance to add items (needs ₹${(diffCents / 100).toFixed(0)} more).`,
+        priceDifferenceCents: diffCents,
+      };
+    }
+  }
+
+  const updated = updateOrderItems(orderId, newItems, newTotalCents);
+  return {
+    success: true,
+    message: `Order items updated successfully. Total is now ₹${(newTotalCents / 100).toFixed(0)}.`,
+    updatedOrder: updated,
+    priceDifferenceCents: diffCents,
   };
 }

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { OrderStep } from '../data/orderStorage';
+import { OrderStep } from '../data/orderStorage.ts';
 
 const STEPS: { key: OrderStep; label: string }[] = [
   { key: 'confirmed', label: 'Confirmed' },
@@ -12,6 +12,14 @@ const STEPS: { key: OrderStep; label: string }[] = [
 ];
 
 export const OrderStatusStepper: React.FC<{ currentStep: OrderStep }> = ({ currentStep }) => {
+  if (currentStep === 'cancelled') {
+    return (
+      <View style={styles.cancelledBox}>
+        <Text style={styles.cancelledText}>✕ Order Cancelled</Text>
+      </View>
+    );
+  }
+
   const activeIndex = STEPS.findIndex((s) => s.key === currentStep);
   return (
     <View style={styles.row}>
@@ -32,4 +40,6 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: '#10B981' },
   label: { fontSize: 11, color: '#9CA3AF' },
   labelActive: { color: '#111827', fontWeight: '600' },
+  cancelledBox: { padding: 10, backgroundColor: '#FEE2E2', borderRadius: 8, alignItems: 'center', marginVertical: 12 },
+  cancelledText: { color: '#EF4444', fontWeight: '700', fontSize: 13 },
 });

@@ -11,10 +11,10 @@ export function middleware(request: NextRequest) {
     const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
     // Enforce ADMIN role access for protected routes
-    const role = request.cookies.get('allgo_admin_role')?.value || 'ADMIN';
+    const role = request.cookies.get('allgo_admin_role')?.value;
     const token = tokenFromCookie || tokenFromHeader;
 
-    if (!token) {
+    if (!token || (role && role !== 'ADMIN')) {
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { iconAssets } from '../design-system/iconAssets';
+import { iconAssets } from '../design-system/iconAssets.ts';
 
 interface Props {
   name: string;

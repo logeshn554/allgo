@@ -1,7 +1,7 @@
 // Job: Listen for live order status and driver GPS updates over WebSockets.
 
-import { loadFromCache } from './localCache';
-import { OrderStep } from './orderStorage';
+import { loadFromCache } from './localCache.ts';
+import { OrderStep } from './orderStorage.ts';
 
 export interface LiveOrderUpdate {
   orderId: string;

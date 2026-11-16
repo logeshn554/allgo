@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { AppIcon } from './AppIcon';
+import { AppIcon } from './AppIcon.tsx';
 
 interface Props {
   title: string;

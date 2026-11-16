@@ -79,6 +79,22 @@ export function toggleItemAvailability(productId: string): { success: boolean; i
   return { success: true, isAvailable: item.isAvailable };
 }
 
+export function toggleVariantAvailability(
+  productId: string,
+  variantId: string
+): { success: boolean; inStock: boolean } {
+  const items = loadMerchantCatalog();
+  const item = items.find((p) => p.id === productId);
+  if (!item) return { success: false, inStock: false };
+
+  const variant = item.variants.find((v) => v.id === variantId);
+  if (!variant) return { success: false, inStock: false };
+
+  variant.inStock = !variant.inStock;
+  setLocalItem(ITEMS_STORAGE_KEY, JSON.stringify(items));
+  return { success: true, inStock: variant.inStock };
+}
+
 export function loadStoreConfig(): StoreOperationalConfig {
   const raw = getLocalItem(STORE_CONFIG_KEY);
   if (!raw) {

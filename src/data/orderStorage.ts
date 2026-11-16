@@ -4,7 +4,7 @@ import type { CartItem } from './cartStorage.ts';
 import { getLocalItem, setLocalItem } from './localCache.ts';
 import { recordOrderCreatedAt } from './orderModificationService.ts';
 
-export type OrderStep = 'confirmed' | 'matched' | 'on_the_way' | 'delivered';
+export type OrderStep = 'confirmed' | 'matched' | 'on_the_way' | 'delivered' | 'cancelled';
 
 export interface SavedOrder {
   id: string;
@@ -59,6 +59,18 @@ export function updateOrderStatus(orderId: string, nextStatus: OrderStep): Saved
   if (!order) return undefined;
 
   order.status = nextStatus;
+  map.set(orderId, order);
+  persistOrdersMap(map);
+  return order;
+}
+
+export function updateOrderItems(orderId: string, items: CartItem[], totalCents: number): SavedOrder | undefined {
+  const map = getOrdersMap();
+  const order = map.get(orderId);
+  if (!order) return undefined;
+
+  order.items = items;
+  order.totalCents = totalCents;
   map.set(orderId, order);
   persistOrdersMap(map);
   return order;

@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { loadGroceryCategories, loadGroceryProducts, GroceryProduct } from '../data/catalogLoader';
-import { loadCartItems, saveItemToCart } from '../data/cartStorage';
-import { ProductCard } from '../components/ProductCard';
-import { CartBar } from '../components/CartBar';
+import { loadGroceryCategories, loadGroceryProducts, GroceryProduct } from '../data/catalogLoader.ts';
+import { loadCartItems, saveItemToCart } from '../data/cartStorage.ts';
+import { ProductCard } from '../components/ProductCard.tsx';
+import { CartBar } from '../components/CartBar.tsx';
 
 interface Props {
   onBack: () => void;

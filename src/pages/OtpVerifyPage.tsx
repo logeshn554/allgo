@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { verifyPhoneOtp } from '../data/smsAuthLoader';
-import { saveUserLogin } from '../data/userStorage';
+import { verifyPhoneOtp } from '../data/smsAuthLoader.ts';
+import { saveUserLogin } from '../data/userStorage.ts';
 
 interface Props {
   phone: string;

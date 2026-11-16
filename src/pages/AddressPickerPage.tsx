@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { saveUserAddress } from '../data/userStorage';
-import { saveAddress, reverseGeocode, getActiveAddress, StructuredAddress } from '../data/geocodingService';
-import { LiveMapBox } from '../components/LiveMapBox';
+import { saveUserAddress } from '../data/userStorage.ts';
+import { saveAddress, reverseGeocode, getActiveAddress, StructuredAddress } from '../data/geocodingService.ts';
+import { LiveMapBox } from '../components/LiveMapBox.tsx';
 
 interface Props {
   currentAddress: string;

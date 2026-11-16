@@ -1,6 +1,6 @@
 // Job: Calculate verified order subtotal, delivery fee, tax, and total.
 
-import { CartItem } from './cartStorage';
+import { CartItem } from './cartStorage.ts';
 
 export interface OrderPriceSummary {
   subtotalCents: number;

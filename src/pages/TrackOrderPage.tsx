@@ -2,15 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { loadOrderById, SavedOrder } from '../data/orderStorage';
-import { connectOrderStream } from '../data/liveOrderStream';
-import { calculateDynamicEta, DynamicEtaUpdate } from '../data/dynamicEtaService';
-import { getOrderGracePeriodStatus, cancelOrderWithinGracePeriod, GracePeriodStatus } from '../data/orderModificationService';
-import { createMaskedCallSession, MaskedCallSession } from '../data/communicationMasking';
-import { OrderStatusStepper } from '../components/OrderStatusStepper';
-import { OtpPinBox } from '../components/OtpPinBox';
-import { RoutePolylineView } from '../components/RoutePolylineView';
-import { MaskedCallModal } from '../components/MaskedCallModal';
+import { loadOrderById, SavedOrder } from '../data/orderStorage.ts';
+import { connectOrderStream } from '../data/liveOrderStream.ts';
+import { calculateDynamicEta, DynamicEtaUpdate } from '../data/dynamicEtaService.ts';
+import { getOrderGracePeriodStatus, cancelOrderWithinGracePeriod, GracePeriodStatus } from '../data/orderModificationService.ts';
+import { createMaskedCallSession, MaskedCallSession } from '../data/communicationMasking.ts';
+import { OrderStatusStepper } from '../components/OrderStatusStepper.tsx';
+import { OtpPinBox } from '../components/OtpPinBox.tsx';
+import { RoutePolylineView } from '../components/RoutePolylineView.tsx';
+import { MaskedCallModal } from '../components/MaskedCallModal.tsx';
 
 interface Props {
   orderId: string;
@@ -123,7 +123,7 @@ export const TrackOrderPage: React.FC<Props> = ({ orderId, onBackHome, onOpenDri
       <OrderStatusStepper currentStep={order.status} />
 
       {/* 4-Digit Handover Verification PIN */}
-      {order.status !== 'delivered' && <OtpPinBox pin={order.otpPin} />}
+      {order.status !== 'delivered' && order.status !== 'cancelled' && <OtpPinBox pin={order.otpPin} />}
 
       <TouchableOpacity style={styles.driverBtn} onPress={onOpenDriverView}>
         <Text style={styles.driverText}>Driver Partner Drop-off Console →</Text>

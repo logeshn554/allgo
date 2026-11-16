@@ -1,7 +1,7 @@
 // Job: Send a login SMS code and verify it to save the user's session token.
 
-import { apiPost } from './apiClient';
-import { saveToCache } from './localCache';
+import { apiPost } from './apiClient.ts';
+import { saveToCache } from './localCache.ts';
 
 const pendingSmsCodes = new Map<string, string>();
 

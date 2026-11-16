@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { CartItem } from '../data/cartStorage';
+import { CartItem } from '../data/cartStorage.ts';
 
 interface Props {
   items: CartItem[];

@@ -36,6 +36,26 @@ export function verifyProofOfDelivery(payload: PodPayload): PodVerificationResul
     };
   }
 
+  if (order.status === 'cancelled') {
+    return {
+      success: false,
+      orderId: payload.orderId,
+      method: payload.method,
+      message: 'Cannot complete Proof of Delivery for a cancelled order.',
+      recordedAt: new Date().toISOString(),
+    };
+  }
+
+  if (order.status === 'delivered') {
+    return {
+      success: false,
+      orderId: payload.orderId,
+      method: payload.method,
+      message: 'Order has already been completed and delivered.',
+      recordedAt: new Date().toISOString(),
+    };
+  }
+
   // 1. PIN-based verification
   if (payload.method === 'PIN') {
     if (!payload.deliveryPin) {

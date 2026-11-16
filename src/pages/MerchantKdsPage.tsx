@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { KdsOrderCard, KdsOrder } from '../components/KdsOrderCard';
+import { KdsOrderCard, KdsOrder } from '../components/KdsOrderCard.tsx';
 import {
   loadMerchantCatalog,
   toggleItemAvailability,
@@ -11,8 +11,8 @@ import {
   MerchantItem,
   StoreOperationalConfig,
 } from '../data/merchantCatalogManager';
-import { EscPosThermalPrinter } from '../data/thermalPrinterService';
-import { generateDailySettlementReport, DailySettlementSummary } from '../data/merchantSettlementService';
+import { EscPosThermalPrinter } from '../data/thermalPrinterService.ts';
+import { generateDailySettlementReport, DailySettlementSummary } from '../data/merchantSettlementService.ts';
 
 interface Props {
   onBack: () => void;

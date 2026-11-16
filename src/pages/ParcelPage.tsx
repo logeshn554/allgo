@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { saveItemToCart } from '../data/cartStorage';
+import { saveItemToCart } from '../data/cartStorage.ts';
 
 interface Props {
   onBack: () => void;

@@ -51,6 +51,7 @@ export interface DisputeAuditRecord {
 }
 
 export function calculateSupplyDemandSurge(supply: number, demand: number): number {
+  if (demand <= 0) return 1.0;
   if (supply <= 0) return 3.0; // Max surge cap 3.0x
   const ratio = demand / supply;
   if (ratio <= 1.0) return 1.0;
@@ -86,22 +87,36 @@ export function processDisputeRefund(
   orderId: string,
   customerId: string,
   amountCents: number,
-  reason: string
+  reason: string,
+  evidence?: {
+    partnerId?: string;
+    dropoffLat?: number;
+    dropoffLon?: number;
+    driverDropoffLat?: number;
+    driverDropoffLon?: number;
+    photoProofUrl?: string;
+  }
 ): DisputeAuditRecord {
   creditWallet(amountCents, `Dispute Refund: ${reason}`, orderId);
+
+  const dropLat = evidence?.dropoffLat ?? 12.9716;
+  const dropLon = evidence?.dropoffLon ?? 77.5946;
+  const drvLat = evidence?.driverDropoffLat ?? 12.9780;
+  const drvLon = evidence?.driverDropoffLon ?? 77.6020;
+  const proximity = evaluateDisputeGpsProximity(dropLat, dropLon, drvLat, drvLon);
 
   return {
     disputeId: `DSP-${Date.now()}`,
     orderId,
     customerId,
-    partnerId: 'partner_default_1',
+    partnerId: evidence?.partnerId ?? 'partner_default_1',
     customerClaim: reason,
-    dropoffLat: 12.9716,
-    dropoffLon: 77.5946,
-    driverDropoffLat: 12.9780, // Far drop-off location
-    driverDropoffLon: 77.6020,
-    gpsDistanceMeters: 950,
-    photoProofUrl: 'storage/proof_mismatch.jpg',
+    dropoffLat: dropLat,
+    dropoffLon: dropLon,
+    driverDropoffLat: drvLat,
+    driverDropoffLon: drvLon,
+    gpsDistanceMeters: proximity.distanceMeters,
+    photoProofUrl: evidence?.photoProofUrl ?? 'storage/proof_mismatch.jpg',
     refundIssuedCents: amountCents,
     resolutionStatus: 'REFUNDED',
     resolvedAt: new Date().toISOString(),

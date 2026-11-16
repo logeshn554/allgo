@@ -1,6 +1,6 @@
 // Job: Process UPI, Card, or Cash on Delivery payments and return a receipt.
 
-import { apiPost } from './apiClient';
+import { apiPost } from './apiClient.ts';
 
 export type PaymentMethod = 'upi' | 'card' | 'cod';
 

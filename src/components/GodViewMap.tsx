@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ActiveOrderPin, DriverCluster, GeofenceZone } from '../data/adminDispatchService';
+import { ActiveOrderPin, DriverCluster, GeofenceZone } from '../data/adminDispatchService.ts';
 
 interface Props {
   orders: ActiveOrderPin[];

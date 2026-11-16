@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { RideOption, calculateRideFareCents } from '../data/rideOptionsLoader';
-import { AppIcon } from './AppIcon';
+import { RideOption, calculateRideFareCents } from '../data/rideOptionsLoader.ts';
+import { AppIcon } from './AppIcon.tsx';
 
 interface Props {
   option: RideOption;

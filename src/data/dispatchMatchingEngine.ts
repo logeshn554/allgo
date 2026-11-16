@@ -40,6 +40,9 @@ export function createDispatchOffer(
   countdownSeconds: number = 25 // 15-30s countdown
 ): DispatchOffer {
   const clampedSeconds = Math.min(30, Math.max(15, countdownSeconds));
+  const rawDistKm = haversineMeters(pickup.lat, pickup.lon, dropoff.lat, dropoff.lon) / 1000;
+  const distanceKm = Number(Math.max(0.5, rawDistKm).toFixed(1));
+
   return {
     id: `off_${Date.now()}`,
     orderId,
@@ -51,7 +54,7 @@ export function createDispatchOffer(
     dropoffLat: dropoff.lat,
     dropoffLon: dropoff.lon,
     courierEarningsCents: earningsCents,
-    distanceKm: 3.8,
+    distanceKm,
     acceptanceDurationSeconds: clampedSeconds,
     expiresAtMs: Date.now() + clampedSeconds * 1000,
     status: 'PENDING',
@@ -78,11 +81,17 @@ export function evaluateBatchingFeasibility(
   );
 
   if (pickupDist <= maxProximityThresholdMeters && dropoffDist <= maxProximityThresholdMeters * 1.5) {
+    const leg2 = haversineMeters(candidateOrder.pickupLat, candidateOrder.pickupLon, primaryOrder.dropoffLat, primaryOrder.dropoffLon);
+    const totalMeters = pickupDist + leg2 + dropoffDist;
+    const totalDistanceKm = Number((totalMeters / 1000).toFixed(1));
+    // Dynamic batch incentive: base fare (₹80) + dynamic corridor distance compensation + batch bonus
+    const totalEarningsCents = 8000 + Math.round(totalDistanceKm * 1500) + 3000;
+
     const combined: BatchedRouteJob = {
       batchId: `batch_${Date.now()}`,
       orderIds: [primaryOrder.orderId, candidateOrder.orderId],
-      totalEarningsCents: 18000, // Combined incentive
-      totalDistanceKm: 5.2,
+      totalEarningsCents,
+      totalDistanceKm,
       waypoints: [
         { type: 'PICKUP', orderId: primaryOrder.orderId, address: 'Outlet A', lat: primaryOrder.pickupLat, lon: primaryOrder.pickupLon },
         { type: 'PICKUP', orderId: candidateOrder.orderId, address: 'Outlet B (Adjacent)', lat: candidateOrder.pickupLat, lon: candidateOrder.pickupLon },

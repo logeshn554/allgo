@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { GroceryProduct } from '../data/catalogLoader';
-import { AppIcon } from './AppIcon';
+import { GroceryProduct } from '../data/catalogLoader.ts';
+import { AppIcon } from './AppIcon.tsx';
 
 interface Props {
   product: GroceryProduct;

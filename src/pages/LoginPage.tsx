@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import { saveUserLogin } from '../data/userStorage';
+import { saveUserLogin } from '../data/userStorage.ts';
 
 interface Props {
   onLoginSuccess: () => void;

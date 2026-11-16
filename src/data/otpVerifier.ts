@@ -10,6 +10,8 @@ export function verifyDeliveryPin(orderId: string, enteredPin: string): { ok: bo
 
   const order = loadOrderById(orderId);
   if (!order) return { ok: false, message: 'Order not found.' };
+  if (order.status === 'cancelled') return { ok: false, message: 'Cannot verify delivery for cancelled order.' };
+  if (order.status === 'delivered') return { ok: false, message: 'Order has already been verified and delivered.' };
 
   if (order.otpPin !== enteredPin) {
     failedTriesByOrder.set(orderId, tries + 1);

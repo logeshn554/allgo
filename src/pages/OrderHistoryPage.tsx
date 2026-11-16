@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
-import { loadAllOrders } from '../data/orderStorage';
-import { EmptyStateBox } from '../components/EmptyStateBox';
+import { loadAllOrders } from '../data/orderStorage.ts';
+import { EmptyStateBox } from '../components/EmptyStateBox.tsx';
 
 interface Props {
   onBack: () => void;

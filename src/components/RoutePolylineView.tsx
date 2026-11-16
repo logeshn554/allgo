@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { GeoPoint, DynamicEtaUpdate } from '../data/dynamicEtaService';
+import { GeoPoint, DynamicEtaUpdate } from '../data/dynamicEtaService.ts';
 
 interface Props {
   pickup: GeoPoint;

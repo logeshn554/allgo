@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { loadRideOptions, calculateRideFareCents } from '../data/rideOptionsLoader';
-import { saveNewOrder } from '../data/orderStorage';
-import { getCurrentCoordinates, computeHaversineDistanceKm } from '../data/gpsLoader';
-import { RideTierRow } from '../components/RideTierRow';
-import { LiveMapBox } from '../components/LiveMapBox';
+import { loadRideOptions, calculateRideFareCents } from '../data/rideOptionsLoader.ts';
+import { saveNewOrder } from '../data/orderStorage.ts';
+import { getCurrentCoordinates, computeHaversineDistanceKm } from '../data/gpsLoader.ts';
+import { RideTierRow } from '../components/RideTierRow.tsx';
+import { LiveMapBox } from '../components/LiveMapBox.tsx';
 
 interface Props {
   onBack: () => void;

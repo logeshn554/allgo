@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { GodViewMap } from '../components/GodViewMap';
-import { DisputeRefundModal } from '../components/DisputeRefundModal';
+import { GodViewMap } from '../components/GodViewMap.tsx';
+import { DisputeRefundModal } from '../components/DisputeRefundModal.tsx';
 import {
   ActiveOrderPin,
   DriverCluster,

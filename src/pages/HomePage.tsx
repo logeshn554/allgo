@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { loadUserProfile } from '../data/userStorage';
-import { AddressBar } from '../components/AddressBar';
-import { ServiceCard } from '../components/ServiceCard';
+import { loadUserProfile } from '../data/userStorage.ts';
+import { AddressBar } from '../components/AddressBar.tsx';
+import { ServiceCard } from '../components/ServiceCard.tsx';
 
 export type ScreenName =
   | 'login'

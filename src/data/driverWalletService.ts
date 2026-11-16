@@ -13,6 +13,13 @@ export interface EarningsEntry {
   totalCents: number;
 }
 
+export interface DriverPayoutRecord {
+  id: string;
+  amountCents: number;
+  bankAccountId: string;
+  timestamp: string;
+}
+
 export interface DriverWalletBreakdown {
   dailyTotalCents: number;
   weeklyTotalCents: number;
@@ -20,11 +27,25 @@ export interface DriverWalletBreakdown {
   distancePaySumCents: number;
   waitingTimeSumCents: number;
   surgeBonusSumCents: number;
+  totalWithdrawnCents: number;
   availableBalanceCents: number;
   entries: EarningsEntry[];
+  payouts: DriverPayoutRecord[];
 }
 
 const DRIVER_WALLET_KEY = 'allgo_driver_wallet_v1';
+const DRIVER_PAYOUTS_KEY = 'allgo_driver_payouts_v1';
+
+export function loadDriverPayouts(): DriverPayoutRecord[] {
+  const raw = getLocalItem(DRIVER_PAYOUTS_KEY);
+  if (!raw) return [];
+  try {
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
 
 const DEFAULT_ENTRIES: EarningsEntry[] = [
   {
@@ -72,6 +93,9 @@ export function loadDriverEarnings(): DriverWalletBreakdown {
   }
 
   const weeklyTotal = baseFareSum + distancePaySum + waitingTimeSum + surgeBonusSum;
+  const payouts = loadDriverPayouts();
+  const totalWithdrawnCents = payouts.reduce((sum, p) => sum + p.amountCents, 0);
+  const availableBalanceCents = Math.max(0, weeklyTotal - totalWithdrawnCents);
 
   return {
     dailyTotalCents: dailyTotal,
@@ -80,8 +104,10 @@ export function loadDriverEarnings(): DriverWalletBreakdown {
     distancePaySumCents: distancePaySum,
     waitingTimeSumCents: waitingTimeSum,
     surgeBonusSumCents: surgeBonusSum,
-    availableBalanceCents: weeklyTotal,
+    totalWithdrawnCents,
+    availableBalanceCents,
     entries,
+    payouts,
   };
 }
 
@@ -100,12 +126,21 @@ export function requestInstantPayout(
   }
 
   const payoutId = `PAYOUT-IMPS-${Math.floor(100000 + Math.random() * 900000)}`;
-  setLocalItem(DRIVER_WALLET_KEY, JSON.stringify([]));
+  const payouts = loadDriverPayouts();
+  payouts.push({
+    id: payoutId,
+    amountCents,
+    bankAccountId,
+    timestamp: new Date().toISOString(),
+  });
+  setLocalItem(DRIVER_PAYOUTS_KEY, JSON.stringify(payouts));
+
+  const remainingBalanceCents = wallet.availableBalanceCents - amountCents;
 
   return {
     success: true,
     payoutId,
     message: `₹${(amountCents / 100).toFixed(0)} successfully transferred via Instant IMPS rail to ${bankAccountId}.`,
-    remainingBalanceCents: 0,
+    remainingBalanceCents,
   };
 }

@@ -1,6 +1,6 @@
 // Job: Save and load user session, JWT token, and active address with disk persistence.
 
-import { getLocalItem, setLocalItem, removeLocalItem } from './localCache';
+import { getLocalItem, setLocalItem, removeLocalItem } from './localCache.ts';
 
 export interface UserProfile {
   id?: string;

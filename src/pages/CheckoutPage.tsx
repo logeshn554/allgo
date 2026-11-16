@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { loadCartItems, clearSavedCart } from '../data/cartStorage';
-import { calculateOrderPrice } from '../data/priceCalculator';
-import { saveNewOrder } from '../data/orderStorage';
-import { PaymentPicker } from '../components/PaymentPicker';
-import { LoadingOverlay } from '../components/LoadingOverlay';
-import { PaymentMethod, processOrderPayment } from '../data/paymentGateway';
-import { loadWalletState, debitWallet, calculatePaymentSplit } from '../data/walletStorage';
+import { loadCartItems, clearSavedCart } from '../data/cartStorage.ts';
+import { calculateOrderPrice } from '../data/priceCalculator.ts';
+import { saveNewOrder } from '../data/orderStorage.ts';
+import { PaymentPicker } from '../components/PaymentPicker.tsx';
+import { LoadingOverlay } from '../components/LoadingOverlay.tsx';
+import { PaymentMethod, processOrderPayment } from '../data/paymentGateway.ts';
+import { loadWalletState, debitWallet, calculatePaymentSplit } from '../data/walletStorage.ts';
 
 interface Props {
   onBack: () => void;
