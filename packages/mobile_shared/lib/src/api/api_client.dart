@@ -66,7 +66,7 @@ class ApiClient {
     http.Client? httpClient,
     this.activeRole = 'CUSTOMER',
     this.activeLanguage = 'en',
-  })  : baseUrl = baseUrl ?? 'http://10.0.2.2:3000',
+  })  : baseUrl = baseUrl ?? const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://127.0.0.1:3000'),
         tokenStorage = tokenStorage ?? SecureTokenStorage(),
         _httpClient = httpClient ?? http.Client() {
     _baseApi = BaseApi(
