@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { latLngToH3Index, getDriverH3RedisKey } from '@allgo/common';
 import { DatabaseService } from '../database/database.service.js';
@@ -26,7 +27,7 @@ export class PartnerAvailabilityService {
     private readonly db: DatabaseService,
     private readonly redis: RedisService,
     private readonly gateway: DeliveryGateway,
-    repo?: PartnerAvailabilityRepository
+    @Optional() repo?: PartnerAvailabilityRepository
   ) {
     this.repo = repo ?? new PartnerAvailabilityRepository(db);
   }
