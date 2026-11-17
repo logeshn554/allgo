@@ -19,7 +19,10 @@ export type ScreenName =
   | 'history'
   | 'address'
   | 'kds'
-  | 'admin_dispatch';
+  | 'admin_dispatch'
+  | 'customer_onboarding'
+  | 'partner_kyc'
+  | 'merchant_setup';
 
 interface Props {
   onNavigate: (screen: ScreenName) => void;
