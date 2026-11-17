@@ -1,5 +1,7 @@
 node_modules/
 dist/
+!packages/common/dist/
+!packages/common/dist/**
 build/
 .env
 .env*

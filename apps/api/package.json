@@ -5,6 +5,7 @@
   "type": "module",
   "description": "AllGo Core API Service (NestJS REST API)",
   "scripts": {
+    "prebuild": "node -e \"const fs=require('fs'),cp=require('child_process');if(!fs.existsSync('../../packages/common/dist/index.d.ts')){cp.execSync('npm run build --workspace=@allgo/common',{stdio:'inherit'})}\"",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
     "start:dev": "npm run build && node dist/main.js"
