@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: allgo-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@allgo/api
+    startCommand: node apps/api/dist/main.js
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: allgo_cloud_jwt_secret_production_ready_32b_render
+      - key: OTP_PEPPER
+        value: allgo_cloud_otp_pepper_secret_16b

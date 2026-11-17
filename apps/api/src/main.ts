@@ -44,7 +44,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   const port = configService.port;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   logger.log(`AllGo Core API server running on port ${port} [Env: ${configService.nodeEnv}]`);
   logger.log(`OpenAPI documentation accessible at http://localhost:${port}/docs`);
 }

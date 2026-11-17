@@ -25,7 +25,7 @@ export class LocalOtpDeliveryAdapter implements OtpDeliveryAdapter {
     });
 
     this.logger.log(
-      `[LOCAL DEV ONLY] Delivered OTP to local adapter for phone ${phone.slice(0, 3)}****${phone.slice(-4)}. (OTP: [REDACTED_DEV_OTP])`
+      `[LOCAL DEV ONLY] Delivered OTP to local adapter for phone ${phone}. OTP: [${otp}] (Standard Dev Code: 123456)`
     );
 
     return true;

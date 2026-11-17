@@ -13,6 +13,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client: Redis | null = null;
   private isConnected: boolean = false;
+  private readonly mem = new Map<string, any>();
 
   constructor(private readonly config: ConfigService) {}
 
@@ -94,11 +95,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get(key: string): Promise<string | null> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      return this.mem.get(key) ?? null;
+    }
     const client = this.ensureConnected();
     return client.get(key);
   }
 
   async set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      this.mem.set(key, value);
+      return 'OK';
+    }
     const client = this.ensureConnected();
     if (mode === 'EX' && duration) {
       return client.set(key, value, 'EX', duration);
@@ -107,41 +115,70 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async setex(key: string, seconds: number, value: string): Promise<'OK'> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      this.mem.set(key, value);
+      return 'OK';
+    }
     const client = this.ensureConnected();
     return client.setex(key, seconds, value);
   }
 
   async del(key: string): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      return this.mem.delete(key) ? 1 : 0;
+    }
     const client = this.ensureConnected();
     return client.del(key);
   }
 
   async exists(key: string): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      return this.mem.has(key) ? 1 : 0;
+    }
     const client = this.ensureConnected();
     return client.exists(key);
   }
 
   async hset(key: string, field: string, value: any): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      const obj = this.mem.get(key) || {};
+      obj[field] = String(value);
+      this.mem.set(key, obj);
+      return 1;
+    }
     const client = this.ensureConnected();
     return client.hset(key, field, String(value));
   }
 
   async hget(key: string, field: string): Promise<string | null> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      const obj = this.mem.get(key);
+      return obj ? (obj[field] ?? null) : null;
+    }
     const client = this.ensureConnected();
     return client.hget(key, field);
   }
 
   async hincrby(key: string, field: string, increment: number): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      const obj = this.mem.get(key) || {};
+      const current = parseInt(obj[field] || '0', 10);
+      obj[field] = String(current + increment);
+      this.mem.set(key, obj);
+      return current + increment;
+    }
     const client = this.ensureConnected();
     return client.hincrby(key, field, increment);
   }
 
   async expire(key: string, seconds: number): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) return 1;
     const client = this.ensureConnected();
     return client.expire(key, seconds);
   }
 
   async ttl(key: string): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) return 60;
     const client = this.ensureConnected();
     return client.ttl(key);
   }
@@ -239,6 +276,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     expectedHmac: string,
     maxAttempts: number = 3
   ): Promise<number> {
+    if (!this.isConnected && this.config.isDevelopment) {
+      const obj = this.mem.get(key);
+      if (!obj) return -1;
+      const attempts = parseInt(obj.attempts || '0', 10);
+      if (attempts >= maxAttempts) {
+        this.mem.delete(key);
+        return -2;
+      }
+      if (obj.hmac === expectedHmac) {
+        this.mem.delete(key);
+        return 1;
+      }
+      obj.attempts = String(attempts + 1);
+      if (attempts + 1 >= maxAttempts) {
+        this.mem.delete(key);
+        return -2;
+      }
+      this.mem.set(key, obj);
+      return 0;
+    }
     const client = this.ensureConnected();
     const script = `
       local exists = redis.call('EXISTS', KEYS[1])

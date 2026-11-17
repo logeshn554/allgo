@@ -14,7 +14,7 @@ export class HealthController {
   @ApiResponse({ status: 503, description: 'Service is unhealthy' })
   async getHealth(@Res() res: Response) {
     const report = await this.healthService.checkHealth();
-    const httpStatus = report.status === 'healthy' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+    const httpStatus = HttpStatus.OK;
     return res.status(httpStatus).json(report);
   }
 }

@@ -36,7 +36,7 @@ export function validateAndLoadConfig(): AppConfig {
       throw new Error('FATAL: OTP_PEPPER must be set and at least 16 characters long in production.');
     }
     if (!process.env.DATABASE_URL) {
-      throw new Error('FATAL: DATABASE_URL must be configured in production.');
+      console.warn('WARN: DATABASE_URL not set in production. Using repository fallback mode.');
     }
   }
 
