@@ -66,7 +66,7 @@ class ApiClient {
     http.Client? httpClient,
     this.activeRole = 'CUSTOMER',
     this.activeLanguage = 'en',
-  })  : baseUrl = baseUrl ?? const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://allgo-d36db.web.app'),
+  })  : baseUrl = baseUrl ?? const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://allgo-api.onrender.com'),
         tokenStorage = tokenStorage ?? SecureTokenStorage(),
         _httpClient = httpClient ?? http.Client() {
     _baseApi = BaseApi(
