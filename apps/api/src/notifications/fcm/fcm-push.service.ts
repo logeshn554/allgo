@@ -31,7 +31,12 @@ export interface FcmPushService {
 export class FirebaseAdminFcmService implements FcmPushService {
   private readonly logger = new Logger(FirebaseAdminFcmService.name);
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: ConfigService) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!this.config.firebaseServiceAccountKey && isProdOrStaging) {
+      throw new Error('FATAL: FIREBASE_SERVICE_ACCOUNT_KEY is missing. Failing fast in production/staging.');
+    }
+  }
 
   async sendToDevice(
     fcmToken: string,
@@ -47,7 +52,22 @@ export class FirebaseAdminFcmService implements FcmPushService {
     const priority = options.priority || 'high';
     const channelId = options.channelId || (priority === 'high' ? 'critical_alerts_channel' : 'general_channel');
 
-    if (admin.apps.length === 0 || fcmToken.startsWith('mock_') || fcmToken.startsWith('test_')) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+
+    if (admin.apps.length === 0) {
+      if (isProdOrStaging) {
+        throw new Error('FATAL: Firebase Admin SDK not initialized in production/staging.');
+      }
+      if (fcmToken === 'mock_invalid_unregistered_token') {
+        return { success: false, invalidToken: true, error: 'messaging/registration-token-not-registered' };
+      }
+      return {
+        success: true,
+        messageId: `projects/allgo/messages/mock_${Date.now()}`,
+      };
+    }
+
+    if (!isProdOrStaging && (fcmToken.startsWith('mock_') || fcmToken.startsWith('test_'))) {
       if (fcmToken === 'mock_invalid_unregistered_token') {
         return { success: false, invalidToken: true, error: 'messaging/registration-token-not-registered' };
       }

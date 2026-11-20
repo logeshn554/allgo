@@ -15,8 +15,15 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
   private readonly baseUrl = 'https://api.razorpay.com/v1';
 
   constructor(keyId?: string, keySecret?: string) {
-    this.keyId = keyId || process.env.RAZORPAYX_KEY_ID || process.env.RAZORPAY_KEY_ID || 'rzp_test_payout_key';
-    this.keySecret = keySecret || process.env.RAZORPAYX_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || 'local_test_rzpx_secret';
+    this.keyId = keyId || process.env.RAZORPAYX_KEY_ID || process.env.RAZORPAY_KEY_ID || '';
+    this.keySecret = keySecret || process.env.RAZORPAYX_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET || '';
+
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!this.keyId || !this.keySecret) {
+      if (isProdOrStaging) {
+        throw new Error('FATAL: RazorpayX credentials (RAZORPAYX_KEY_ID, RAZORPAYX_KEY_SECRET) are missing. Failing fast in production/staging.');
+      }
+    }
   }
 
   private get authHeader(): string {
@@ -39,7 +46,8 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
       notes: params.notes || {},
     };
 
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAYX_KEY_ID) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
       return {
         id: `pout_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
         entity: 'payout',
@@ -50,6 +58,10 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
         mode: payload.mode,
         referenceId: params.referenceId,
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('RazorpayX API request failed: Missing credentials');
     }
 
     try {
@@ -85,13 +97,18 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
   }
 
   async fetchPayout(payoutId: string): Promise<GatewayPayoutDetails> {
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAYX_KEY_ID) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
       return {
         id: payoutId,
         amount: 50000,
         status: 'processed',
         utr: `UTR_${Date.now()}`,
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('RazorpayX API request failed: Missing credentials');
     }
 
     try {
@@ -121,7 +138,8 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
   }
 
   async cancelPayout(payoutId: string): Promise<GatewayPayoutResult> {
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAYX_KEY_ID) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
       return {
         id: payoutId,
         entity: 'payout',
@@ -131,6 +149,10 @@ export class RazorpayXPayoutGateway implements PayoutGateway {
         mode: 'IMPS',
         referenceId: `ref_${payoutId}`,
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('RazorpayX API request failed: Missing credentials');
     }
 
     try {

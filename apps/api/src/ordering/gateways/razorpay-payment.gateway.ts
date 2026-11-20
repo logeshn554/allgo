@@ -17,8 +17,15 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   private readonly baseUrl = 'https://api.razorpay.com/v1';
 
   constructor(keyId?: string, keySecret?: string) {
-    this.keyId = keyId || process.env.RAZORPAY_KEY_ID || 'rzp_test_local_key_id';
-    this.keySecret = keySecret || process.env.RAZORPAY_KEY_SECRET || 'local_test_razorpay_secret_key_12345';
+    this.keyId = keyId || process.env.RAZORPAY_KEY_ID || '';
+    this.keySecret = keySecret || process.env.RAZORPAY_KEY_SECRET || '';
+
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!this.keyId || !this.keySecret) {
+      if (isProdOrStaging) {
+        throw new Error('FATAL: Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are missing. Failing fast in production/staging.');
+      }
+    }
   }
 
   private get authHeader(): string {
@@ -35,8 +42,9 @@ export class RazorpayPaymentGateway implements PaymentGateway {
       notes: params.notes || {},
     };
 
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAY_KEY_ID) {
-      // Offline fallback / mock mode when real credentials or live net are absent
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
+      // Mock / offline fallback in test or local dev
       return {
         id: `order_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`,
         amount: amountInPaise,
@@ -44,6 +52,10 @@ export class RazorpayPaymentGateway implements PaymentGateway {
         receipt: params.receipt,
         status: 'created',
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('Razorpay API request failed: Missing credentials');
     }
 
     try {
@@ -99,7 +111,8 @@ export class RazorpayPaymentGateway implements PaymentGateway {
       speed: params.speed || 'optimum',
     };
 
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAY_KEY_ID) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
       return {
         id: `rfnd_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`,
         paymentId: params.paymentId,
@@ -107,6 +120,10 @@ export class RazorpayPaymentGateway implements PaymentGateway {
         currency: 'INR',
         status: 'processed',
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('Razorpay API request failed: Missing credentials');
     }
 
     try {
@@ -139,7 +156,8 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   }
 
   async fetchPayment(paymentId: string): Promise<GatewayPaymentDetails> {
-    if (process.env.NODE_ENV === 'test' || !process.env.RAZORPAY_KEY_ID) {
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!isProdOrStaging) {
       return {
         id: paymentId,
         orderId: `order_mock_${paymentId}`,
@@ -147,6 +165,10 @@ export class RazorpayPaymentGateway implements PaymentGateway {
         currency: 'INR',
         status: 'captured',
       };
+    }
+
+    if (!this.keyId || !this.keySecret) {
+      throw new Error('Razorpay API request failed: Missing credentials');
     }
 
     try {

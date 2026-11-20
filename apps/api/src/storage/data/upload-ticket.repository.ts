@@ -26,8 +26,15 @@ export class UploadTicketRepository {
     return this.inMemoryTickets;
   }
 
+  private isProductionOrStaging(): boolean {
+    const env = process.env.NODE_ENV;
+    return env === 'production' || env === 'staging';
+  }
+
   async insertTicket(ticket: UploadTicket): Promise<void> {
-    this.inMemoryTickets.set(ticket.id, ticket);
+    if (!this.isProductionOrStaging()) {
+      this.inMemoryTickets.set(ticket.id, ticket);
+    }
     try {
       await this.db.query(
         `INSERT INTO document_upload_tickets 
@@ -45,8 +52,11 @@ export class UploadTicketRepository {
           ticket.expires_at,
         ]
       );
-    } catch {
-      // DB offline; in-memory store populated
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error inserting upload ticket: ${err.message}`);
+      }
+      // DB offline in test/dev; in-memory store populated
     }
   }
 
@@ -54,10 +64,13 @@ export class UploadTicketRepository {
     try {
       const res = await this.db.query('SELECT * FROM document_upload_tickets WHERE id = $1;', [ticketId]);
       if (res.rows.length > 0) return res.rows[0];
-    } catch {
-      // fallback to memory
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error finding upload ticket by ID: ${err.message}`);
+      }
+      // fallback to memory in test/dev
     }
-    return this.inMemoryTickets.get(ticketId) || null;
+    return !this.isProductionOrStaging() ? (this.inMemoryTickets.get(ticketId) || null) : null;
   }
 
   async updateUploadCompleted(
@@ -66,11 +79,13 @@ export class UploadTicketRepository {
     scanStatus: string,
     scanResult?: string | null
   ): Promise<void> {
-    const mem = this.inMemoryTickets.get(ticketId);
-    if (mem) {
-      mem.file_size_bytes = fileSizeBytes;
-      mem.scan_status = scanStatus as any;
-      mem.scan_result = scanResult;
+    if (!this.isProductionOrStaging()) {
+      const mem = this.inMemoryTickets.get(ticketId);
+      if (mem) {
+        mem.file_size_bytes = fileSizeBytes;
+        mem.scan_status = scanStatus as any;
+        mem.scan_result = scanResult;
+      }
     }
     try {
       await this.db.query(
@@ -79,17 +94,22 @@ export class UploadTicketRepository {
          WHERE id = $4;`,
         [fileSizeBytes, scanStatus, scanResult, ticketId]
       );
-    } catch {
-      // offline
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error updating upload completion: ${err.message}`);
+      }
+      // offline in test/dev
     }
   }
 
   async updateLinked(ticketId: string, entityType: string, entityId: string): Promise<void> {
-    const mem = this.inMemoryTickets.get(ticketId);
-    if (mem) {
-      mem.linked_entity_type = entityType;
-      mem.linked_entity_id = entityId;
-      mem.status = 'LINKED';
+    if (!this.isProductionOrStaging()) {
+      const mem = this.inMemoryTickets.get(ticketId);
+      if (mem) {
+        mem.linked_entity_type = entityType;
+        mem.linked_entity_id = entityId;
+        mem.status = 'LINKED';
+      }
     }
     try {
       await this.db.query(
@@ -98,8 +118,11 @@ export class UploadTicketRepository {
          WHERE id = $3;`,
         [entityType, entityId, ticketId]
       );
-    } catch {
-      // offline
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error updating ticket linked entity: ${err.message}`);
+      }
+      // offline in test/dev
     }
   }
 
@@ -110,23 +133,31 @@ export class UploadTicketRepository {
          WHERE status = 'PENDING_LINK' AND expires_at < NOW();`
       );
       return res.rows;
-    } catch {
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error finding expired pending tickets: ${err.message}`);
+      }
       return [];
     }
   }
 
   async markOrphaned(ticketId: string): Promise<void> {
-    const mem = this.inMemoryTickets.get(ticketId);
-    if (mem) {
-      mem.status = 'ORPHANED';
+    if (!this.isProductionOrStaging()) {
+      const mem = this.inMemoryTickets.get(ticketId);
+      if (mem) {
+        mem.status = 'ORPHANED';
+      }
     }
     try {
       await this.db.query(
         `UPDATE document_upload_tickets SET status = 'ORPHANED' WHERE id = $1;`,
         [ticketId]
       );
-    } catch {
-      // offline
+    } catch (err: any) {
+      if (this.isProductionOrStaging()) {
+        throw new Error(`Database error marking ticket orphaned: ${err.message}`);
+      }
+      // offline in test/dev
     }
   }
 }

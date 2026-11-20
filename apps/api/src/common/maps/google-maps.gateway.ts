@@ -25,6 +25,10 @@ export class GoogleMapsGateway implements MapsGateway {
     private readonly redis: RedisService
   ) {
     this.apiKey = this.config.googleMapsApiKey || '';
+    const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+    if (!this.apiKey && isProdOrStaging) {
+      throw new Error('FATAL: GOOGLE_MAPS_SERVER_API_KEY (or GOOGLE_MAPS_API_KEY) is missing. Failing fast in production/staging.');
+    }
   }
 
   async computeRoute(
@@ -77,7 +81,16 @@ export class GoogleMapsGateway implements MapsGateway {
           }
         }
       } catch (err: any) {
+        const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+        if (isProdOrStaging) {
+          throw new Error(`Google Routes API call failed: ${err.message}`);
+        }
         this.logger.warn(`Google Routes API call failed: ${err.message}. Using fallback.`);
+      }
+    } else {
+      const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+      if (isProdOrStaging) {
+        throw new Error('Google Routes API request failed: Missing or invalid API key in production/staging.');
       }
     }
 
@@ -160,7 +173,16 @@ export class GoogleMapsGateway implements MapsGateway {
           }
         }
       } catch (err: any) {
+        const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+        if (isProdOrStaging) {
+          throw new Error(`Google Geocoding API failed: ${err.message}`);
+        }
         this.logger.warn(`Google Geocoding API failed: ${err.message}`);
+      }
+    } else {
+      const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+      if (isProdOrStaging) {
+        throw new Error('Google Geocoding API request failed: Missing or invalid API key in production/staging.');
       }
     }
     return [{ formattedAddress: address, location: { latitude: 13.0827, longitude: 80.2707 } }];
@@ -192,7 +214,16 @@ export class GoogleMapsGateway implements MapsGateway {
           }
         }
       } catch (err: any) {
+        const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+        if (isProdOrStaging) {
+          throw new Error(`Google Reverse Geocoding failed: ${err.message}`);
+        }
         this.logger.warn(`Google Reverse Geocoding failed: ${err.message}`);
+      }
+    } else {
+      const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+      if (isProdOrStaging) {
+        throw new Error('Google Reverse Geocoding request failed: Missing or invalid API key in production/staging.');
       }
     }
     return { formattedAddress: `${point.latitude.toFixed(4)}, ${point.longitude.toFixed(4)}, Chennai, Tamil Nadu`, location: point };
@@ -226,7 +257,16 @@ export class GoogleMapsGateway implements MapsGateway {
           }
         }
       } catch (err: any) {
+        const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+        if (isProdOrStaging) {
+          throw new Error(`Google Places API failed: ${err.message}`);
+        }
         this.logger.warn(`Google Places API failed: ${err.message}`);
+      }
+    } else {
+      const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
+      if (isProdOrStaging) {
+        throw new Error('Google Places API request failed: Missing or invalid API key in production/staging.');
       }
     }
     return [{
