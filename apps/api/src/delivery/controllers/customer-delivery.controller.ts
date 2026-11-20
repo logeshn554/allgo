@@ -3,10 +3,13 @@ import {
   Get,
   Param,
   Query,
+  Sse,
   UseGuards,
   Request,
   NotFoundException,
 } from '@nestjs/common';
+import { Observable, interval, from } from 'rxjs';
+import { switchMap, map } from 'rxjs/operators';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { DeliveryJobService } from '../delivery-job.service.js';
 import { DatabaseService } from '../../database/database.service.js';
@@ -54,6 +57,19 @@ export class CustomerDeliveryController {
   @Get('jobs/:id/tracking')
   async getTrackingSnapshot(@Request() req: any, @Param('id') id: string) {
     return this.deliveryJobService.getJobTrackingDetails(req.user.userId, 'CUSTOMER', id);
+  }
+
+  @Sse('jobs/:id/tracking/stream')
+  streamDriverTracking(
+    @Request() req: any,
+    @Param('id') id: string
+  ): Observable<{ data: any }> {
+    return interval(3000).pipe(
+      switchMap(() =>
+        from(this.deliveryJobService.getJobTrackingDetails(req.user.userId, 'CUSTOMER', id))
+      ),
+      map((snapshot) => ({ data: snapshot }))
+    );
   }
 
   @Get('jobs/:id/events/sync')

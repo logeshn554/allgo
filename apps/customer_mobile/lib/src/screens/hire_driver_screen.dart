@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 import '../components/hire_driver_booking_form.dart';
@@ -16,13 +17,15 @@ class HireDriverScreen extends ConsumerStatefulWidget {
 }
 
 class _HireDriverScreenState extends ConsumerState<HireDriverScreen> {
-  final _reportingCtrl = TextEditingController(text: '12, 1st Cross, Anna Nagar West, Chennai');
+  final _reportingCtrl = TextEditingController();
 
   int _hours = 4;
   String _transmission = 'MANUAL';
   Map<String, dynamic>? _estimateData;
   bool _isEstimating = false;
   bool _isBooking = false;
+  double _reportingLat = 13.0827;
+  double _reportingLng = 80.2707;
 
   HireDriverBookingModel? _activeBooking;
   Timer? _pollingTimer;
@@ -33,7 +36,38 @@ class _HireDriverScreenState extends ConsumerState<HireDriverScreen> {
     if (widget.activeBookingId != null) {
       _loadBooking(widget.activeBookingId!);
     }
+    _resolveInitialAddress();
     _startPolling();
+  }
+
+  Future<void> _resolveInitialAddress() async {
+    try {
+      final addresses = await ref.read(apiClientProvider).listCustomerAddresses();
+      if (addresses.isNotEmpty && mounted) {
+        final def = addresses.firstWhere((a) => a.isDefault, orElse: () => addresses.first);
+        _reportingCtrl.text = '${def.addressLine1}, ${def.city}';
+        _reportingLat = def.latitude;
+        _reportingLng = def.longitude;
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        final pos = await Geolocator.getCurrentPosition(timeLimit: const Duration(seconds: 4));
+        if (mounted) {
+          _reportingLat = pos.latitude;
+          _reportingLng = pos.longitude;
+          _reportingCtrl.text = 'Current GPS Location (${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)})';
+          return;
+        }
+      }
+    } catch (_) {}
+
+    if (mounted && _reportingCtrl.text.isEmpty) {
+      _reportingCtrl.text = 'Current Location';
+    }
   }
 
   @override
@@ -64,8 +98,8 @@ class _HireDriverScreenState extends ConsumerState<HireDriverScreen> {
       final res = await ref.read(apiClientProvider).estimateHireDriver({
         'durationHours': _hours,
         'transmissionType': _transmission,
-        'reportingLatitude': 13.0827,
-        'reportingLongitude': 80.2707,
+        'reportingLatitude': _reportingLat,
+        'reportingLongitude': _reportingLng,
       });
       if (mounted) setState(() => _estimateData = res);
     } catch (e) {
@@ -79,9 +113,9 @@ class _HireDriverScreenState extends ConsumerState<HireDriverScreen> {
     setState(() => _isBooking = true);
     try {
       final b = await ref.read(apiClientProvider).bookHireDriver({
-        'reportingAddress': _reportingCtrl.text,
-        'reportingLatitude': 13.0827,
-        'reportingLongitude': 80.2707,
+        'reportingAddress': _reportingCtrl.text.trim().isNotEmpty ? _reportingCtrl.text.trim() : 'Current Location',
+        'reportingLatitude': _reportingLat,
+        'reportingLongitude': _reportingLng,
         'durationHours': _hours,
         'transmissionType': _transmission,
       });
@@ -114,4 +148,8 @@ class _HireDriverScreenState extends ConsumerState<HireDriverScreen> {
             ),
     );
   }
+}
+
+extension DoubleFormatting on double {
+  String toFixed(int digits) => toStringAsFixed(digits);
 }

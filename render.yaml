@@ -1,18 +1,92 @@
 services:
+  # 1. Core API Service (NestJS REST & Real-time WebSockets)
   - type: web
     name: allgo-api
     runtime: node
-    plan: free
+    plan: starter
     region: singapore
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && npm run build:api
     startCommand: node apps/api/dist/main.js
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
-        value: development
+        value: production
       - key: PORT
         value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: OTP_PEPPER
         sync: false
+      - key: GOOGLE_MAPS_SERVER_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+
+  # 2. Admin Web Console (Next.js 16)
+  - type: web
+    name: allgo-admin
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@allgo/admin
+    startCommand: npm run start --workspace=@allgo/admin
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3003
+      - key: NEXT_PUBLIC_API_URL
+        value: https://allgo-api.onrender.com
+
+  # 3. Webhooks Worker (Razorpay Signature Verification & Idempotency)
+  - type: web
+    name: allgo-webhooks
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@allgo/webhooks
+    startCommand: node apps/webhooks/dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: REDIS_URL
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: PUBSUB_PROJECT_ID
+        sync: false
+
+  # 4. Standalone Dispatch Engine Worker
+  - type: worker
+    name: allgo-dispatch
+    runtime: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build --workspace=@allgo/dispatch
+    startCommand: node apps/dispatch/dist/main.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: 3001

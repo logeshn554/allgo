@@ -3,6 +3,7 @@ import { DatabaseModule } from '../database/database.module.js';
 import { RedisModule } from '../redis/redis.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { MapsModule } from '../common/maps/maps.module.js';
+import { HealthModule } from '../health/health.module.js';
 
 import { DeliveryGateway } from './delivery.gateway.js';
 import { PartnerAvailabilityService } from './partner-availability.service.js';
@@ -23,6 +24,7 @@ import { DeliveryHandoverService } from './delivery-handover.service.js';
 import { DeliveryExceptionService } from './delivery-exception.service.js';
 import { AdminDeliverySupervisionService } from './admin-delivery-supervision.service.js';
 import { MultiStoreBatchingService } from './multi-store-batching.service.js';
+import { AdminDashboardService } from './admin-dashboard.service.js';
 
 // Facades
 import { DispatchEngineService } from './dispatch-engine.service.js';
@@ -34,15 +36,17 @@ import { MerchantDeliveryController } from './controllers/merchant-delivery.cont
 import { PartnerDeliveryController } from './controllers/partner-delivery.controller.js';
 import { CustomerDeliveryController } from './controllers/customer-delivery.controller.js';
 import { AdminDispatchController } from './controllers/admin-dispatch.controller.js';
+import { AdminDashboardController } from './controllers/admin-dashboard.controller.js';
 
 @Module({
-  imports: [DatabaseModule, RedisModule, ConfigModule, MapsModule],
+  imports: [DatabaseModule, RedisModule, ConfigModule, MapsModule, HealthModule],
   controllers: [
     DeliveryJobController,
     MerchantDeliveryController,
     PartnerDeliveryController,
     CustomerDeliveryController,
     AdminDispatchController,
+    AdminDashboardController,
   ],
   providers: [
     DeliveryGateway,
@@ -62,6 +66,7 @@ import { AdminDispatchController } from './controllers/admin-dispatch.controller
     DeliveryExceptionService,
     AdminDeliverySupervisionService,
     MultiStoreBatchingService,
+    AdminDashboardService,
     // Facades
     DispatchEngineService,
     DeliveryJobService,
@@ -82,6 +87,7 @@ import { AdminDispatchController } from './controllers/admin-dispatch.controller
     DeliveryExceptionService,
     AdminDeliverySupervisionService,
     MultiStoreBatchingService,
+    AdminDashboardService,
     DispatchEngineService,
     DeliveryJobService,
   ],

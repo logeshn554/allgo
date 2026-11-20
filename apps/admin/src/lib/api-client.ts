@@ -21,6 +21,7 @@ import { parcelsApi } from '../data/api/parcels.api';
 import { financeApi } from '../data/api/finance.api';
 import { supportApi } from '../data/api/support.api';
 import { ratingsApi } from '../data/api/ratings.api';
+import { dashboardApi } from '../data/api/dashboard.api';
 
 export * from '../data/types';
 export * from '../data/api';
@@ -137,6 +138,9 @@ export class AdminApiClient {
   // Ratings
   listRatings = (limit?: number, offset?: number) => ratingsApi.listRatings(limit, offset);
   moderateRating = (id: string, isHidden: boolean, reason?: string) => ratingsApi.moderateRating(id, isHidden, reason);
+
+  // Dashboard
+  getDashboardSummary = () => dashboardApi.getDashboardSummary();
 }
 
 export const adminApi = new AdminApiClient();

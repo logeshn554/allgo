@@ -12,3 +12,4 @@ export * from './parcels.api';
 export * from './finance.api';
 export * from './support.api';
 export * from './ratings.api';
+export * from './dashboard.api';

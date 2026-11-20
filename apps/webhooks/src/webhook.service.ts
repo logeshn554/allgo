@@ -19,7 +19,14 @@ export class WebhookService {
     pubsub?: PubSubPublisher,
     idempotency?: IdempotencyStore
   ) {
-    this.webhookSecret = webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET || 'local_test_razorpay_secret_key_12345';
+    const isProduction = process.env.NODE_ENV === 'production';
+    const secret = webhookSecret || process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (isProduction && (!secret || secret.length < 16)) {
+      throw new Error('FATAL: RAZORPAY_WEBHOOK_SECRET is missing or insecure in production.');
+    }
+
+    this.webhookSecret = secret || 'local_test_razorpay_secret_key_12345';
     this.pubsub = pubsub || new InMemoryPubSubPublisher();
     this.idempotency = idempotency || new InMemoryIdempotencyStore();
   }

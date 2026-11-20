@@ -1,12 +1,30 @@
 import crypto from 'node:crypto';
 import type { DispatchRequest, DispatchOffer, DispatchCandidate } from './types.js';
 
+export interface DispatchStore {
+  saveOffer(offer: DispatchOffer): Promise<void>;
+  getOffer(attemptId: string): Promise<DispatchOffer | null>;
+  updateOfferStatus(attemptId: string, status: DispatchOffer['status']): Promise<DispatchOffer>;
+  saveJob(job: DispatchRequest): Promise<void>;
+  getJob(jobId: string): Promise<DispatchRequest | null>;
+  getPendingOffersCount(): Promise<number>;
+}
+
 export class StandaloneDispatchEngine {
   private readonly offers = new Map<string, DispatchOffer>();
   private readonly activeJobs = new Map<string, DispatchRequest>();
+  private readonly store?: DispatchStore;
+
+  constructor(store?: DispatchStore) {
+    this.store = store;
+  }
 
   requestDispatch(req: DispatchRequest, candidates: DispatchCandidate[]): DispatchOffer | null {
     this.activeJobs.set(req.jobId, req);
+    if (this.store) {
+      this.store.saveJob(req).catch(() => {});
+    }
+
     if (!candidates || candidates.length === 0) {
       return null;
     }
@@ -26,6 +44,9 @@ export class StandaloneDispatchEngine {
     };
 
     this.offers.set(offer.attemptId, offer);
+    if (this.store) {
+      this.store.saveOffer(offer).catch(() => {});
+    }
     return offer;
   }
 
@@ -42,10 +63,14 @@ export class StandaloneDispatchEngine {
     }
     if (new Date(offer.offerExpiresAt).getTime() < Date.now()) {
       offer.status = 'EXPIRED';
+      if (this.store) this.store.updateOfferStatus(attemptId, 'EXPIRED').catch(() => {});
       throw new Error('Offer has expired');
     }
 
     offer.status = 'ACCEPTED';
+    if (this.store) {
+      this.store.updateOfferStatus(attemptId, 'ACCEPTED').catch(() => {});
+    }
     return offer;
   }
 
@@ -58,6 +83,9 @@ export class StandaloneDispatchEngine {
       throw new Error(`Partner ${partnerId} not authorized`);
     }
     offer.status = 'REJECTED';
+    if (this.store) {
+      this.store.updateOfferStatus(attemptId, 'REJECTED').catch(() => {});
+    }
     return offer;
   }
 

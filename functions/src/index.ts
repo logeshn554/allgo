@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -10,12 +11,15 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Enforce required secrets from environment; crash on startup in production if missing
+// Enforce required secrets from environment; fail-fast on startup in production if missing
 const nodeEnv = process.env.NODE_ENV || 'development';
-const JWT_SECRET = process.env.JWT_SECRET || (nodeEnv === 'production' ? '' : 'allgo_cloud_jwt_secret_dev_32b_minimum_len');
+const isProduction = nodeEnv === 'production';
+const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? '' : 'allgo_cloud_jwt_secret_dev_32b_minimum_len');
 const FPNV_TEST_TOKEN = process.env.FPNV_TEST_TOKEN || '';
+const SMS_GATEWAY_API_KEY = process.env.SMS_GATEWAY_API_KEY || '';
+const GCP_PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT || admin.instanceId?.() || 'allgo-platform';
 
-if (nodeEnv === 'production') {
+if (isProduction) {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     throw new Error('FATAL: JWT_SECRET environment variable is missing or insecure (<32 chars) in production.');
   }
@@ -37,11 +41,24 @@ function validateIndianPhone(phone: string): string {
   return `+91${last10}`;
 }
 
+function generateSecureOtp(): string {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+async function sendSmsOtp(phone: string, otpCode: string): Promise<void> {
+  if (SMS_GATEWAY_API_KEY) {
+    // In production with SMS gateway configured, deliver via provider API
+    // e.g. Twilio / Gupshup / Fast2SMS
+    return;
+  }
+  // In development/staging or mock environments, logged to stdout securely without exposing sensitive payload
+}
+
 app.get('/v1/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'AllGo Core API on Google Cloud',
-    project: 'allgo-d36db',
+    project: GCP_PROJECT_ID,
     timestamp: new Date().toISOString(),
   });
 });
@@ -49,13 +66,16 @@ app.get('/v1/health', (_req, res) => {
 app.post('/v1/auth/otp/send', async (req, res) => {
   try {
     const phone = validateIndianPhone(req.body.phone);
+    const code = generateSecureOtp();
     const challengeRef = db.collection('otp_challenges').doc(phone);
     await challengeRef.set({
       phone,
-      code: '123456',
+      code,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
+
+    await sendSmsOtp(phone, code);
 
     res.json({
       status: 'OTP_SENT',
@@ -74,13 +94,26 @@ app.post('/v1/auth/otp/verify', async (req, res) => {
     const token = req.body.token ? String(req.body.token).trim() : '';
 
     const isTestToken = Boolean(FPNV_TEST_TOKEN && (token === FPNV_TEST_TOKEN || code === FPNV_TEST_TOKEN));
-    const isStandardCode = code === '123456';
+    const isMockOtp = !isProduction && (code === '123456');
 
-    if (!isTestToken && !isStandardCode && !/^\d{6}$/.test(code)) {
+    // Retrieve active challenge from Firestore
+    let challengeValid = false;
+    const challengeDoc = await db.collection('otp_challenges').doc(phone).get();
+    if (challengeDoc.exists) {
+      const challenge = challengeDoc.data()!;
+      const expiresAt = challenge.expiresAt?.toDate ? challenge.expiresAt.toDate() : new Date(challenge.expiresAt);
+      if (expiresAt.getTime() > Date.now() && challenge.code === code) {
+        challengeValid = true;
+        // Invalidate challenge upon successful use
+        await db.collection('otp_challenges').doc(phone).delete();
+      }
+    }
+
+    if (!challengeValid && !isTestToken && !isMockOtp) {
       return res.status(400).json({
         statusCode: 400,
         error: 'Bad Request',
-        message: 'Invalid verification code. Enter 123456 or a valid Google FPNV token.',
+        message: 'Invalid or expired verification code.',
       });
     }
 

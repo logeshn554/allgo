@@ -11,3 +11,4 @@ export * from './parcels.types';
 export * from './finance.types';
 export * from './support.types';
 export * from './ratings.types';
+export * from './dashboard.types';

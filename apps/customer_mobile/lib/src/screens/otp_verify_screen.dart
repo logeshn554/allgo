@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
@@ -48,7 +50,10 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
   Future<void> _handleVerify(String code) async {
     _enteredCode = code;
     final authNotifier = ref.read(authNotifierProvider.notifier);
-    final success = await authNotifier.verifyOtp(code, platform: 'ANDROID');
+    final String currentPlatform = kIsWeb
+        ? 'WEB'
+        : (Platform.isIOS ? 'IOS' : 'ANDROID');
+    final success = await authNotifier.verifyOtp(code, platform: currentPlatform);
 
     if (!mounted) return;
 
