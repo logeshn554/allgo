@@ -50,6 +50,9 @@ class RideModel {
   final String? driverVehicle;
   final String? createdAt;
 
+  String get serviceType => vehicleCategory;
+  String get destinationAddress => dropoffAddress;
+
   RideModel({
     required this.id,
     required this.rideNumber,
@@ -100,6 +103,8 @@ class ParcelModel {
   final String? courierName;
   final String? courierPhone;
   final String? createdAt;
+
+  double get totalFareInr => totalAmountInr;
 
   ParcelModel({
     required this.id,
@@ -156,6 +161,11 @@ class HireDriverBookingModel {
   final String? driverPhone;
   final String? createdAt;
 
+  String get reportingAddress => pickupAddress;
+  String get transmissionType => transmission;
+  double? get startOdometerKm => null;
+  double? get endOdometerKm => null;
+
   HireDriverBookingModel({
     required this.id,
     required this.bookingNumber,
@@ -202,6 +212,24 @@ class PartnerModeConfigModel {
   final String? activeVerticalLock;
   final bool isOnline;
 
+  String get mode => preferredMode;
+
+  dynamic operator [](String key) {
+    switch (key) {
+      case 'mode':
+      case 'preferredMode':
+        return preferredMode;
+      case 'activeVerticalLock':
+        return activeVerticalLock;
+      case 'partnerId':
+        return partnerId;
+      case 'isOnline':
+        return isOnline;
+      default:
+        return null;
+    }
+  }
+
   PartnerModeConfigModel({
     required this.partnerId,
     required this.preferredMode,
@@ -231,6 +259,9 @@ class RideOfferModel {
   final double partnerPayoutInr;
   final double estimatedDistanceKm;
   final String offerExpiresAt;
+
+  String get destinationAddress => dropoffAddress;
+  double get estimatedFare => partnerPayoutInr;
 
   RideOfferModel({
     required this.attemptId,

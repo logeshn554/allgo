@@ -79,7 +79,7 @@ class OrderDetailSafetyAndPartnerCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(6)),
-                      child: Text(order.deliveryJob!.status, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.blue.shade800)),
+                      child: Text(order.deliveryJob!['status']?.toString() ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.blue.shade800)),
                     ),
                   ],
                 ),

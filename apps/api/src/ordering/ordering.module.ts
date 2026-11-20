@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module.js';
 import { DeliveryModule } from '../delivery/delivery.module.js';
+import { StorageModule } from '../storage/storage.module.js';
 // Repositories
 import { OrderRepository } from './data/order.repository.js';
 import { OrderEventRepository } from './data/order-event.repository.js';
@@ -21,6 +22,8 @@ import { OrderMerchantLifecycleService } from './services/order-merchant-lifecyc
 import { OrderCancellationService } from './services/order-cancellation.service.js';
 import { OrderQueryService } from './services/order-query.service.js';
 import { OrderSagaOrchestratorService } from './services/order-saga-orchestrator.service.js';
+import { GstInvoiceService } from './services/gst-invoice.service.js';
+import { OrderSubstitutionService } from './services/order-substitution.service.js';
 // Facades
 import { PricingService } from './services/pricing.service.js';
 import { CouponsService } from './services/coupons.service.js';
@@ -33,9 +36,10 @@ import { AddressesController } from './controllers/addresses.controller.js';
 import { MerchantOrdersController } from './controllers/merchant-orders.controller.js';
 import { PaymentsController } from './controllers/payments.controller.js';
 import { AdminOrdersController } from './controllers/admin-orders.controller.js';
+import { OrderSubstitutionController } from './controllers/order-substitution.controller.js';
 
 @Module({
-  imports: [DatabaseModule, DeliveryModule],
+  imports: [DatabaseModule, DeliveryModule, StorageModule],
   controllers: [
     CartController,
     CheckoutController,
@@ -44,15 +48,14 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
     MerchantOrdersController,
     PaymentsController,
     AdminOrdersController,
+    OrderSubstitutionController,
   ],
   providers: [
-    // Repositories
     OrderRepository,
     OrderEventRepository,
     OrderCancellationRepository,
     PricingRepository,
     CouponRepository,
-    // Sub-Services
     CartService,
     AddressService,
     InventoryReservationService,
@@ -66,7 +69,8 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
     OrderCancellationService,
     OrderQueryService,
     OrderSagaOrchestratorService,
-    // Facades
+    GstInvoiceService,
+    OrderSubstitutionService,
     PricingService,
     CouponsService,
     OrdersService,
@@ -90,6 +94,8 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
     OrderCancellationService,
     OrderQueryService,
     OrderSagaOrchestratorService,
+    GstInvoiceService,
+    OrderSubstitutionService,
     PricingService,
     CouponsService,
     OrdersService,

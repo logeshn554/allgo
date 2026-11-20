@@ -18,6 +18,7 @@ import { OrderHistoryPage } from './pages/OrderHistoryPage';
 import { AddressPickerPage } from './pages/AddressPickerPage';
 import { MerchantKdsPage } from './pages/MerchantKdsPage';
 import { AdminGodViewPage } from './pages/AdminGodViewPage';
+import { WalletLedgerView } from './components/WalletLedgerView';
 import { OfflineBanner } from './components/OfflineBanner';
 import { loadUserProfile } from './data/userStorage';
 import { type UserRole } from './data/userRegistrationService';
@@ -119,6 +120,9 @@ export default function App() {
       )}
       {screen === 'history' && (
         <OrderHistoryPage onBack={() => setScreen('home')} onSelectOrder={openTracking} />
+      )}
+      {screen === 'wallet' && (
+        <WalletLedgerView onBack={() => setScreen('home')} />
       )}
       {screen === 'address' && (
         <AddressPickerPage

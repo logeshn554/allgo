@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "AllGo Inbound Webhooks Service (Payment & Partner Callbacks)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "dependencies": {
     "@allgo/common": "*"
   }

@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -12,7 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../common/guards/roles.guard.js';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { AddressService } from '../services/address.service.js';
-import { CreateAddressDto } from '../dto/ordering.dto.js';
+import { CreateAddressDto, UpdateAddressDto } from '../dto/ordering.dto.js';
 
 @Controller('v1/addresses')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +31,22 @@ export class AddressesController {
   @Roles('CUSTOMER')
   async createAddress(@Request() req: any, @Body() dto: CreateAddressDto) {
     return this.addressService.createSavedAddress(req.user.id, dto);
+  }
+
+  @Put(':id')
+  @Roles('CUSTOMER')
+  async updateAddress(
+    @Request() req: any,
+    @Param('id') addressId: string,
+    @Body() dto: UpdateAddressDto
+  ) {
+    return this.addressService.updateSavedAddress(addressId, req.user.id, dto);
+  }
+
+  @Patch(':id/default')
+  @Roles('CUSTOMER')
+  async setDefaultAddress(@Request() req: any, @Param('id') addressId: string) {
+    return this.addressService.setDefaultAddress(addressId, req.user.id);
   }
 
   @Delete(':id')

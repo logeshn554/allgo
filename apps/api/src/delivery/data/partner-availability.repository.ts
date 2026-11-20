@@ -140,4 +140,44 @@ export class PartnerAvailabilityRepository {
     );
     return ins.rows[0].id;
   }
+
+  async batchInsertLocations(locations: Array<{
+    partnerId: string;
+    activeJobId: string | null;
+    lon: number;
+    lat: number;
+    heading?: number | null;
+    speedMps?: number | null;
+    accuracy?: number | null;
+    recordedAt?: Date;
+  }>): Promise<number> {
+    if (locations.length === 0) return 0;
+    const valueClauses: string[] = [];
+    const params: any[] = [];
+    let pIdx = 1;
+
+    for (const loc of locations) {
+      valueClauses.push(
+        `($${pIdx++}, $${pIdx++}, ST_SetSRID(ST_MakePoint($${pIdx++}, $${pIdx++}), 4326), $${pIdx++}, $${pIdx++}, $${pIdx++}, $${pIdx++})`
+      );
+      params.push(
+        loc.partnerId,
+        loc.activeJobId,
+        loc.lon,
+        loc.lat,
+        loc.heading ?? null,
+        loc.speedMps ?? null,
+        loc.accuracy ?? null,
+        loc.recordedAt || new Date()
+      );
+    }
+
+    const query = `
+      INSERT INTO partner_location_history (
+        partner_id, active_job_id, location, heading, speed_meters_per_second, accuracy_meters, recorded_at
+      ) VALUES ${valueClauses.join(', ')};
+    `;
+    const res = await this.db.query(query, params);
+    return res.rowCount || locations.length;
+  }
 }

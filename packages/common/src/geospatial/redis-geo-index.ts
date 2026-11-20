@@ -1,12 +1,13 @@
 // Job: High-performance Redis geospatial indexing and nearest-driver evaluation within 3-5 km.
 
-export interface DriverLocationPing {
+export interface RedisDriverCandidate {
   partnerId: string;
+  driverId?: string;
   latitude: number;
   longitude: number;
-  vehicleType: 'BICYCLE' | 'MOTORCYCLE' | 'AUTO' | 'CAB_ECONOMY' | 'CAB_PREMIUM';
-  isAvailable: boolean;
-  timestampMs: number;
+  vehicleType?: 'BICYCLE' | 'MOTORCYCLE' | 'AUTO' | 'CAB_ECONOMY' | 'CAB_PREMIUM' | string;
+  isAvailable?: boolean;
+  timestampMs?: number;
 }
 
 export interface NearbyDriverResult {
@@ -40,7 +41,7 @@ export function haversineDistanceMeters(
 
 export function buildRedisGeoAddCommand(
   key: string,
-  driver: DriverLocationPing
+  driver: RedisDriverCandidate
 ): [string, number, number, string] {
   return [key, driver.longitude, driver.latitude, driver.partnerId];
 }
@@ -48,7 +49,7 @@ export function buildRedisGeoAddCommand(
 export function evaluateNearestDrivers(
   pickupLat: number,
   pickupLon: number,
-  drivers: DriverLocationPing[],
+  drivers: RedisDriverCandidate[],
   options?: {
     maxRadiusMeters?: number;
     requiredVehicleType?: string;
@@ -64,11 +65,11 @@ export function evaluateNearestDrivers(
   const results: NearbyDriverResult[] = [];
 
   for (const driver of drivers) {
-    if (!driver.isAvailable) continue;
-    if (options?.requiredVehicleType && driver.vehicleType !== options.requiredVehicleType) {
+    if (driver.isAvailable === false) continue;
+    if (options?.requiredVehicleType && driver.vehicleType && driver.vehicleType !== options.requiredVehicleType) {
       continue;
     }
-    if (now - driver.timestampMs > maxStaleAge) {
+    if (driver.timestampMs && now - driver.timestampMs > maxStaleAge) {
       continue;
     }
 
@@ -82,7 +83,7 @@ export function evaluateNearestDrivers(
         estimatedArrivalMinutes: etaMinutes,
         latitude: driver.latitude,
         longitude: driver.longitude,
-        vehicleType: driver.vehicleType,
+        vehicleType: driver.vehicleType ?? 'MOTORCYCLE',
       });
     }
   }

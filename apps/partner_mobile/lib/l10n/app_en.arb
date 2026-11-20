@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "appTitle": "AllGo Partner",
+  "partnerDuty": "Duty & Dispatch",
+  "modeDeliveries": "Deliveries Only",
+  "modeRides": "Rides Only",
+  "modeAllJobs": "All Jobs (Max Earnings)",
+  "unifiedEarnings": "Unified Daily Earnings",
+  "nextJobMatching": "Next Job Near Drop",
+  "proofOfDelivery": "Proof of Delivery",
+  "handoverOtp": "Handover OTP",
+  "languagePicker": "Select Language"
+}

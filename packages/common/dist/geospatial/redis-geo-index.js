@@ -20,12 +20,12 @@ export function evaluateNearestDrivers(pickupLat, pickupLon, drivers, options) {
     const now = Date.now();
     const results = [];
     for (const driver of drivers) {
-        if (!driver.isAvailable)
+        if (driver.isAvailable === false)
             continue;
-        if (options?.requiredVehicleType && driver.vehicleType !== options.requiredVehicleType) {
+        if (options?.requiredVehicleType && driver.vehicleType && driver.vehicleType !== options.requiredVehicleType) {
             continue;
         }
-        if (now - driver.timestampMs > maxStaleAge) {
+        if (driver.timestampMs && now - driver.timestampMs > maxStaleAge) {
             continue;
         }
         const dist = haversineDistanceMeters(pickupLat, pickupLon, driver.latitude, driver.longitude);
@@ -38,7 +38,7 @@ export function evaluateNearestDrivers(pickupLat, pickupLon, drivers, options) {
                 estimatedArrivalMinutes: etaMinutes,
                 latitude: driver.latitude,
                 longitude: driver.longitude,
-                vehicleType: driver.vehicleType,
+                vehicleType: driver.vehicleType ?? 'MOTORCYCLE',
             });
         }
     }

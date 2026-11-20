@@ -7,10 +7,12 @@ import '../components/merchant_emergency_tab.dart';
 
 class OperatingHoursScreen extends ConsumerStatefulWidget {
   final String outletId;
+  final String? outletName;
 
   const OperatingHoursScreen({
     super.key,
     required this.outletId,
+    this.outletName,
   });
 
   @override

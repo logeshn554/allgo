@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { SubmitMerchantDocumentDto } from './dto/submit-merchant-doc.dto.js';
 import { StorageService } from '../storage/storage.service.js';
@@ -21,16 +22,11 @@ export class MerchantDocumentService {
       throw new NotFoundException('Merchant profile not found');
     }
 
-    let ticket: any;
-    if (this.storage) {
-      ticket = await this.storage.linkTicket(dto.ticketId, userId, 'merchant', merchant.id);
-    } else {
-      ticket = {
-        storage_key: `mock/merchant_${dto.ticketId}.pdf`,
-        mime_type: 'application/pdf',
-        file_size_bytes: 1024,
-      };
+    if (!this.storage) {
+      throw new InternalServerErrorException('Storage service is unavailable. Document processing failed.');
     }
+
+    const ticket = await this.storage.linkTicket(dto.ticketId, userId, 'merchant', merchant.id);
 
     let existingDoc = await this.docRepo.findCurrentDocument(merchant.id, dto.documentType);
 

@@ -1,31 +1,11 @@
-/**
- * AllGo Order Lifecycle Statuses
- *
- * Represents the discrete states of an order / sub-order from creation through
- * fulfillment or terminal failure.
- */
-export const OrderStatus = {
-    CART: 'CART',
-    PLACED: 'PLACED',
-    PAYMENT_CONFIRMED: 'PAYMENT_CONFIRMED',
-    MERCHANT_ACCEPTED: 'MERCHANT_ACCEPTED',
-    PREPARING: 'PREPARING',
-    READY: 'READY',
-    PARTNER_ASSIGNED: 'PARTNER_ASSIGNED',
-    PARTNER_AT_STORE: 'PARTNER_AT_STORE',
-    PICKED_UP: 'PICKED_UP',
-    OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
-    ARRIVED: 'ARRIVED',
-    DELIVERED: 'DELIVERED',
-    CANCELLED: 'CANCELLED',
-    REFUNDED: 'REFUNDED',
-    FAILED: 'FAILED',
-};
+import { OrderStatus } from "../contracts/order-status.js";
+export { OrderStatus };
 /**
  * Terminal states where no further standard forward transitions can occur
  */
 export const TERMINAL_ORDER_STATUSES = [
     OrderStatus.DELIVERED,
+    OrderStatus.COMPLETED,
     OrderStatus.CANCELLED,
     OrderStatus.REFUNDED,
     OrderStatus.FAILED,
@@ -34,15 +14,24 @@ export const TERMINAL_ORDER_STATUSES = [
  * Active in-flight order statuses
  */
 export const ACTIVE_ORDER_STATUSES = [
+    OrderStatus.CREATED,
+    OrderStatus.PAYMENT_PENDING,
+    OrderStatus.CONFIRMED,
     OrderStatus.PLACED,
     OrderStatus.PAYMENT_CONFIRMED,
     OrderStatus.MERCHANT_ACCEPTED,
     OrderStatus.PREPARING,
     OrderStatus.READY,
+    OrderStatus.READY_FOR_PICKUP,
+    OrderStatus.DISPATCHING,
+    OrderStatus.DRIVER_ASSIGNED,
     OrderStatus.PARTNER_ASSIGNED,
     OrderStatus.PARTNER_AT_STORE,
+    OrderStatus.ARRIVED_AT_PICKUP,
     OrderStatus.PICKED_UP,
+    OrderStatus.IN_TRANSIT,
     OrderStatus.OUT_FOR_DELIVERY,
     OrderStatus.ARRIVED,
+    OrderStatus.ARRIVED_AT_DROP,
 ];
 //# sourceMappingURL=order-status.enum.js.map

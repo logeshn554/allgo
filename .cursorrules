@@ -1,8 +1,16 @@
-# Project Organization Rules (Strict)
-1. Keep this app organized so a beginner can read it.
-2. Screens go in `src/pages/`.
-3. Shared UI pieces go in `src/components/`.
-4. Saving, loading, and API logic goes in `src/data/`.
-5. One job per file. Never combine unrelated functions in the same file.
-6. No file over 300 lines. If a file approaches 300 lines, split it into smaller single-job files.
-7. Before writing anything new, check if it already exists in `public/icons/`, `src/design-system/iconAssets.ts`, `src/pages/`, `src/components/`, or `src/data/`.
+# AllGo Production Engineering Rules (always_on)
+
+## 1. Strict Code Modularity & File Size Laws
+- Every file MUST have a single, well-defined responsibility.
+- Keep individual source files strictly under 100 to 250 lines (never exceed 300 lines). If a file grows larger, split sub-modules into dedicated files.
+- Frontend/Mobile directory structure MUST strictly follow:
+  - `src/pages/` (screen-level route containers only)
+  - `src/components/` (reusable, stateless or isolated UI widgets; use `AppIcon.tsx` and `src/design-system/iconAssets.ts` for all icons)
+  - `src/data/` (isolated data/network modules: `apiClient.ts`, `smsAuthLoader.ts`, `liveOrderStream.ts`, `gpsLoader.ts`, `paymentGateway.ts`, `localCache.ts`)
+
+## 2. Environment, Network & Build Constraints
+- NEVER hardcode `a.lvh.me:3000`, `localhost`, or raw API keys in source code.
+- Default production backend base URL is `https://allgo-api.onrender.com` (injectable via environment/compile-time variables).
+- Always compile `@allgo/common` (`npm run build --workspace=@allgo/common`) BEFORE building or testing `allgo-api` or client apps.
+- On local Windows Android/Flutter builds, ensure `GRADLE_USER_HOME` points to `E:\.gradle` if `C:\Users` cache write locks occur, and pass `--android-skip-build-dependency-validation` when required.
+- Never commit `build/`, `.gradle/`, `node_modules/`, or raw `google-services.json` secrets to git.

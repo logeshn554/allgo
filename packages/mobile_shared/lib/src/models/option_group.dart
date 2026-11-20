@@ -5,6 +5,8 @@ class OptionItem {
   final bool isAvailable;
   final int displayOrder;
 
+  double get priceModifierInr => priceInr;
+
   const OptionItem({
     required this.id,
     required this.name,

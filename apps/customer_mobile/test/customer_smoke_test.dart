@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:customer_mobile/src/screens/welcome_screen.dart';
+import 'package:allgo_customer_mobile/src/screens/welcome_screen.dart';
 
 void main() {
   group('Customer Mobile App Smoke Tests', () {

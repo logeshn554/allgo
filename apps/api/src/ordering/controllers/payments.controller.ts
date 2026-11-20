@@ -1,9 +1,12 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
+  Param,
   Headers,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { PaymentService } from '../services/payment.service.js';
@@ -23,12 +26,12 @@ export class PaymentsController {
     );
   }
 
-  @Post('webhook')
-  async handleWebhook(
-    @Headers('x-razorpay-signature') signature: string,
-    @Body() body: any
+  @Get('status/:orderGroupId')
+  @UseGuards(JwtAuthGuard)
+  async getPaymentStatus(
+    @Param('orderGroupId') orderGroupId: string,
+    @Query('transactionId') transactionId?: string
   ) {
-    const rawBody = typeof body === 'string' ? body : JSON.stringify(body);
-    return this.paymentService.handleWebhook(rawBody, signature || '', body);
+    return this.paymentService.getPaymentStatus(orderGroupId, transactionId);
   }
 }

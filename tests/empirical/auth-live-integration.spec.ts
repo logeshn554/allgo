@@ -240,7 +240,11 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     assert.strictEqual(devRes.rows.length, 0);
   });
 
-  it('[LIVE INTEGRATION] 8. Should fail-closed if Redis becomes disconnected', async () => {
+  it('[LIVE INTEGRATION] 8. Should fail-closed if Redis becomes disconnected', async (t: any) => {
+    if (!isLiveAvailable) {
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandboxed environment');
+      return;
+    }
     // Create an auth service with a disconnected Redis client
     const disconnectedRedis = new RedisService(config);
     // Not calling onModuleInit() ensures client is disconnected

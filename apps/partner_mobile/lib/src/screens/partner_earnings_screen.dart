@@ -135,6 +135,7 @@ class _PartnerEarningsScreenState extends ConsumerState<PartnerEarningsScreen> {
                               children: [
                                 const Text('Cash-in-Hand (COD)', style: TextStyle(color: Colors.white70, fontSize: 11)),
                                 Text('₹${_outstandingCod.toStringAsFixed(2)}', style: TextStyle(color: _outstandingCod > 1500 ? AllGoColors.error : Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text('Lifetime: ₹${_totalCodCollected.toStringAsFixed(0)}', style: const TextStyle(color: Colors.white54, fontSize: 10)),
                               ],
                             ),
                             ElevatedButton.icon(

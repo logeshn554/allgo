@@ -19,12 +19,14 @@ import { StoreOpenCalculatorService } from './store-open-calculator.service.js';
 import { CatalogMediaService } from './catalog-media.service.js';
 import { CatalogService } from './catalog.service.js';
 import { OperatingHoursService } from './operating-hours.service.js';
+import { MerchantCsvMenuService } from './merchant-csv-menu.service.js';
 import { MerchantCategoryController } from './merchant-category.controller.js';
 import { MerchantProductController } from './merchant-product.controller.js';
 import { MerchantVariantController } from './merchant-variant.controller.js';
 import { MerchantStockController } from './merchant-stock.controller.js';
 import { CustomerCatalogController } from './customer-catalog.controller.js';
 import { AdminCatalogController } from './admin-catalog.controller.js';
+import { MerchantCsvMenuController } from './merchant-csv-menu.controller.js';
 
 @Module({
   imports: [DatabaseModule],
@@ -35,6 +37,7 @@ import { AdminCatalogController } from './admin-catalog.controller.js';
     MerchantStockController,
     CustomerCatalogController,
     AdminCatalogController,
+    MerchantCsvMenuController,
   ],
   providers: [
     CatalogRepository,
@@ -56,6 +59,7 @@ import { AdminCatalogController } from './admin-catalog.controller.js';
     CatalogMediaService,
     CatalogService,
     OperatingHoursService,
+    MerchantCsvMenuService,
   ],
   exports: [
     CatalogRepository,
@@ -77,6 +81,7 @@ import { AdminCatalogController } from './admin-catalog.controller.js';
     CatalogMediaService,
     CatalogService,
     OperatingHoursService,
+    MerchantCsvMenuService,
   ],
 })
 export class CatalogModule {}

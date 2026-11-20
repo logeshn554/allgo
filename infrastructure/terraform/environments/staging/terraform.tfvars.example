@@ -1,0 +1,5 @@
+project_id         = "allgo-staging"
+region             = "asia-south1"
+billing_account_id = "012345-6789AB-CDEF01"
+budget_amount_inr  = 25000
+db_password        = "REPLACE_WITH_SECURE_STAGING_PASSWORD"

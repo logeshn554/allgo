@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'create_outlet_screen.dart';
 import 'operating_hours_screen.dart';
+import 'store_branding_media_screen.dart';
 
 class OutletManagementScreen extends ConsumerStatefulWidget {
   const OutletManagementScreen({super.key});
@@ -220,24 +221,52 @@ class _OutletManagementScreenState extends ConsumerState<OutletManagementScreen>
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => OperatingHoursScreen(
-                                            outletId: o['id'].toString(),
-                                            outletName: outletName,
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => OperatingHoursScreen(
+                                                  outletId: o['id'].toString(),
+                                                  outletName: outletName,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.schedule, size: 16),
+                                          label: const Text('Operating Hours'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: const Color(0xFF6200EA),
+                                            side: const BorderSide(color: Color(0xFF6200EA)),
+                                            visualDensity: VisualDensity.compact,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.schedule, size: 16),
-                                    label: const Text('Manage Operating Hours'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF6200EA),
-                                      side: const BorderSide(color: Color(0xFF6200EA)),
-                                      visualDensity: VisualDensity.compact,
-                                    ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) => StoreBrandingMediaScreen(
+                                                  outletId: o['id'].toString(),
+                                                  outletName: outletName,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.image_outlined, size: 16),
+                                          label: const Text('Logo & Banner'),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: AllGoColors.primary,
+                                            side: const BorderSide(color: AllGoColors.primary),
+                                            visualDensity: VisualDensity.compact,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

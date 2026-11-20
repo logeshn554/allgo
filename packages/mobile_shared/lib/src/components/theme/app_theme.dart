@@ -62,7 +62,7 @@ class AllGoTheme {
         labelStyle: AllGoTypography.bodyMedium.copyWith(color: AllGoColors.textSecondary),
         hintStyle: AllGoTypography.bodyMedium.copyWith(color: AllGoColors.textTertiary),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AllGoColors.surface,
         elevation: 1,
         shape: RoundedRectangleBorder(

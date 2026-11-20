@@ -23,13 +23,22 @@ class MerchantOrdersApi {
     throw ApiException(response.statusCode, res['message']?.toString() ?? 'Failed to fetch dashboard');
   }
 
-  Future<void> updateOutletStatus(String outletId, bool isOpen, {int? defaultPrepTimeMinutes}) async {
+  Future<void> updateOutletStatus(
+    String outletId,
+    bool? isOpen, {
+    int? defaultPrepTimeMinutes,
+    String? logoUrl,
+    String? coverPhotoUrl,
+  }) async {
     final token = await base.tokenStorage.getAccessToken();
     final url = Uri.parse('${base.base.baseUrl}/v1/merchants/outlets/$outletId/status');
-    final Map<String, dynamic> body = {'isOpen': isOpen};
+    final Map<String, dynamic> body = {};
+    if (isOpen != null) body['isOpen'] = isOpen;
     if (defaultPrepTimeMinutes != null) {
       body['defaultPrepTimeMinutes'] = defaultPrepTimeMinutes;
     }
+    if (logoUrl != null) body['logoUrl'] = logoUrl;
+    if (coverPhotoUrl != null) body['coverPhotoUrl'] = coverPhotoUrl;
     final response = await base.httpClient.patch(
       url,
       headers: base.buildHeaders(token: token),

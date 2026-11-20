@@ -40,6 +40,8 @@ class MerchantDashboardData {
   final double storeRating;
   final double completionRatePercentage;
 
+  bool get outletIsOpen => isOpen;
+
   const MerchantDashboardData({
     required this.status,
     this.outletId,
@@ -53,6 +55,27 @@ class MerchantDashboardData {
     required this.storeRating,
     required this.completionRatePercentage,
   });
+
+  factory MerchantDashboardData.empty() {
+    return const MerchantDashboardData(
+      status: 'NOT_REGISTERED',
+      isOpen: false,
+      defaultPrepTimeMinutes: 15,
+      todaySalesInr: 0.0,
+      weeklySalesInr: 0.0,
+      pendingPayoutInr: 0.0,
+      orderSummary: OrderSummaryStats(
+        newOrders: 0,
+        accepted: 0,
+        preparing: 0,
+        ready: 0,
+        completed: 0,
+        cancelled: 0,
+      ),
+      storeRating: 5.0,
+      completionRatePercentage: 100.0,
+    );
+  }
 
   factory MerchantDashboardData.fromJson(Map<String, dynamic> json) {
     return MerchantDashboardData(

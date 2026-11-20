@@ -1,10 +1,11 @@
-export interface DriverLocationPing {
+export interface RedisDriverCandidate {
     partnerId: string;
+    driverId?: string;
     latitude: number;
     longitude: number;
-    vehicleType: 'BICYCLE' | 'MOTORCYCLE' | 'AUTO' | 'CAB_ECONOMY' | 'CAB_PREMIUM';
-    isAvailable: boolean;
-    timestampMs: number;
+    vehicleType?: 'BICYCLE' | 'MOTORCYCLE' | 'AUTO' | 'CAB_ECONOMY' | 'CAB_PREMIUM' | string;
+    isAvailable?: boolean;
+    timestampMs?: number;
 }
 export interface NearbyDriverResult {
     partnerId: string;
@@ -15,8 +16,8 @@ export interface NearbyDriverResult {
     vehicleType: string;
 }
 export declare function haversineDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number;
-export declare function buildRedisGeoAddCommand(key: string, driver: DriverLocationPing): [string, number, number, string];
-export declare function evaluateNearestDrivers(pickupLat: number, pickupLon: number, drivers: DriverLocationPing[], options?: {
+export declare function buildRedisGeoAddCommand(key: string, driver: RedisDriverCandidate): [string, number, number, string];
+export declare function evaluateNearestDrivers(pickupLat: number, pickupLon: number, drivers: RedisDriverCandidate[], options?: {
     maxRadiusMeters?: number;
     requiredVehicleType?: string;
     maxResults?: number;

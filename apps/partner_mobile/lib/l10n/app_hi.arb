@@ -1,0 +1,13 @@
+{
+  "@@locale": "hi",
+  "appTitle": "ऑलगो पार्टनर",
+  "partnerDuty": "ड्यूटी और डिस्पैच",
+  "modeDeliveries": "केवल डिलीवरी",
+  "modeRides": "केवल राइड्स",
+  "modeAllJobs": "सभी कार्य (अधिकतम कमाई)",
+  "unifiedEarnings": "एकीकृत दैनिक कमाई",
+  "nextJobMatching": "ड्रॉप के पास अगला कार्य",
+  "proofOfDelivery": "डिलीवरी का प्रमाण",
+  "handoverOtp": "हैंडओवर ओटीपी",
+  "languagePicker": "भाषा चुनें"
+}

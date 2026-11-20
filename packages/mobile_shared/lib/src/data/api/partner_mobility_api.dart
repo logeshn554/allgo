@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'base_api.dart';
-import '../../models/mobility.dart';
+import '../../models/mobility.dart' hide ParcelModel;
 import '../../models/parcel.dart';
 
 class PartnerMobilityApi {

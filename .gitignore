@@ -14,10 +14,18 @@ yarn-error.log*
 .superpowers/
 .agents/
 .next/
+**/.next/
 *.tsbuildinfo
 *.pem
 *.key
+# Secrets and credentials
 *service-account*.json
+**/google-services.json
+google-services.json
+!**/google-services.json.example
+!google-services.json.example
+.gradle/
+**/.gradle/
 secrets/
 .terraform/
 *.tfstate
@@ -27,8 +35,10 @@ secrets/
 
 # Flutter & Dart build artifacts
 .dart_tool/
+**/.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+build/
 **/build/
 **/android/.gradle/
 **/android/local.properties

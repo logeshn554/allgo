@@ -172,38 +172,31 @@ export class ParcelOfferDispatchService {
           await this.assignmentRepo.updateAttemptStatus(attemptId, 'EXPIRED', undefined, client);
           throw new BadRequestException('Parcel offer has expired');
         }
-
         const parcelRes = await client.query(`SELECT * FROM parcels WHERE id = $1 FOR UPDATE;`, [
           attempt.parcel_id,
         ]);
         const parcel = parcelRes.rows[0];
-
         if (parcel.partner_id && parcel.partner_id !== partner.id) {
           throw new BadRequestException('Parcel has already been assigned to another partner');
         }
-
         await this.assignmentRepo.updateAttemptStatus(attemptId, 'ACCEPTED', undefined, client);
         await this.assignmentRepo.cancelOtherOffers(attempt.parcel_id, attemptId, client);
-
         const updatedRes = await client.query(
           `UPDATE parcels SET partner_id = $1, status = 'PARTNER_ASSIGNED', updated_at = NOW() WHERE id = $2 RETURNING *;`,
           [partner.id, attempt.parcel_id]
         );
-
         await client.query(
           `INSERT INTO parcel_delivery_events (
              parcel_id, event_type, from_status, to_status, actor_id, actor_role, reason
            ) VALUES ($1, 'PARTNER_ASSIGNED', $2, 'PARTNER_ASSIGNED', $3, 'PARTNER', 'Courier partner accepted parcel delivery offer');`,
           [attempt.parcel_id, parcel.status, userId]
         );
-
         return updatedRes.rows[0];
       });
     } catch (err: any) {
       await this.continuityService.releaseVerticalLock(partner.id);
       throw err;
     }
-
     try {
       this.gateway.server?.to(`user:${updatedParcel.sender_id}`).emit('parcel:status_changed', {
         parcelId: updatedParcel.id,
@@ -211,24 +204,18 @@ export class ParcelOfferDispatchService {
         partnerId: partner.id,
       });
     } catch (_) {}
-
     return updatedParcel;
   }
-
   async rejectOffer(userId: string, attemptId: string, reason: string): Promise<any> {
     const partner = await this.continuityService.getPartnerByUserId(userId);
     const attempt = await this.assignmentRepo.findAttemptById(attemptId);
-
     if (!attempt) {
       throw new NotFoundException('Parcel offer not found');
     }
-
     if (attempt.partner_id !== partner.id) {
       throw new ForbiddenException('Not authorized to reject this offer');
     }
-
     await this.assignmentRepo.updateAttemptStatus(attemptId, 'REJECTED', reason || 'Rejected by partner');
-
     setImmediate(async () => {
       try {
         await this.requestDispatch(attempt.parcel_id);
@@ -236,14 +223,11 @@ export class ParcelOfferDispatchService {
         this.logger.warn(`Background parcel redispatch failed: ${e.message}`);
       }
     });
-
     return { status: 'OFFER_REJECTED', attemptId, parcelId: attempt.parcel_id };
   }
-
   async getPartnerOffers(partnerUserId: string): Promise<any[]> {
     const partner = await this.continuityService.getPartnerByUserId(partnerUserId);
     const rows = await this.assignmentRepo.getPartnerOffers(partner.id);
-
     return rows.map((r: any) => ({
       attemptId: r.id,
       parcelId: r.parcel_id,

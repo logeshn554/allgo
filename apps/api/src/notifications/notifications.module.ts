@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '../database/database.module.js';
-import { RedisModule } from '../redis/redis.module.js';
-import { NotificationsService } from './notifications.service.js';
 import { NotificationsController } from './notifications.controller.js';
+import { NotificationsService } from './notifications.service.js';
+import { FirebaseAdminFcmService } from './fcm/fcm-push.service.js';
+import { IndiaDltSmsGateway } from './sms/india-dlt-sms.gateway.js';
+import { NotificationLocalizationService } from './notification-localization.service.js';
 
 @Module({
-  imports: [DatabaseModule, RedisModule],
   controllers: [NotificationsController],
-  providers: [NotificationsService],
-  exports: [NotificationsService],
+  providers: [
+    NotificationsService,
+    FirebaseAdminFcmService,
+    IndiaDltSmsGateway,
+    NotificationLocalizationService,
+  ],
+  exports: [
+    NotificationsService,
+    FirebaseAdminFcmService,
+    IndiaDltSmsGateway,
+    NotificationLocalizationService,
+  ],
 })
 export class NotificationsModule {}

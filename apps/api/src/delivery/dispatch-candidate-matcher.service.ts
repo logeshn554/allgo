@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional, Inject } from '@nestjs/common';
 import { latLngToH3Index, getH3KRing, getDriverH3RedisKey } from '@allgo/common';
 import { RedisService } from '../redis/redis.service.js';
 import { DispatchAttemptRepository } from './data/dispatch-attempt.repository.js';
@@ -6,6 +6,7 @@ import {
   PartnerAvailabilityService,
   REDIS_ONLINE_PARTNERS_GEO_KEY,
 } from './partner-availability.service.js';
+import type { MapsGateway } from '../common/maps/maps-gateway.interface.js';
 
 @Injectable()
 export class DispatchCandidateMatcherService {
@@ -14,7 +15,8 @@ export class DispatchCandidateMatcherService {
   constructor(
     private readonly redis: RedisService,
     private readonly attemptRepo: DispatchAttemptRepository,
-    private readonly partnerAvailabilityService: PartnerAvailabilityService
+    private readonly partnerAvailabilityService: PartnerAvailabilityService,
+    @Optional() @Inject('MapsGateway') private readonly mapsGateway?: MapsGateway
   ) {}
 
   async findEligibleCandidate(
@@ -65,7 +67,7 @@ export class DispatchCandidateMatcherService {
     const pastRejectedIds = await this.attemptRepo.findPastRejectedPartnerIds(jobId);
     const rejectedPartnerIds = new Set(pastRejectedIds);
 
-    let selectedPartnerId: string | null = null;
+    const eligiblePartnerIds: string[] = [];
 
     for (const pid of candidatePartnerIds) {
       if (rejectedPartnerIds.has(pid)) continue;
@@ -76,8 +78,36 @@ export class DispatchCandidateMatcherService {
       const eligibility = await this.partnerAvailabilityService.checkEligibility(pid);
       if (!eligibility.isEligible) continue;
 
-      selectedPartnerId = pid;
-      break;
+      eligiblePartnerIds.push(pid);
+    }
+
+    if (eligiblePartnerIds.length === 0) {
+      return { selectedPartnerId: null, attemptsCount: pastRejectedIds.length + 1 };
+    }
+
+    // Road ETA Dispatch Ranking
+    let selectedPartnerId: string | null = eligiblePartnerIds[0] ?? null;
+    if (this.mapsGateway && eligiblePartnerIds.length > 1) {
+      try {
+        const topCandidates = eligiblePartnerIds.slice(0, 5);
+        let bestEtaSeconds = Infinity;
+        for (const pid of topCandidates) {
+          const pt = await this.partnerAvailabilityService.getPartnerLastPoint(pid);
+          if (pt) {
+            const route = await this.mapsGateway.computeRoute(
+              { latitude: pt.lat, longitude: pt.lon },
+              { latitude: Number(pickupLat), longitude: Number(pickupLon) },
+              'TWO_WHEELER'
+            );
+            if (route.durationSeconds < bestEtaSeconds) {
+              bestEtaSeconds = route.durationSeconds;
+              selectedPartnerId = pid;
+            }
+          }
+        }
+      } catch (err: any) {
+        this.logger.debug(`Road ETA ranking fallback: ${err.message}`);
+      }
     }
 
     return {

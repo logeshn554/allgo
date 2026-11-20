@@ -1,3 +1,6 @@
+export 'parcel_quote.dart';
+export 'parcel_offer.dart';
+
 class ParcelLocation {
   final double latitude;
   final double longitude;
@@ -105,6 +108,9 @@ class ParcelModel {
   final List<ParcelEvent> events;
   final String? createdAt;
 
+  double get totalFareInr => totalAmountInr;
+  String get dropoffAddress => dropAddress;
+
   const ParcelModel({
     required this.id,
     required this.trackingNumber,
@@ -207,6 +213,4 @@ class ParcelModel {
   }
 }
 
-export 'parcel_quote.dart';
-export 'parcel_offer.dart';
 

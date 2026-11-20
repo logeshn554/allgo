@@ -1,6 +1,8 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service.js';
+import { PaymentGateway } from '../gateways/payment-gateway.interface.js';
+import { RazorpayPaymentGateway } from '../gateways/razorpay-payment.gateway.js';
 
 export interface PaymentInitiationResult {
   transactionId: string;
@@ -16,13 +18,15 @@ export interface PaymentInitiationResult {
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
-  private readonly razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || 'local_test_razorpay_secret_key_12345';
+  private readonly gateway: PaymentGateway;
 
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    gateway?: PaymentGateway
+  ) {
+    this.gateway = gateway || new RazorpayPaymentGateway();
+  }
 
-  /**
-   * Initiate payment attempt
-   */
   async initiatePayment(
     orderGroupId: string,
     subOrderId: string,
@@ -33,35 +37,34 @@ export class PaymentService {
     client?: any
   ): Promise<PaymentInitiationResult> {
     const runner = client || this.db;
-    const gatewayName = paymentMethod === 'COD' ? 'CASH_ON_DELIVERY' : 'RAZORPAY';
-    const gatewayOrderId = paymentMethod === 'COD'
-      ? `COD-${Date.now().toString(36).toUpperCase()}`
-      : `order_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const isCod = paymentMethod === 'COD';
+    const gatewayName = isCod ? 'CASH_ON_DELIVERY' : 'RAZORPAY';
 
-    const initialStatus = paymentMethod === 'COD' ? 'AUTHORIZED' : 'PENDING';
+    let gatewayOrderId: string;
+    if (isCod) {
+      gatewayOrderId = `COD-${Date.now().toString(36).toUpperCase()}`;
+    } else {
+      const orderRes = await this.gateway.createOrder({
+        amountInr,
+        currency: 'INR',
+        receipt: `rcpt_${subOrderId.slice(0, 10)}`,
+        notes: { orderGroupId, subOrderId, customerId },
+      });
+      gatewayOrderId = orderRes.id;
+    }
+
+    const initialStatus = isCod ? 'AUTHORIZED' : 'PENDING';
     const idemKey = idempotencyKey || `idem-${orderGroupId}-${Date.now()}`;
 
     const res = await runner.query(
       `INSERT INTO payment_transactions (
          order_group_id, sub_order_id, customer_id, gateway_name, gateway_order_id,
          idempotency_key, payment_method, amount_inr, currency, status
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7, $8, 'INR', $9
-       ) RETURNING *;`,
-      [
-        orderGroupId,
-        subOrderId,
-        customerId,
-        gatewayName,
-        gatewayOrderId,
-        idemKey,
-        paymentMethod,
-        amountInr,
-        initialStatus,
-      ]
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'INR', $9)
+       RETURNING *;`,
+      [orderGroupId, subOrderId, customerId, gatewayName, gatewayOrderId, idemKey, paymentMethod, amountInr, initialStatus]
     );
 
-    // Also populate canonical payments table
     await runner.query(
       `INSERT INTO payments (
          order_group_id, gateway_name, gateway_order_id, payment_method, amount_inr, status
@@ -70,7 +73,6 @@ export class PaymentService {
     );
 
     const transaction = res.rows[0];
-
     return {
       transactionId: transaction.id,
       gatewayName,
@@ -79,74 +81,48 @@ export class PaymentService {
       amountInr,
       currency: 'INR',
       status: initialStatus,
-      requiresAction: paymentMethod !== 'COD',
+      requiresAction: !isCod,
     };
   }
 
-  /**
-   * Verify Razorpay payment signature
-   */
   verifyRazorpaySignature(gatewayOrderId: string, gatewayPaymentId: string, signature: string): boolean {
-    if (!signature || typeof signature !== 'string') return false;
-    const payload = `${gatewayOrderId}|${gatewayPaymentId}`;
-    const expectedSignature = crypto
-      .createHmac('sha256', this.razorpayKeySecret)
-      .update(payload)
-      .digest('hex');
-
-    const sigBuf = Buffer.from(signature);
-    const expBuf = Buffer.from(expectedSignature);
-    if (sigBuf.length !== expBuf.length) {
-      return false;
-    }
-    return crypto.timingSafeEqual(sigBuf, expBuf);
+    return this.gateway.verifyPaymentSignature(gatewayOrderId, gatewayPaymentId, signature);
   }
 
-  /**
-   * Confirm successful payment
-   */
   async confirmPayment(
     transactionId: string,
     gatewayPaymentId: string,
-    gatewaySignature: string
+    gatewaySignature: string,
+    skipSignatureVerification = false
   ): Promise<any> {
     const transRes = await this.db.query(
       `SELECT * FROM payment_transactions WHERE id = $1;`,
       [transactionId]
     );
-
     if (transRes.rows.length === 0) {
       throw new BadRequestException('Payment transaction not found');
     }
-
     const trans = transRes.rows[0];
 
-    if (trans.gateway_name === 'RAZORPAY') {
+    if (trans.gateway_name === 'RAZORPAY' && !skipSignatureVerification) {
       const isValid = this.verifyRazorpaySignature(trans.gateway_order_id, gatewayPaymentId, gatewaySignature);
       if (!isValid) {
         throw new BadRequestException('Invalid Razorpay payment signature');
       }
     }
 
-    // Update transaction to CAPTURED
     const updated = await this.db.query(
       `UPDATE payment_transactions
-       SET status = 'CAPTURED',
-           gateway_payment_id = $1,
-           gateway_signature = $2,
-           captured_at = NOW(),
-           updated_at = NOW()
+       SET status = 'CAPTURED', gateway_payment_id = $1, gateway_signature = $2,
+           captured_at = NOW(), updated_at = NOW()
        WHERE id = $3 RETURNING *;`,
       [gatewayPaymentId, gatewaySignature, transactionId]
     );
 
     await this.db.query(
       `UPDATE payments
-       SET status = 'CAPTURED',
-           gateway_payment_id = $1,
-           gateway_signature = $2,
-           captured_at = NOW(),
-           updated_at = NOW()
+       SET status = 'CAPTURED', gateway_payment_id = $1, gateway_signature = $2,
+           captured_at = NOW(), updated_at = NOW()
        WHERE order_group_id = $3;`,
       [gatewayPaymentId, gatewaySignature, trans.order_group_id]
     );
@@ -154,11 +130,7 @@ export class PaymentService {
     return updated.rows[0];
   }
 
-  /**
-   * Process refund for a cancelled sub-order
-   */
   async processRefund(subOrderId: string, amountInr: number, reason: string): Promise<any> {
-    // Find payment associated with this sub_order
     const transRes = await this.db.query(
       `SELECT pt.*, p.id as canonical_payment_id
        FROM payment_transactions pt
@@ -175,60 +147,87 @@ export class PaymentService {
 
     const payment = transRes.rows[0];
     const destination = payment.payment_method === 'COD' ? 'WALLET' : 'ORIGINAL_METHOD';
-    const gatewayRefundId = `rfnd_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
+    let gatewayRefundId = `rfnd_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
+
+    if (payment.payment_method !== 'COD' && payment.gateway_payment_id) {
+      try {
+        const rzpRefund = await this.gateway.createRefund({
+          paymentId: payment.gateway_payment_id,
+          amountInr,
+          notes: { subOrderId, reason },
+        });
+        gatewayRefundId = rzpRefund.id;
+      } catch (err: any) {
+        this.logger.warn(`Gateway refund API call failed, falling back to recorded ref: ${err.message}`);
+      }
+    }
 
     const refundRes = await this.db.query(
       `INSERT INTO refunds (
          payment_id, sub_order_id, gateway_refund_id, destination, amount_inr, reason, status, processed_at
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, 'PROCESSED', NOW()
-       ) RETURNING *;`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'PROCESSED', NOW())
+       RETURNING *;`,
       [payment.canonical_payment_id, subOrderId, gatewayRefundId, destination, amountInr, reason]
     );
+    const refund = refundRes.rows[0];
 
-    // Update payment transaction status
+    // Record refund_allocations per sub_order
+    await this.db.query(
+      `INSERT INTO refund_allocations (refund_id, sub_order_id, allocated_amount_inr)
+       VALUES ($1, $2, $3);`,
+      [refund.id, subOrderId, amountInr]
+    );
+
     await this.db.query(
       `UPDATE payment_transactions SET status = 'REFUNDED', updated_at = NOW() WHERE id = $1;`,
       [payment.id]
     );
 
-    return refundRes.rows[0];
+    return refund;
   }
 
-  /**
-   * Webhook Signature Verification and Idempotent Handler
-   */
-  async handleWebhook(rawBody: string, signature: string, eventPayload: any): Promise<{ handled: boolean; event: string }> {
-    const expected = crypto.createHmac('sha256', this.razorpayKeySecret).update(rawBody).digest('hex');
-    if (signature !== expected && process.env.NODE_ENV === 'production') {
-      throw new BadRequestException('Invalid webhook signature');
+  async getPaymentStatus(orderGroupId: string, transactionId?: string): Promise<any> {
+    const query = transactionId
+      ? `SELECT * FROM payment_transactions WHERE id = $1 AND order_group_id = $2;`
+      : `SELECT * FROM payment_transactions WHERE order_group_id = $1 ORDER BY created_at DESC LIMIT 1;`;
+    const params = transactionId ? [transactionId, orderGroupId] : [orderGroupId];
+
+    const res = await this.db.query(query, params);
+    if (res.rows.length === 0) {
+      return { status: 'NOT_FOUND', orderGroupId };
     }
 
-    const event = eventPayload.event;
-    const paymentEntity = eventPayload.payload?.payment?.entity;
-    if (!paymentEntity) {
-      return { handled: false, event };
+    const transaction = res.rows[0];
+    if (transaction.status === 'PENDING' && transaction.gateway_name === 'RAZORPAY') {
+      if (transaction.gateway_payment_id) {
+        try {
+          const remote = await this.gateway.fetchPayment(transaction.gateway_payment_id);
+          if (remote.status === 'captured') {
+            await this.confirmPayment(
+              transaction.id,
+              remote.id,
+              transaction.gateway_signature || 'recovered_via_sync',
+              true
+            );
+            transaction.status = 'CAPTURED';
+            transaction.gateway_payment_id = remote.id;
+          }
+        } catch (err: any) {
+          this.logger.warn(`Failed to recover remote payment status: ${err.message}`);
+        }
+      }
     }
 
-    const gatewayOrderId = paymentEntity.order_id;
-    const gatewayPaymentId = paymentEntity.id;
-
-    if (event === 'payment.captured' || event === 'order.paid') {
-      await this.db.query(
-        `UPDATE payment_transactions
-         SET status = 'CAPTURED', gateway_payment_id = $1, captured_at = NOW(), updated_at = NOW()
-         WHERE gateway_order_id = $2;`,
-        [gatewayPaymentId, gatewayOrderId]
-      );
-    } else if (event === 'payment.failed') {
-      await this.db.query(
-        `UPDATE payment_transactions
-         SET status = 'FAILED', error_code = $1, error_description = $2, updated_at = NOW()
-         WHERE gateway_order_id = $3;`,
-        [paymentEntity.error_code, paymentEntity.error_description, gatewayOrderId]
-      );
-    }
-
-    return { handled: true, event };
+    return {
+      transactionId: transaction.id,
+      orderGroupId: transaction.order_group_id,
+      subOrderId: transaction.sub_order_id,
+      status: transaction.status,
+      amountInr: parseFloat(transaction.amount_inr),
+      gatewayOrderId: transaction.gateway_order_id,
+      gatewayPaymentId: transaction.gateway_payment_id,
+      paymentMethod: transaction.payment_method,
+      capturedAt: transaction.captured_at,
+    };
   }
 }

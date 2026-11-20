@@ -22,13 +22,31 @@ const EMOJI_FALLBACK: Record<string, string> = {
   auto: '🛺',
   cab: '🚗',
   premium: '🚘',
+  wallet: '💳',
+  sos: '🚨',
+  shield: '🛡️',
+  chat: '💬',
+  dispute: '⚖️',
+  camera: '📷',
+  share: '🔗',
+  pin: '📍',
+  bell: '🔔',
+  check: '✅',
+  printer: '🖨️',
+  clock: '⏱️',
+  box: '📦',
+  truck: '🚚',
+  pause: '⏸️',
+  play: '▶️',
+  barcode: '🏷️',
 };
 
 export const AppIcon: React.FC<Props> = ({ name, size = 40 }) => {
   const assetPath =
     (iconAssets.services as any)[name] ||
     (iconAssets.rides as any)[name] ||
-    (iconAssets.grocery as any)[name];
+    (iconAssets.grocery as any)[name] ||
+    (iconAssets as any).ui?.[name];
 
   const symbol = EMOJI_FALLBACK[name] || '✨';
 

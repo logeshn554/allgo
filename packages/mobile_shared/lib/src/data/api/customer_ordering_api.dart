@@ -2,11 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/customer_order.dart';
+import '../../models/customer_address.dart';
 import '../../models/delivery_job.dart';
+import 'customer_addresses_api.dart';
 
 class CustomerOrderingApi {
   final BaseApi base;
-  CustomerOrderingApi(this.base);
+  final CustomerAddressesApi addresses;
+  CustomerOrderingApi(this.base) : addresses = CustomerAddressesApi(base);
 
   Future<List<DeliveryJobModel>> getCustomerActiveDeliveries() async {
     final token = await base.tokenStorage.getAccessToken();
@@ -208,42 +211,23 @@ class CustomerOrderingApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to cancel order');
   }
 
-  Future<List<CustomerAddressModel>> listCustomerAddresses() async {
+  Future<Map<String, dynamic>> syncMissedDeliveryEvents(String jobId, {String? since}) async {
     final token = await base.tokenStorage.getAccessToken();
-    final url = Uri.parse('${base.base.baseUrl}/v1/addresses');
-    final response = await base.httpClient.get(url, headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'));
-    final data = jsonDecode(response.body);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final list = data as List<dynamic>? ?? [];
-      return list.map((a) => CustomerAddressModel.fromJson(a as Map<String, dynamic>)).toList();
-    }
-    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to fetch saved addresses');
-  }
-
-  Future<CustomerAddressModel> createCustomerAddress(CustomerAddressModel address) async {
-    final token = await base.tokenStorage.getAccessToken();
-    final url = Uri.parse('${base.base.baseUrl}/v1/addresses');
-    final response = await base.httpClient.post(
-      url,
+    final uri = Uri.parse('${base.base.baseUrl}/v1/customer/delivery/jobs/$jobId/events/sync${since != null ? '?since=$since' : ''}');
+    final response = await base.httpClient.get(
+      uri,
       headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
-      body: jsonEncode(address.toJson()),
     );
     final data = jsonDecode(response.body);
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return CustomerAddressModel.fromJson(data as Map<String, dynamic>);
+      return data as Map<String, dynamic>;
     }
-    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to create saved address');
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to sync missed events');
   }
 
-  Future<void> deleteCustomerAddress(String addressId) async {
-    final token = await base.tokenStorage.getAccessToken();
-    final url = Uri.parse('${base.base.baseUrl}/v1/addresses/$addressId');
-    final response = await base.httpClient.delete(url, headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'));
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return;
-    }
-    final data = jsonDecode(response.body);
-    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to delete saved address');
-  }
-
+  Future<List<CustomerAddressModel>> listCustomerAddresses() => addresses.listCustomerAddresses();
+  Future<CustomerAddressModel> createCustomerAddress(CustomerAddressModel address) => addresses.createCustomerAddress(address);
+  Future<CustomerAddressModel> updateCustomerAddress(String addressId, CustomerAddressModel address) => addresses.updateCustomerAddress(addressId, address);
+  Future<CustomerAddressModel> setDefaultCustomerAddress(String addressId) => addresses.setDefaultCustomerAddress(addressId);
+  Future<void> deleteCustomerAddress(String addressId) => addresses.deleteCustomerAddress(addressId);
 }

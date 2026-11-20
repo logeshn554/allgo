@@ -241,4 +241,54 @@ class DiscoveryApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to list promotions');
   }
 
+  Future<List<DiscoveryOutlet>> getFavoriteStores() async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/discovery/favorites');
+    final response = await base.httpClient.get(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return (data as List<dynamic>).map((e) => DiscoveryOutlet.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to list favorite stores');
+  }
+
+  Future<bool> toggleFavoriteStore(String outletId) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/discovery/favorites/$outletId');
+    final response = await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data['isFavorite'] as bool? ?? false;
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to toggle favorite');
+  }
+
+  Future<List<DiscoveryOutlet>> getRecentlyViewedStores() async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/discovery/recently-viewed');
+    final response = await base.httpClient.get(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return (data as List<dynamic>).map((e) => DiscoveryOutlet.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to get recently viewed stores');
+  }
+
+  Future<void> recordStoreView(String outletId) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/discovery/recently-viewed/$outletId');
+    await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+    );
+  }
 }

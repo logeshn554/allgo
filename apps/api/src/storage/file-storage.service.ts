@@ -4,22 +4,35 @@ import {
   ForbiddenException,
   NotFoundException,
   PayloadTooLargeException,
+  OnModuleInit,
 } from '@nestjs/common';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
+import crypto from 'node:crypto';
+import { FileStorage, SignedUrlOptions, StoredFileMetadata } from './file-storage.interface.js';
+import { CloudKmsService } from './cloud-kms.service.js';
 
 @Injectable()
-export class FileStorageService {
+export class FileStorageService implements FileStorage, OnModuleInit {
   private storageRoot: string;
   public readonly MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+  private readonly kmsService: CloudKmsService;
+  private readonly privateBucketName: string;
 
-  constructor() {
+  constructor(kmsService?: CloudKmsService) {
+    this.kmsService = kmsService || new CloudKmsService();
     this.storageRoot = path.resolve(
       process.env.DOCUMENT_STORAGE_ROOT || path.join(os.tmpdir(), 'allgo_private_storage')
     );
+    this.privateBucketName = process.env.GCS_BUCKET_NAME || 'allgo-secure-kyc-docs-private';
     this.ensureStorageRootExists();
+  }
+
+  onModuleInit() {
+    this.ensureStorageRootExists();
+    this.kmsService.initializeKms();
   }
 
   public getStorageRoot(): string {
@@ -141,10 +154,15 @@ export class FileStorageService {
     if (!fs.existsSync(filePath)) {
       throw new NotFoundException('Requested document file does not exist on storage');
     }
-    return fs.readFileSync(filePath);
+    const raw = fs.readFileSync(filePath);
+    return this.kmsService.decryptDocumentPayload(raw);
   }
 
   public writeFile(targetPath: string, buffer: Buffer): void {
+    const parentDir = path.dirname(targetPath);
+    if (!fs.existsSync(parentDir)) {
+      fs.mkdirSync(parentDir, { recursive: true, mode: 0o700 });
+    }
     fs.writeFileSync(targetPath, buffer, { mode: 0o600 });
   }
 
@@ -156,5 +174,53 @@ export class FileStorageService {
 
   public fileExists(targetPath: string): boolean {
     return fs.existsSync(targetPath);
+  }
+
+  public async generateSignedUploadUrl(storageKey: string, options?: SignedUrlOptions): Promise<string> {
+    const expiresIn = options?.expiresInSeconds || 900;
+    const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
+    const signature = crypto
+      .createHmac('sha256', process.env.STORAGE_SIGNING_SECRET || 'allgo_storage_signing_key_test')
+      .update(`PUT\n${this.privateBucketName}\n${storageKey}\n${expiresAt}`)
+      .digest('hex');
+
+    return `https://storage.googleapis.com/${this.privateBucketName}/${storageKey}?Action=PUT&Expires=${expiresAt}&Signature=${signature}`;
+  }
+
+  public async generateSignedDownloadUrl(storageKey: string, options?: SignedUrlOptions): Promise<string> {
+    const expiresIn = options?.expiresInSeconds || 300;
+    const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
+    const signature = crypto
+      .createHmac('sha256', process.env.STORAGE_SIGNING_SECRET || 'allgo_storage_signing_key_test')
+      .update(`GET\n${this.privateBucketName}\n${storageKey}\n${expiresAt}`)
+      .digest('hex');
+
+    return `https://storage.googleapis.com/${this.privateBucketName}/${storageKey}?Action=GET&Expires=${expiresAt}&Signature=${signature}`;
+  }
+
+  public async uploadBufferWithKms(
+    storageKey: string,
+    buffer: Buffer,
+    declaredMimeType: string,
+    kmsKeyId?: string
+  ): Promise<StoredFileMetadata> {
+    this.validateFileContent(buffer, declaredMimeType);
+    const targetPath = this.resolveAndValidatePath(storageKey);
+    const encrypted = this.kmsService.encryptDocumentPayload(buffer, kmsKeyId);
+    this.writeFile(targetPath, encrypted);
+
+    return {
+      storageKey,
+      sizeBytes: buffer.length,
+      mimeType: declaredMimeType,
+      bucket: this.privateBucketName,
+      kmsEncrypted: true,
+      kmsKeyId: kmsKeyId || this.kmsService.getKeyId(),
+      createdAt: new Date(),
+    };
+  }
+
+  public async downloadBufferWithKms(storageKey: string): Promise<Buffer> {
+    return this.getFileBuffer(storageKey);
   }
 }

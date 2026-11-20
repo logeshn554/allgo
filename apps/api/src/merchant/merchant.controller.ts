@@ -28,13 +28,15 @@ import { SubmitMerchantDocumentDto } from './dto/submit-merchant-doc.dto.js';
 
 @ApiTags('merchants')
 @Controller('v1/merchants')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
 @ApiBearerAuth()
 export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
 
   @Post('register')
   @HttpCode(HttpStatus.OK)
+  @Roles('CUSTOMER', 'MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiOperation({ summary: 'Register or update merchant business profile & outlet' })
   @ApiResponse({ status: 200, description: 'Merchant registration profile saved successfully' })
   async register(@Req() req: any, @Body() dto: RegisterMerchantDto) {
@@ -50,7 +52,7 @@ export class MerchantController {
 
   @Patch('outlets/:id/status')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Toggle outlet availability open/closed and update prep time' })
   async updateOutletStatus(
@@ -63,7 +65,7 @@ export class MerchantController {
 
   @Get('dashboard')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Retrieve live merchant dashboard metrics and sales breakdown' })
   async getDashboard(@Req() req: any) {
@@ -72,7 +74,7 @@ export class MerchantController {
 
   @Get('orders')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'List live and historical orders for merchant outlets' })
   async getOrders(@Req() req: any, @Query('status') status?: string) {
@@ -81,7 +83,7 @@ export class MerchantController {
 
   @Get('orders/:id')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Get full order details with item breakdowns' })
   async getOrderById(@Req() req: any, @Param('id') orderId: string) {
@@ -90,7 +92,7 @@ export class MerchantController {
 
   @Patch('orders/:id/status')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Execute lifecycle transition for an order (ACCEPT, PREPARE, READY)' })
   async updateOrderStatus(
@@ -103,7 +105,7 @@ export class MerchantController {
 
   @Get('categories')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'List menu/catalog categories for merchant outlet' })
   async getCategories(@Req() req: any) {
@@ -112,7 +114,7 @@ export class MerchantController {
 
   @Get('products')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'List products and current stock quantities' })
   async getProducts(
@@ -125,7 +127,7 @@ export class MerchantController {
 
   @Post('products')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Add a new food or grocery product with initial stock' })
   async createProduct(@Req() req: any, @Body() dto: CreateProductDto) {
@@ -134,7 +136,7 @@ export class MerchantController {
 
   @Patch('products/:id')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Update product price, description, or availability' })
   async updateProduct(
@@ -147,7 +149,7 @@ export class MerchantController {
 
   @Delete('products/:id')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Archive a product from the active catalog' })
   async deleteProduct(@Req() req: any, @Param('id') productId: string) {
@@ -156,7 +158,7 @@ export class MerchantController {
 
   @Patch('inventory/:itemId')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Update stock levels and out-of-stock toggle' })
   async updateInventory(
@@ -169,7 +171,7 @@ export class MerchantController {
 
   @Get('earnings')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Retrieve gross sales, platform commissions, and net settlement summary' })
   async getEarnings(@Req() req: any) {
@@ -178,7 +180,7 @@ export class MerchantController {
 
   @Get('payouts')
   @UseGuards(RolesGuard)
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiHeader({ name: 'X-AllGo-Role', description: 'Active role context (MERCHANT_ADMIN)', required: true })
   @ApiOperation({ summary: 'Retrieve historical RazorpayX payout settlement transactions' })
   async getPayouts(@Req() req: any) {

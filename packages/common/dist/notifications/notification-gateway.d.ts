@@ -38,7 +38,7 @@ export interface ChannelSender {
 }
 export declare class MultiChannelNotificationGateway {
     private readonly sender?;
-    constructor(sender?: ChannelSender | undefined);
+    constructor(sender?: ChannelSender);
     dispatchNotification(payload: NotificationPayload): Promise<NotificationDeliveryResult>;
 }
 //# sourceMappingURL=notification-gateway.d.ts.map

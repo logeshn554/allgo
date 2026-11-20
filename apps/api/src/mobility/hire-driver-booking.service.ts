@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, Optional } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { MobilityFareService } from './mobility-fare.service.js';
 import { PartnerContinuityService } from './partner-continuity.service.js';
 import { HireDriverRepository } from './data/hire-driver.repository.js';
 import { BookHireDriverDto } from './dto/mobility.dto.js';
+import { CloudTasksGateway } from '../common/scheduling/cloud-tasks.gateway.js';
 
 @Injectable()
 export class HireDriverBookingService {
@@ -13,6 +14,7 @@ export class HireDriverBookingService {
     private readonly repo: HireDriverRepository,
     private readonly fareService: MobilityFareService,
     private readonly continuityService: PartnerContinuityService,
+    @Optional() private readonly cloudTasksGateway?: CloudTasksGateway,
   ) {}
 
   private generateOtp(): string {
@@ -66,6 +68,16 @@ export class HireDriverBookingService {
       { durationHours: dto.durationHours, scheduledStartTime: scheduledDate.toISOString() }
     );
 
+    if (this.cloudTasksGateway) {
+      await this.cloudTasksGateway.scheduleTask({
+        taskName: `cloud_task_hire_${booking.id}`,
+        targetType: 'SCHEDULED_HIRE_DRIVER',
+        targetId: booking.id,
+        scheduledFor: scheduledDate,
+        payload: { bookingId: booking.id, customerId, scheduledStartTime: scheduledDate.toISOString() },
+      });
+    }
+
     return booking;
   }
 
@@ -79,6 +91,10 @@ export class HireDriverBookingService {
     const cancelEventType = role === 'PARTNER' ? 'DRIVER_CANCELLED' : 'CUSTOMER_CANCELLED';
 
     const updated = await this.repo.updateBookingCancelled(bookingId, reason);
+
+    if (this.cloudTasksGateway) {
+      await this.cloudTasksGateway.cancelTask(`cloud_task_hire_${bookingId}`);
+    }
 
     await this.repo.recordHireDriverEvent(
       bookingId,

@@ -22,9 +22,6 @@ export class SupportService {
 
   constructor(private readonly db: DatabaseService) {}
 
-  /**
-   * Create a new support ticket
-   */
   async createTicket(userId: string, creatorRole: string, dto: CreateTicketDto) {
     const {
       category,
@@ -72,7 +69,6 @@ export class SupportService {
 
     const ticket = res.rows[0];
 
-    // Add initial message
     await this.db.query(
       `INSERT INTO support_ticket_messages (ticket_id, sender_id, sender_role, message, is_internal)
        VALUES ($1, $2, $3, $4, FALSE);`,
@@ -82,9 +78,6 @@ export class SupportService {
     return ticket;
   }
 
-  /**
-   * Post message / reply into ticket thread
-   */
   async addMessage(
     ticketId: string,
     senderId: string,
@@ -97,7 +90,6 @@ export class SupportService {
       throw new BadRequestException('Message cannot be empty.');
     }
 
-    // Security invariant: only ADMIN can add internal notes
     if (isInternal && senderRole !== 'ADMIN') {
       throw new ForbiddenException('Only administrators can post internal notes.');
     }
@@ -109,7 +101,6 @@ export class SupportService {
 
     const ticket = ticketRes.rows[0];
 
-    // Non-admin can only post to their own ticket
     if (senderRole !== 'ADMIN' && ticket.user_id !== senderId) {
       throw new ForbiddenException('You are not authorized to reply to this ticket.');
     }
@@ -122,7 +113,6 @@ export class SupportService {
       [ticketId, senderId, senderRole, message, isInternal, JSON.stringify(attachments)]
     );
 
-    // Update ticket status
     let nextStatus = ticket.status;
     if (senderRole === 'ADMIN' && !isInternal) {
       nextStatus = 'WAITING_FOR_CUSTOMER';
@@ -138,10 +128,6 @@ export class SupportService {
     return res.rows[0];
   }
 
-  /**
-   * Retrieve ticket details and conversation thread
-   * CRITICAL: Never expose is_internal notes to non-admin users
-   */
   async getTicketDetails(ticketId: string, requesterId: string, requesterRole: string) {
     const ticketRes = await this.db.query(
       `SELECT t.*, u.phone as creator_phone, u.name as creator_name
@@ -157,12 +143,10 @@ export class SupportService {
 
     const ticket = ticketRes.rows[0];
 
-    // Authorization check
     if (requesterRole !== 'ADMIN' && ticket.user_id !== requesterId) {
       throw new ForbiddenException('You do not have permission to view this ticket.');
     }
 
-    // Filter messages: internal notes ONLY returned for ADMIN
     const messageQuery = requesterRole === 'ADMIN'
       ? `SELECT m.*, u.name as sender_name, u.phone as sender_phone
          FROM support_ticket_messages m
@@ -183,9 +167,6 @@ export class SupportService {
     };
   }
 
-  /**
-   * List tickets for a specific user (Customer / Partner / Merchant)
-   */
   async listUserTickets(userId: string) {
     const res = await this.db.query(
       `SELECT * FROM support_tickets WHERE user_id = $1 ORDER BY updated_at DESC;`,
@@ -194,9 +175,6 @@ export class SupportService {
     return res.rows;
   }
 
-  /**
-   * List ticket queues for Admin
-   */
   async listAdminTickets(status?: string, priority?: string) {
     const conditions: string[] = [];
     const values: any[] = [];
@@ -226,9 +204,6 @@ export class SupportService {
     return res.rows;
   }
 
-  /**
-   * Admin assigns ticket
-   */
   async assignTicket(ticketId: string, adminId: string) {
     const res = await this.db.query(
       `UPDATE support_tickets
@@ -242,9 +217,6 @@ export class SupportService {
     return res.rows[0];
   }
 
-  /**
-   * Admin updates ticket status / resolution
-   */
   async updateTicketStatus(
     ticketId: string,
     status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_CUSTOMER' | 'ESCALATED' | 'RESOLVED' | 'CLOSED',

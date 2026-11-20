@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'phone_login_screen.dart';
 import 'partner_registration_screen.dart';
+import 'partner_home_shell.dart';
 
 class ApprovalStatusScreen extends ConsumerStatefulWidget {
   const ApprovalStatusScreen({super.key});
@@ -83,6 +84,11 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
       statusIcon = Icons.cancel;
       statusTitle = 'Application Rejected';
       statusSubtitle = 'Compliance review rejected the application.';
+    } else if (status == 'NOT_REGISTERED') {
+      statusColor = Colors.orange;
+      statusIcon = Icons.app_registration;
+      statusTitle = 'Registration Pending';
+      statusSubtitle = 'Please complete registration to activate your partner account.';
     }
 
     return Scaffold(
@@ -159,10 +165,37 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Resubmit Button if documents required or registration incomplete
-                    if (!isApproved) ...[
+                    // Error message if fetch failed
+                    if (_errorMessage != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AllGoColors.error.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: AllGoColors.error, fontSize: 13),
+                        ),
+                      ),
+                    ],
+
+                    // Action Button
+                    if (isApproved) ...[
                       AllGoButton(
-                        label: 'Complete Document Submission',
+                        label: 'Launch Partner Dashboard',
+                        onPressed: () {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const PartnerHomeShell()),
+                            (route) => false,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                    ] else ...[
+                      AllGoButton(
+                        label: status == 'NOT_REGISTERED' ? 'Complete Partner Registration' : 'Complete Document Submission',
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const PartnerRegistrationScreen()),

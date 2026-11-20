@@ -3,6 +3,7 @@ import { DatabaseModule } from '../database/database.module.js';
 import { RedisModule } from '../redis/redis.module.js';
 import { LedgerService } from './ledger/ledger.service.js';
 import { WalletService } from './wallet/wallet.service.js';
+import { WalletWebhookService } from './wallet/wallet-webhook.service.js';
 import { SettlementService } from './settlement/settlement.service.js';
 import { PartnerSettlementService } from './settlement/partner-settlement.service.js';
 import { MerchantSettlementService } from './settlement/merchant-settlement.service.js';
@@ -36,6 +37,7 @@ import { FinanceController } from './finance.controller.js';
     MerchantSettlementService,
     LedgerService,
     WalletService,
+    WalletWebhookService,
     SettlementService,
     CodReconciliationService,
     PayoutService,
@@ -43,6 +45,7 @@ import { FinanceController } from './finance.controller.js';
   exports: [
     LedgerService,
     WalletService,
+    WalletWebhookService,
     SettlementService,
     CodReconciliationService,
     PayoutService,

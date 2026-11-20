@@ -9,6 +9,8 @@ import type pg from 'pg';
 export class InMemoryRedisTestDouble {
   private inMemoryStore = new Map<string, { value: any; expiresAt?: number }>();
   private inMemoryHashes = new Map<string, Map<string, any>>();
+  private inMemorySets = new Map<string, Set<string>>();
+  private inMemoryGeo = new Map<string, Map<string, { lon: number; lat: number }>>();
   public isConnected = true;
 
   async onModuleInit() {}
@@ -32,8 +34,23 @@ export class InMemoryRedisTestDouble {
     return item.value;
   }
 
-  async set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null> {
-    const expiresAt = mode === 'EX' && duration ? Date.now() + duration * 1000 : undefined;
+  async set(key: string, value: string, ...args: any[]): Promise<'OK' | null> {
+    let duration: number | undefined;
+    let nx = false;
+
+    for (let i = 0; i < args.length; i++) {
+      if (args[i] === 'NX') nx = true;
+      if (args[i] === 'EX') duration = args[i + 1];
+    }
+
+    if (nx && this.inMemoryStore.has(key)) {
+      const existing = this.inMemoryStore.get(key);
+      if (!existing?.expiresAt || Date.now() < existing.expiresAt) {
+        return null;
+      }
+    }
+
+    const expiresAt = duration ? Date.now() + duration * 1000 : undefined;
     this.inMemoryStore.set(key, { value, expiresAt });
     return 'OK';
   }
@@ -129,6 +146,94 @@ export class InMemoryRedisTestDouble {
       return 0; // Mismatch
     }
   }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    let s = this.inMemorySets.get(key);
+    if (!s) {
+      s = new Set();
+      this.inMemorySets.set(key, s);
+    }
+    let added = 0;
+    for (const m of members) {
+      if (!s.has(m)) {
+        s.add(m);
+        added++;
+      }
+    }
+    return added;
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    const s = this.inMemorySets.get(key);
+    if (!s) return [];
+    return Array.from(s);
+  }
+
+  async sismember(key: string, member: string): Promise<number> {
+    const s = this.inMemorySets.get(key);
+    if (!s) return 0;
+    return s.has(member) ? 1 : 0;
+  }
+
+  async geoadd(key: string, longitude: number, latitude: number, member: string): Promise<number> {
+    let g = this.inMemoryGeo.get(key);
+    if (!g) {
+      g = new Map();
+      this.inMemoryGeo.set(key, g);
+    }
+    const isNew = !g.has(member);
+    g.set(member, { lon: longitude, lat: latitude });
+    return isNew ? 1 : 0;
+  }
+
+  async geosearch(
+    key: string,
+    _from: string,
+    lon: number,
+    lat: number,
+    _by: string,
+    radius: number,
+    _unit: string,
+    _order: string,
+    _withdist: string
+  ): Promise<any[]> {
+    const g = this.inMemoryGeo.get(key);
+    if (!g) return [];
+    const results: any[] = [];
+    for (const [member, coords] of g.entries()) {
+      const d = this.calculateHaversine(lat, lon, coords.lat, coords.lon) * 1000;
+      if (d <= radius) {
+        results.push([member, d.toFixed(1)]);
+      }
+    }
+    results.sort((a, b) => parseFloat(a[1]) - parseFloat(b[1]));
+    return results;
+  }
+
+  async georadius(key: string, lon: number, lat: number, radiusMeters: number): Promise<any[]> {
+    return this.geosearch(key, 'FROMLONLAT', lon, lat, 'BYRADIUS', radiusMeters, 'M', 'ASC', 'WITHDIST');
+  }
+
+  async zrem(key: string, member: string): Promise<number> {
+    const g = this.inMemoryGeo.get(key);
+    if (!g) return 0;
+    return g.delete(member) ? 1 : 0;
+  }
+
+  async publish(_channel: string, _message: string): Promise<number> {
+    return 1;
+  }
+
+  private calculateHaversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
 }
 
 export class MockDatabaseService {
@@ -143,9 +248,12 @@ export class MockDatabaseService {
   public items = new Map<string, any>();
   public inventory = new Map<string, any>();
   public subOrders = new Map<string, any>();
+  public orders = new Map<string, any>();
+  public paymentTransactions = new Map<string, any>();
   public orderItems = new Map<string, any[]>();
   public orderEvents: any[] = [];
   public payouts = new Map<string, any>();
+  public notifications: any[] = [];
 
   constructor() {
     this.roles.set('CUSTOMER', { id: 'role_cust', name: 'CUSTOMER' });
@@ -200,6 +308,34 @@ export class MockDatabaseService {
       return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
     }
 
+    // Notifications queries
+    if (text.includes('SELECT id FROM notifications')) {
+      const existing = this.notifications.find((n) => n.user_id === params[0] && n.title === params[1] && n.category === params[2]);
+      return { rows: existing ? [existing as T] : [], rowCount: existing ? 1 : 0, command: 'SELECT', oid: 0, fields: [] };
+    }
+
+    if (text.includes('INSERT INTO notifications')) {
+      const n = {
+        id: `notif-${Date.now()}-${Math.random()}`,
+        user_id: params[0],
+        role: params[1],
+        title: params[2],
+        body: params[3],
+        category: params[4],
+        reference_type: params[5] || null,
+        reference_id: params[6] || null,
+        metadata: params[7] || {},
+        is_read: false,
+        created_at: new Date().toISOString(),
+      };
+      this.notifications.push(n);
+      return { rows: [n as T], rowCount: 1, command: 'INSERT', oid: 0, fields: [] };
+    }
+
+    if (text.includes('FROM devices') && text.includes('fcm_token IS NOT NULL')) {
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
+    }
+
     // INSERT or UPDATE devices
     if (text.includes('INSERT INTO devices')) {
       const key = `${params[0]}:${params[1]}`;
@@ -249,6 +385,18 @@ export class MockDatabaseService {
         u.status = newStatus;
       }
       return { rows: [], rowCount: 1, command: 'UPDATE', oid: 0, fields: [] };
+    }
+
+    // UPDATE user profile (fullName, defaultLanguage, email)
+    if (text.includes('UPDATE users') && (text.includes('full_name') || text.includes('default_language'))) {
+      const id = params[0];
+      const u = this.users.get(id);
+      if (u) {
+        if (params[1] !== null && params[1] !== undefined) u.full_name = params[1];
+        if (params[2] !== null && params[2] !== undefined) u.default_language = params[2];
+        if (params[3] !== null && params[3] !== undefined) u.email = params[3];
+      }
+      return { rows: u ? [u as T] : [], rowCount: u ? 1 : 0, command: 'UPDATE', oid: 0, fields: [] };
     }
 
     // SELECT from roles WHERE name = $1
@@ -412,7 +560,7 @@ export class MockDatabaseService {
     }
 
     // UPDATE outlets status
-    if (text.includes('UPDATE outlets SET is_open = $1') || text.includes('UPDATE outlets SET is_open = TRUE')) {
+    if (text.includes('UPDATE outlets SET') && (text.includes('is_open') || text.includes('default_prep_time_minutes'))) {
       for (const o of this.outlets.values()) {
         if (text.includes('WHERE id =')) {
           const outletId = params[params.length - 1];
@@ -800,6 +948,98 @@ export class MockDatabaseService {
         return { rows: [m as any], rowCount: 1, command: 'UPDATE', oid: 0, fields: [] };
       }
       return { rows: [], rowCount: 0, command: 'UPDATE', oid: 0, fields: [] };
+    }
+
+    // SELECT from orders with FOR UPDATE
+    if (text.includes('orders') && text.includes('FOR UPDATE')) {
+      const orderId = params[0];
+      const ord = this.orders.get(orderId);
+      if (ord) {
+        return { rows: [ord as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      }
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
+    }
+
+    // UPDATE orders SET status = $1
+    if (text.includes('UPDATE orders SET status = $1')) {
+      const newStatus = params[0];
+      const orderId = params[1];
+      const ord = this.orders.get(orderId);
+      if (ord) {
+        ord.status = newStatus;
+        ord.updated_at = new Date().toISOString();
+        return { rows: [ord as any], rowCount: 1, command: 'UPDATE', oid: 0, fields: [] };
+      }
+      return { rows: [], rowCount: 0, command: 'UPDATE', oid: 0, fields: [] };
+    }
+
+    // SELECT items for pricing
+    if (text.includes('FROM items WHERE id = ANY($1)')) {
+      const ids: string[] = params[0] || [];
+      const rows: any[] = [];
+      for (const id of ids) {
+        const it = this.items.get(id);
+        if (it) rows.push(it);
+      }
+      return { rows: rows as any, rowCount: rows.length, command: 'SELECT', oid: 0, fields: [] };
+    }
+
+    // INSERT INTO payment_transactions
+    if (text.includes('INSERT INTO payment_transactions')) {
+      const tx = {
+        id: `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        order_group_id: params[0],
+        customer_id: params[1],
+        gateway_order_id: params[2],
+        idempotency_key: params[3],
+        payment_method: params[4],
+        amount_inr: params[5],
+        status: params[6],
+      };
+      this.paymentTransactions.set(tx.gateway_order_id, tx);
+      return { rows: [tx as any], rowCount: 1, command: 'INSERT', oid: 0, fields: [] };
+    }
+
+    // UPDATE payment_transactions SET status = ... WHERE gateway_order_id = $1
+    if (text.includes('UPDATE payment_transactions SET status =')) {
+      const newStatus = text.includes("'SUCCESS'") ? 'SUCCESS' : text.includes("'FAILED'") ? 'FAILED' : 'UPDATED';
+      const gwId = params[0];
+      const tx = this.paymentTransactions.get(gwId);
+      if (tx) tx.status = newStatus;
+      return { rows: [], rowCount: 1, command: 'UPDATE', oid: 0, fields: [] };
+    }
+
+    // IDOR Order Ownership check
+    if (text.includes('SELECT 1 FROM (') && text.includes('customer_id as cid')) {
+      const orderId = params[0];
+      const userId = params[1];
+      const ord = this.orders.get(orderId);
+      if (ord) {
+        const isOwner = ord.customer_id === userId || ord.merchant_id === userId || ord.driver_id === userId;
+        if (isOwner) return { rows: [{ '1': 1 } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      }
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
+    }
+
+    // IDOR Merchant Ownership check
+    if (text.includes('FROM merchants m') && text.includes('WHERE (m.id = $1 OR o.id = $1) AND m.owner_id = $2')) {
+      const merchantId = params[0];
+      const userId = params[1];
+      const m = this.merchants.get(merchantId);
+      if (m && m.owner_id === userId) {
+        return { rows: [{ '1': 1 } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      }
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
+    }
+
+    // IDOR Driver Ownership check
+    if (text.includes('FROM partners p') && text.includes('WHERE (p.id = $1 OR p.user_id = $1) AND p.user_id = $2')) {
+      const driverId = params[0];
+      const userId = params[1];
+      if (driverId === userId || driverId === `partner_${userId}`) {
+        return { rows: [{ '1': 1 } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      }
+      return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
     }
 
     return { rows: [], rowCount: 0, command: 'UNKNOWN', oid: 0, fields: [] };

@@ -7,6 +7,8 @@
  * 3. Stale token claim detection (JWT claims are non-authoritative convenience only)
  * 4. Contextual role-switching enforcement (e.g. Courier mode vs Customer mode)
  */
+import { UserRole } from "../contracts/user-role.js";
+export { UserRole };
 /**
  * Authoritatively evaluates access request against database/Redis truth.
  * Firebase token claims are never trusted for authorization decisions.

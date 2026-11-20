@@ -105,6 +105,8 @@ class ParcelModel {
   final List<ParcelEvent> events;
   final String? createdAt;
 
+  double get totalFareInr => totalAmountInr;
+
   const ParcelModel({
     required this.id,
     required this.trackingNumber,

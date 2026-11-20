@@ -56,4 +56,20 @@ export class DiscoveryService {
   async listCategories(verticalType = 'FOOD'): Promise<any[]> {
     return this.nearbyService.listCategories(verticalType);
   }
+
+  async recordStoreView(customerId: string, outletId: string): Promise<void> {
+    return this.nearbyService.recordStoreView(customerId, outletId);
+  }
+
+  async getRecentlyViewedStores(customerId: string): Promise<any[]> {
+    return this.nearbyService.getRecentlyViewedStores(customerId);
+  }
+
+  async toggleFavoriteStore(customerId: string, outletId: string): Promise<{ isFavorite: boolean }> {
+    return this.nearbyService.toggleFavoriteStore(customerId, outletId);
+  }
+
+  async getFavoriteStores(customerId: string): Promise<any[]> {
+    return this.nearbyService.getFavoriteStores(customerId);
+  }
 }

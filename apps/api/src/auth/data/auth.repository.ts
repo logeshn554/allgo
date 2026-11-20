@@ -154,19 +154,46 @@ export class AuthRepository {
     }
   }
 
-  async recordDeviceSession(userId: string, deviceId: string, platform: string, refreshToken: string): Promise<void> {
+  async recordDeviceSession(
+    userId: string,
+    deviceId: string,
+    platform: string,
+    refreshToken: string,
+    fcmToken?: string
+  ): Promise<void> {
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     try {
       await this.db.query(
-        `INSERT INTO devices (user_id, device_id, platform, refresh_token_hash, last_active_at)
-         VALUES ($1, $2, $3, $4, NOW())
+        `INSERT INTO devices (user_id, device_id, platform, refresh_token_hash, fcm_token, last_active_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
          ON CONFLICT (user_id, device_id)
-         DO UPDATE SET refresh_token_hash = $4, last_active_at = NOW();`,
-        [userId, deviceId, platform, tokenHash]
+         DO UPDATE SET refresh_token_hash = $4, fcm_token = COALESCE($5, devices.fcm_token), last_active_at = NOW();`,
+        [userId, deviceId, platform, tokenHash, fcmToken || null]
       );
     } catch {
       this.memDevices.set(`${userId}:${deviceId}`, { refresh_token_hash: tokenHash });
     }
+  }
+
+  async getDeviceTokens(userId: string): Promise<string[]> {
+    try {
+      const res = await this.db.query(
+        `SELECT DISTINCT fcm_token FROM devices WHERE user_id = $1 AND fcm_token IS NOT NULL AND fcm_token != '';`,
+        [userId]
+      );
+      return res.rows.map((r: any) => r.fcm_token);
+    } catch {
+      return [];
+    }
+  }
+
+  async pruneInvalidToken(fcmToken: string): Promise<void> {
+    try {
+      await this.db.query(
+        `UPDATE devices SET fcm_token = NULL WHERE fcm_token = $1;`,
+        [fcmToken]
+      );
+    } catch {}
   }
 
   async deleteDeviceSession(userId: string, deviceId?: string): Promise<void> {

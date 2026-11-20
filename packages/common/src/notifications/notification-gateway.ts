@@ -39,7 +39,11 @@ export interface ChannelSender {
 }
 
 export class MultiChannelNotificationGateway {
-  constructor(private readonly sender?: ChannelSender) {}
+  private readonly sender?: ChannelSender;
+
+  constructor(sender?: ChannelSender) {
+    this.sender = sender;
+  }
 
   async dispatchNotification(payload: NotificationPayload): Promise<NotificationDeliveryResult> {
     const notificationId = `NOTIF-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;

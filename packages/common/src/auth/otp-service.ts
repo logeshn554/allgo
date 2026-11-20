@@ -1,15 +1,5 @@
 import crypto from 'node:crypto';
 
-/**
- * AllGo Platform - Cryptographic OTP Generation, Rate Limiting & Atomic Verification
- *
- * Security Invariants:
- * 1. Plaintext OTPs are NEVER persisted in Redis or database (only keyed HMAC-SHA256).
- * 2. OTP verification is strictly atomic via Redis Lua script, eliminating race conditions.
- * 3. Exactly-once consumption: A valid OTP challenge is immediately deleted upon match.
- * 4. Concurrent duplicate requests cannot both succeed.
- */
-
 export const ATOMIC_OTP_VERIFY_AND_CONSUME_LUA = `
 -- Keys:
 -- KEYS[1]: Challenge Key (e.g. "otp:challenge:+919876543210")
@@ -94,19 +84,12 @@ export class OtpSecurityService {
     this.maxAttempts = maxAttempts;
   }
 
-  /**
-   * Generates a cryptographically secure random 6-digit numeric OTP.
-   * Utilizes node:crypto.randomInt to guarantee uniform distribution.
-   */
   public generateSecureOtp(length: number = 6): string {
     const min = Math.pow(10, length - 1);
     const max = Math.pow(10, length);
     return crypto.randomInt(min, max).toString();
   }
 
-  /**
-   * Computes a keyed HMAC-SHA256 digest over the phone and OTP using server pepper.
-   */
   public computeOtpHmac(phone: string, otp: string): string {
     return crypto
       .createHmac('sha256', this.pepper)
@@ -114,10 +97,6 @@ export class OtpSecurityService {
       .digest('hex');
   }
 
-  /**
-   * Evaluates the atomic Redis Lua verification script logic.
-   * Ensures identical atomic semantics in live Redis and testing environments.
-   */
   public evaluateAtomicVerification(
     currentData: OtpChallengeData | undefined,
     submittedHmac: string,
@@ -139,7 +118,6 @@ export class OtpSecurityService {
       return { statusCode: -2, status: OtpVerificationStatus.MAX_ATTEMPTS_EXCEEDED };
     }
 
-    // Constant-time buffer comparison to prevent timing side-channel attacks
     const storedBuf = Buffer.from(currentData.hmac, 'hex');
     const submittedBuf = Buffer.from(submittedHmac, 'hex');
 
@@ -148,7 +126,6 @@ export class OtpSecurityService {
       crypto.timingSafeEqual(storedBuf, submittedBuf);
 
     if (isMatch) {
-      // Consumed atomically: Challenge destroyed
       return { statusCode: 1, status: OtpVerificationStatus.SUCCESS };
     } else {
       const newAttempts = currentData.attempts + 1;
@@ -164,10 +141,6 @@ export class OtpSecurityService {
   }
 }
 
-/**
- * Thread-safe, atomic in-memory challenge store simulating Redis single-threaded execution.
- * Allows deterministic concurrency and race-condition testing without live Redis.
- */
 export class AtomicOtpChallengeStore {
   private readonly store = new Map<string, OtpChallengeData>();
   private readonly security: OtpSecurityService;
@@ -177,9 +150,6 @@ export class AtomicOtpChallengeStore {
     this.security = securityService;
   }
 
-  /**
-   * Acquire a per-key sequential lock to emulate Redis single-threaded atomic Lua execution.
-   */
   private async withKeyLock<T>(key: string, fn: () => Promise<T> | T): Promise<T> {
     while (this.lockQueue.has(key)) {
       await this.lockQueue.get(key);
@@ -220,9 +190,6 @@ export class AtomicOtpChallengeStore {
     });
   }
 
-  /**
-   * Atomically verifies the OTP challenge and consumes it upon success.
-   */
   public async verifyAndConsumeOtp(
     phone: string,
     submittedOtp: string,
@@ -236,10 +203,8 @@ export class AtomicOtpChallengeStore {
       const result = this.security.evaluateAtomicVerification(current, submittedHmac, maxAttempts);
 
       if (result.statusCode === 1 || result.statusCode === -2) {
-        // Atomic deletion upon success or attempt exhaustion
         this.store.delete(key);
       } else if (result.statusCode === 0 && result.updatedData) {
-        // Atomic update of attempt counter
         this.store.set(key, result.updatedData);
       } else if (result.statusCode === -1) {
         this.store.delete(key);
@@ -258,4 +223,3 @@ export class AtomicOtpChallengeStore {
     this.lockQueue.clear();
   }
 }
-

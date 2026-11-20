@@ -1,13 +1,4 @@
 import crypto from 'node:crypto';
-/**
- * AllGo Platform - Cryptographic OTP Generation, Rate Limiting & Atomic Verification
- *
- * Security Invariants:
- * 1. Plaintext OTPs are NEVER persisted in Redis or database (only keyed HMAC-SHA256).
- * 2. OTP verification is strictly atomic via Redis Lua script, eliminating race conditions.
- * 3. Exactly-once consumption: A valid OTP challenge is immediately deleted upon match.
- * 4. Concurrent duplicate requests cannot both succeed.
- */
 export const ATOMIC_OTP_VERIFY_AND_CONSUME_LUA = `
 -- Keys:
 -- KEYS[1]: Challenge Key (e.g. "otp:challenge:+919876543210")
@@ -69,28 +60,17 @@ export class OtpSecurityService {
         this.defaultTtlSeconds = defaultTtlSeconds;
         this.maxAttempts = maxAttempts;
     }
-    /**
-     * Generates a cryptographically secure random 6-digit numeric OTP.
-     * Utilizes node:crypto.randomInt to guarantee uniform distribution.
-     */
     generateSecureOtp(length = 6) {
         const min = Math.pow(10, length - 1);
         const max = Math.pow(10, length);
         return crypto.randomInt(min, max).toString();
     }
-    /**
-     * Computes a keyed HMAC-SHA256 digest over the phone and OTP using server pepper.
-     */
     computeOtpHmac(phone, otp) {
         return crypto
             .createHmac('sha256', this.pepper)
             .update(`${phone.trim()}:${otp.trim()}`)
             .digest('hex');
     }
-    /**
-     * Evaluates the atomic Redis Lua verification script logic.
-     * Ensures identical atomic semantics in live Redis and testing environments.
-     */
     evaluateAtomicVerification(currentData, submittedHmac, maxAttempts = this.maxAttempts) {
         if (!currentData) {
             return { statusCode: -1, status: OtpVerificationStatus.EXPIRED_OR_NOT_FOUND };
@@ -101,13 +81,11 @@ export class OtpSecurityService {
         if (currentData.attempts >= maxAttempts) {
             return { statusCode: -2, status: OtpVerificationStatus.MAX_ATTEMPTS_EXCEEDED };
         }
-        // Constant-time buffer comparison to prevent timing side-channel attacks
         const storedBuf = Buffer.from(currentData.hmac, 'hex');
         const submittedBuf = Buffer.from(submittedHmac, 'hex');
         const isMatch = storedBuf.length === submittedBuf.length &&
             crypto.timingSafeEqual(storedBuf, submittedBuf);
         if (isMatch) {
-            // Consumed atomically: Challenge destroyed
             return { statusCode: 1, status: OtpVerificationStatus.SUCCESS };
         }
         else {
@@ -123,10 +101,6 @@ export class OtpSecurityService {
         }
     }
 }
-/**
- * Thread-safe, atomic in-memory challenge store simulating Redis single-threaded execution.
- * Allows deterministic concurrency and race-condition testing without live Redis.
- */
 export class AtomicOtpChallengeStore {
     store = new Map();
     security;
@@ -134,9 +108,6 @@ export class AtomicOtpChallengeStore {
     constructor(securityService) {
         this.security = securityService;
     }
-    /**
-     * Acquire a per-key sequential lock to emulate Redis single-threaded atomic Lua execution.
-     */
     async withKeyLock(key, fn) {
         while (this.lockQueue.has(key)) {
             await this.lockQueue.get(key);
@@ -168,9 +139,6 @@ export class AtomicOtpChallengeStore {
             return hmac;
         });
     }
-    /**
-     * Atomically verifies the OTP challenge and consumes it upon success.
-     */
     async verifyAndConsumeOtp(phone, submittedOtp, maxAttempts = 3) {
         const key = `otp:challenge:${phone.trim()}`;
         const submittedHmac = this.security.computeOtpHmac(phone, submittedOtp);
@@ -178,11 +146,9 @@ export class AtomicOtpChallengeStore {
             const current = this.store.get(key);
             const result = this.security.evaluateAtomicVerification(current, submittedHmac, maxAttempts);
             if (result.statusCode === 1 || result.statusCode === -2) {
-                // Atomic deletion upon success or attempt exhaustion
                 this.store.delete(key);
             }
             else if (result.statusCode === 0 && result.updatedData) {
-                // Atomic update of attempt counter
                 this.store.set(key, result.updatedData);
             }
             else if (result.statusCode === -1) {

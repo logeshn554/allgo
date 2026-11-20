@@ -24,6 +24,9 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>AllGo requires location to detect delivery address and accurate courier dispatch.</string>
+	<!-- Google Maps API Key for iOS restricted by iOS Bundle Identifier in.allgo.customer -->
+	<key>GoogleMapsApiKey</key>
+	<string>$(GOOGLE_MAPS_CLIENT_IOS_KEY)</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

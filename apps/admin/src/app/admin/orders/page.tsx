@@ -11,21 +11,18 @@ import { CreateCouponModal } from '../../../components/orders/CreateCouponModal'
 export default function OrdersManagementPage() {
   const [activeTab, setActiveTab] = useState<'orders' | 'coupons'>('orders');
 
-  // Orders State
   const [orders, setOrders] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
-  // Selected Order Drawer State
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
   const [isLoadingCoupons, setIsLoadingCoupons] = useState(false);
   const [showNewCouponModal, setShowNewCouponModal] = useState(false);
@@ -56,7 +53,6 @@ export default function OrdersManagementPage() {
       const data = await adminApi.listCoupons();
       setCoupons(data);
     } catch {
-      // ignore
     } finally {
       setIsLoadingCoupons(false);
     }
@@ -196,7 +192,6 @@ export default function OrdersManagementPage() {
           🏷️ Promotional Coupons ({coupons.length})
         </button>
       </div>
-
       {activeTab === 'orders' && (
         <OrdersTable
           orders={orders}
@@ -209,7 +204,6 @@ export default function OrdersManagementPage() {
           onInspectOrder={handleInspectOrder}
         />
       )}
-
       {activeTab === 'coupons' && (
         <CouponsTable
           coupons={coupons}
@@ -217,7 +211,6 @@ export default function OrdersManagementPage() {
           onToggleCoupon={handleToggleCoupon}
         />
       )}
-
       <OrderDetailDrawer
         selectedOrder={selectedOrder}
         isLoadingDetail={isLoadingDetail}
@@ -229,7 +222,6 @@ export default function OrdersManagementPage() {
         handleCancelOrder={handleCancelOrder}
         isCancelling={isCancelling}
       />
-
       <CreateCouponModal
         showNewCouponModal={showNewCouponModal}
         setShowNewCouponModal={setShowNewCouponModal}

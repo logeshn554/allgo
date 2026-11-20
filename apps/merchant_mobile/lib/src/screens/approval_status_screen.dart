@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'phone_login_screen.dart';
-import 'merchant_registration_screen.dart';
 import 'merchant_dashboard_shell.dart';
+import 'merchant_resubmission_screen.dart';
 
 class ApprovalStatusScreen extends ConsumerStatefulWidget {
   final String status;
@@ -29,11 +28,7 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
     try {
       final client = ref.read(apiClientProvider);
       final profile = await client.getMerchantProfile();
-      if (mounted) {
-        setState(() {
-          _currentStatus = profile['status'] ?? _currentStatus;
-        });
-      }
+      if (mounted) setState(() => _currentStatus = profile['status'] ?? _currentStatus);
     } catch (_) {}
     if (mounted) setState(() => _isChecking = false);
   }
@@ -41,11 +36,13 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
   Future<void> _handleLogout() async {
     await ref.read(authNotifierProvider.notifier).logout();
     if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const PhoneLoginScreen()),
-        (route) => false,
-      );
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const PhoneLoginScreen()), (route) => false);
     }
+  }
+
+  Future<void> _openResubmission() async {
+    final updated = await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MerchantResubmissionScreen()));
+    if (updated == true) _refreshStatus();
   }
 
   @override
@@ -56,14 +53,8 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
         title: 'Application Status',
         showBackButton: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 22),
-            onPressed: _isChecking ? null : _refreshStatus,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, size: 20),
-            onPressed: _handleLogout,
-          ),
+          IconButton(icon: const Icon(Icons.refresh, size: 22), onPressed: _isChecking ? null : _refreshStatus),
+          IconButton(icon: const Icon(Icons.logout, size: 20), onPressed: _handleLogout),
         ],
       ),
       body: SafeArea(
@@ -74,15 +65,15 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
             children: [
               const SizedBox(height: 12),
               _buildStatusCard(),
-              const SizedBox(height: 20),
-              _buildLockWarning(),
-              const SizedBox(height: 28),
-              Text('Compliance & Verification Steps', style: AllGoTypography.heading3),
               const SizedBox(height: 16),
+              _buildLockWarning(),
+              const SizedBox(height: 24),
+              Text('Compliance & Verification Steps', style: AllGoTypography.heading3),
+              const SizedBox(height: 14),
               _buildStepTile(
                 '1. FSSAI Food License & GSTIN Compliance',
                 'Government registration and tax verification',
-                _currentStatus == 'APPROVED' || _currentStatus == 'UNDER_REVIEW' || _currentStatus == 'SUBMITTED',
+                ['APPROVED', 'UNDER_REVIEW', 'SUBMITTED'].contains(_currentStatus),
               ),
               _buildStepTile(
                 '2. Bank Penny-Drop Verification',
@@ -114,28 +105,28 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
     switch (_currentStatus) {
       case 'APPROVED':
       case 'LIVE':
-        cardColor = AllGoColors.success.withOpacity(0.12);
+        cardColor = AllGoColors.success.withValues(alpha: 0.12);
         iconColor = AllGoColors.success;
         icon = Icons.check_circle_outline;
         title = 'Store Approved & Operational';
         subtitle = 'Your outlet is verified and ready to accept live customer orders.';
         break;
       case 'DOCUMENTS_REQUIRED':
-        cardColor = AllGoColors.warning.withOpacity(0.12);
+        cardColor = AllGoColors.warning.withValues(alpha: 0.12);
         iconColor = AllGoColors.warning;
         icon = Icons.assignment_late_outlined;
         title = 'Additional Compliance Required';
         subtitle = 'Please re-submit your FSSAI or PAN documentation for verification.';
         break;
       case 'REJECTED':
-        cardColor = AllGoColors.error.withOpacity(0.12);
+        cardColor = AllGoColors.error.withValues(alpha: 0.12);
         iconColor = AllGoColors.error;
         icon = Icons.cancel_outlined;
         title = 'Application Rejected';
         subtitle = 'Compliance criteria not met. Update your store details to re-apply.';
         break;
       case 'SUSPENDED':
-        cardColor = AllGoColors.error.withOpacity(0.12);
+        cardColor = AllGoColors.error.withValues(alpha: 0.12);
         iconColor = AllGoColors.error;
         icon = Icons.block;
         title = 'Account Suspended';
@@ -144,7 +135,7 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
       case 'SUBMITTED':
       case 'UNDER_REVIEW':
       default:
-        cardColor = const Color(0xFF6200EA).withOpacity(0.12);
+        cardColor = const Color(0xFF6200EA).withValues(alpha: 0.12);
         iconColor = const Color(0xFF6200EA);
         icon = Icons.pending_actions_outlined;
         title = 'Outlet Pending Verification';
@@ -157,7 +148,7 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: iconColor.withOpacity(0.4)),
+        border: Border.all(color: iconColor.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [
@@ -195,7 +186,7 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
             child: Text(
               isApproved
                   ? 'Store Online: You can now toggle your kitchen open and manage live order flow.'
-                  : 'Orders Disabled: Outlets cannot accept live customer orders or go online until administrative approval is complete.',
+                  : 'Orders Disabled: Outlets cannot accept live customer orders until administrative approval is complete.',
               style: AllGoTypography.caption.copyWith(fontWeight: FontWeight.w600, color: AllGoColors.textSecondary),
             ),
           ),
@@ -209,11 +200,7 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
         children: [
-          Icon(
-            isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: isCompleted ? AllGoColors.success : AllGoColors.textTertiary,
-            size: 22,
-          ),
+          Icon(isCompleted ? Icons.check_circle : Icons.radio_button_unchecked, color: isCompleted ? AllGoColors.success : AllGoColors.textTertiary, size: 22),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -233,31 +220,27 @@ class _ApprovalStatusScreenState extends ConsumerState<ApprovalStatusScreen> {
     if (_currentStatus == 'APPROVED' || _currentStatus == 'LIVE') {
       return AllGoButton(
         label: 'Enter Store Dashboard',
-        onPressed: () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MerchantDashboardShell()),
-          );
-        },
-      );
-    } else if (_currentStatus == 'DOCUMENTS_REQUIRED' || _currentStatus == 'REJECTED') {
-      return AllGoButton(
-        label: 'Update & Re-Submit Details',
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const MerchantRegistrationScreen()),
-          );
-        },
-      );
-    } else {
-      return OutlinedButton(
-        onPressed: _isChecking ? null : _refreshStatus,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          side: const BorderSide(color: Color(0xFF6200EA)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: Text(_isChecking ? 'Checking status...' : 'Check Approval Status', style: const TextStyle(color: Color(0xFF6200EA), fontWeight: FontWeight.bold)),
+        onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MerchantDashboardShell())),
       );
     }
+    return Column(
+      children: [
+        AllGoButton(
+          label: 'Correct & Re-Submit Documents',
+          icon: Icons.upload_file_outlined,
+          onPressed: _openResubmission,
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton(
+          onPressed: _isChecking ? null : _refreshStatus,
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            side: const BorderSide(color: Color(0xFF6200EA)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Text(_isChecking ? 'Checking status...' : 'Check Approval Status', style: const TextStyle(color: Color(0xFF6200EA), fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
   }
 }

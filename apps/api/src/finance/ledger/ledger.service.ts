@@ -1,45 +1,8 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException, Logger } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service.js';
-
-export type AccountType =
-  | 'CUSTOMER_WALLET'
-  | 'MERCHANT_SETTLEMENT'
-  | 'PARTNER_EARNINGS'
-  | 'PLATFORM_COMMISSION'
-  | 'PLATFORM_DELIVERY_FEES'
-  | 'GATEWAY_ESCROW'
-  | 'TAX_PAYABLE_GST'
-  | 'TAX_WITHHELD_TCS'
-  | 'TAX_WITHHELD_TDS'
-  | 'COD_COLLECTED'
-  | 'COD_HOLDING';
-
-export type LedgerDirection = 'DEBIT' | 'CREDIT';
-
-export interface LedgerEntryInput {
-  walletId?: string;
-  partnerId?: string;
-  merchantId?: string;
-  subOrderId?: string;
-  rideId?: string;
-  parcelId?: string;
-  hireDriverBookingId?: string;
-  accountType: AccountType;
-  direction: LedgerDirection;
-  amountInr: number;
-  description: string;
-  metadata?: Record<string, any>;
-  isReversal?: boolean;
-  reversalReference?: string;
-}
-
-export interface PostTransactionDto {
-  transactionReference: string;
-  description: string;
-  entries: LedgerEntryInput[];
-  metadata?: Record<string, any>;
-}
+import type { AccountType, LedgerDirection, LedgerEntryInput, PostTransactionDto } from './ledger.types.js';
+export type { AccountType, LedgerDirection, LedgerEntryInput, PostTransactionDto };
 
 @Injectable()
 export class LedgerService {
@@ -57,7 +20,6 @@ export class LedgerService {
       throw new BadRequestException('A double-entry transaction must contain at least two entries.');
     }
 
-    // Verify amounts and calculate debit / credit sums
     let totalDebit = 0;
     let totalCredit = 0;
 
@@ -65,7 +27,6 @@ export class LedgerService {
       if (typeof entry.amountInr !== 'number' || entry.amountInr <= 0 || isNaN(entry.amountInr)) {
         throw new BadRequestException(`Invalid entry amount: ${entry.amountInr}. All entries must have amount > 0.`);
       }
-      // Round to 2 decimal places to avoid IEEE 754 precision issues
       const roundedAmount = Math.round(entry.amountInr * 100) / 100;
       entry.amountInr = roundedAmount;
 
@@ -78,7 +39,6 @@ export class LedgerService {
       }
     }
 
-    // Balancing Rule: Total Debits must equal Total Credits
     if (Math.abs(totalDebit - totalCredit) > 0.001) {
       throw new BadRequestException(
         `Double-entry invariant violation: Total DEBIT (₹${totalDebit.toFixed(2)}) does not equal Total CREDIT (₹${totalCredit.toFixed(2)}). Transaction cannot be posted.`
@@ -87,7 +47,6 @@ export class LedgerService {
 
     const runner = externalClient || this.db;
 
-    // Idempotency check on transaction_reference
     const existing = await runner.query(
       `SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1 LIMIT 1;`,
       [transactionReference]
@@ -103,7 +62,6 @@ export class LedgerService {
 
     const transactionId = crypto.randomUUID();
 
-    // Begin atomic transaction if using database service directly
     const shouldManageTx = !externalClient;
     if (shouldManageTx) {
       await this.db.query('BEGIN;');
@@ -113,7 +71,6 @@ export class LedgerService {
       for (const entry of entries) {
         let balanceAfter: number | null = null;
 
-        // If this entry touches a wallet, update wallet balance atomically
         if (entry.walletId) {
           const walletRes = await runner.query(
             `SELECT balance_inr FROM wallets WHERE id = $1 FOR UPDATE;`,
@@ -125,7 +82,6 @@ export class LedgerService {
           }
 
           const currentBalance = parseFloat(walletRes.rows[0].balance_inr);
-          // For wallet liability account: CREDIT increases user balance, DEBIT decreases user balance
           if (entry.direction === 'CREDIT') {
             balanceAfter = Math.round((currentBalance + entry.amountInr) * 100) / 100;
           } else {
@@ -206,7 +162,6 @@ export class LedgerService {
 
     const reversalReference = `REV-${originalReference}-${Date.now().toString(36)}`;
 
-    // Build compensating entries with reversed directions
     const compensatingEntries: LedgerEntryInput[] = origEntriesRes.rows.map((row) => ({
       walletId: row.wallet_id,
       partnerId: row.partner_id,
@@ -230,10 +185,6 @@ export class LedgerService {
       entries: compensatingEntries,
       metadata: { originalReference, reason },
     });
-
-    // Note: In strict double-entry ledger bookkeeping, posted entries are immutable
-    // and protected by database trigger trg_prevent_ledger_update. The compensating
-    // entries created above carry is_reversal = TRUE and reversal_reference pointing to originalReference.
 
     return {
       reversalTransactionId: result.transactionId,

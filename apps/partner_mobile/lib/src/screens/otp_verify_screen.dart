@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'partner_home_shell.dart';
 import 'approval_status_screen.dart';
+import 'partner_registration_screen.dart';
 
 class OtpVerifyScreen extends ConsumerStatefulWidget {
   final String phone;
@@ -52,13 +53,27 @@ class _OtpVerifyScreenState extends ConsumerState<OtpVerifyScreen> {
     if (!mounted) return;
 
     if (success) {
-      final user = ref.read(currentUserProvider);
-      final isApproved = user?.hasRole('PARTNER') == true && user?.status == AccountStatus.active;
+      final client = ref.read(apiClientProvider);
+      client.activeRole = 'PARTNER';
 
+      Widget targetScreen;
+      try {
+        final profile = await client.getPartnerProfile();
+        final status = profile['status']?.toString() ?? 'NOT_REGISTERED';
+        if (status == 'NOT_REGISTERED' || profile['partner'] == null) {
+          targetScreen = const PartnerRegistrationScreen();
+        } else if (status == 'APPROVED' || status == 'ACTIVE') {
+          targetScreen = const PartnerHomeShell();
+        } else {
+          targetScreen = const ApprovalStatusScreen();
+        }
+      } catch (_) {
+        targetScreen = const ApprovalStatusScreen();
+      }
+
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => isApproved ? const PartnerHomeShell() : const ApprovalStatusScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => targetScreen),
         (route) => false,
       );
     } else {

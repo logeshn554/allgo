@@ -158,7 +158,6 @@ export class DeliveryJobRepository {
       recordedAt: r.recorded_at,
     };
   }
-
   async listAdminJobs(filters: {
     status?: string;
     verticalType?: string;
@@ -169,7 +168,6 @@ export class DeliveryJobRepository {
     const conditions: string[] = ['1=1'];
     const params: any[] = [];
     let pIdx = 1;
-
     if (filters.status) {
       conditions.push(`j.status = $${pIdx++}`);
       params.push(filters.status);
@@ -182,17 +180,14 @@ export class DeliveryJobRepository {
       conditions.push(`j.outlet_id = $${pIdx++}`);
       params.push(filters.outletId);
     }
-
     const whereClause = conditions.join(' AND ');
     const countRes = await this.db.query(
       `SELECT COUNT(*)::int as count FROM delivery_jobs j WHERE ${whereClause};`,
       params
     );
     const total = countRes.rows[0]?.count || 0;
-
     const limit = Math.min(filters.limit || 50, 100);
     const offset = filters.offset || 0;
-
     const query = `
       SELECT j.*, o.outlet_name, up.full_name as partner_name, up.phone as partner_phone,
              ST_X(j.pickup_location::geometry) as pickup_lon, ST_Y(j.pickup_location::geometry) as pickup_lat,
@@ -206,7 +201,6 @@ export class DeliveryJobRepository {
       LIMIT $${pIdx++} OFFSET $${pIdx++};
     `;
     params.push(limit, offset);
-
     const res = await this.db.query(query, params);
     return {
       items: res.rows.map((row) => ({
@@ -217,7 +211,6 @@ export class DeliveryJobRepository {
       total,
     };
   }
-
   async getDispatchStats(): Promise<any> {
     const statsRes = await this.db.query(
       `SELECT
@@ -228,7 +221,6 @@ export class DeliveryJobRepository {
          COUNT(*) FILTER (WHERE status = 'CANCELLED' AND created_at >= CURRENT_DATE) as cancelled_today_count
        FROM delivery_jobs;`
     );
-
     const onlineRes = await this.db.query(
       `SELECT
          COUNT(*) FILTER (WHERE status = 'ONLINE') as online_partners,
@@ -236,11 +228,9 @@ export class DeliveryJobRepository {
        FROM partner_availability_sessions
        WHERE ended_at IS NULL AND last_heartbeat_at >= NOW() - INTERVAL '3 minutes';`
     );
-
     const exceptionsRes = await this.db.query(
       `SELECT COUNT(*)::int as open_exceptions FROM delivery_exception_records WHERE status = 'OPEN';`
     );
-
     return {
       pendingJobs: Number(statsRes.rows[0]?.pending_count || 0),
       assignedJobs: Number(statsRes.rows[0]?.assigned_count || 0),

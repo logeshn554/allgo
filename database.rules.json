@@ -1,6 +1,26 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null"
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$userId": {
+        ".read": "auth != null && auth.uid === $userId"
+      }
+    },
+    "orders": {
+      "$orderId": {
+        ".read": "auth != null && (data.child('customerId').val() === auth.uid || data.child('partnerId').val() === auth.uid)"
+      }
+    },
+    "rides": {
+      "$rideId": {
+        ".read": "auth != null && (data.child('customerId').val() === auth.uid || data.child('driverId').val() === auth.uid)"
+      }
+    },
+    "partner_locations": {
+      "$partnerId": {
+        ".read": "auth != null && ($partnerId === auth.uid || data.child('activeCustomerId').val() === auth.uid || data.child('customerId').val() === auth.uid)"
+      }
+    }
   }
 }

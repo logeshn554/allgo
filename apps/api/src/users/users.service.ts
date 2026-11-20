@@ -7,6 +7,8 @@ import {
 import crypto from 'node:crypto';
 import { DatabaseService } from '../database/database.service.js';
 import { RedisService } from '../redis/redis.service.js';
+import { UserRepository } from './data/user.repository.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 
 export interface UserSummary {
   id: string;
@@ -21,10 +23,23 @@ export interface UserSummary {
 
 @Injectable()
 export class UsersService {
+  private readonly userRepo: UserRepository;
+
   constructor(
     private readonly db: DatabaseService,
-    private readonly redis: RedisService
-  ) {}
+    private readonly redis: RedisService,
+    userRepo?: UserRepository
+  ) {
+    this.userRepo = userRepo ?? new UserRepository(this.db);
+  }
+
+  async updateUserProfile(userId: string, dto: UpdateProfileDto): Promise<UserSummary> {
+    return this.userRepo.updateUserProfile(userId, {
+      fullName: dto.fullName,
+      defaultLanguage: dto.defaultLanguage,
+      email: dto.email,
+    });
+  }
 
   async listUsers(options: { page?: number; limit?: number; role?: string; status?: string } = {}): Promise<{ users: UserSummary[]; total: number }> {
     const page = Math.max(1, options.page || 1);

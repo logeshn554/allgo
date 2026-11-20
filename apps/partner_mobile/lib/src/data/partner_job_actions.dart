@@ -56,9 +56,14 @@ class PartnerJobActions {
     }
   }
 
-  Future<void> completeDelivery(String jobId, String otp) async {
+  Future<void> completeDelivery(String jobId, String otp, {String? photoKey}) async {
     try {
-      await client.partnerCompleteDelivery(jobId, handoverOtp: otp);
+      await client.partnerCompleteDelivery(
+        jobId,
+        handoverOtp: otp,
+        proofType: photoKey != null ? 'PHOTO_OTP' : 'OTP',
+        photoStorageKey: photoKey,
+      );
       onSuccess();
     } catch (e) {
       onError('Completion failed: $e');

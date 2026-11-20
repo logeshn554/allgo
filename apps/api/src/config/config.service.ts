@@ -60,4 +60,16 @@ export class ConfigService {
   get otpResendCooldownSeconds(): number {
     return this.config.otpResendCooldownSeconds;
   }
+
+  get firebaseServiceAccountKey(): string | undefined {
+    return this.config.firebaseServiceAccountKey;
+  }
+
+  get googleMapsApiKey(): string | undefined {
+    return this.config.googleMapsApiKey;
+  }
+
+  get smsGatewayApiKey(): string | undefined {
+    return this.config.smsGatewayApiKey;
+  }
 }

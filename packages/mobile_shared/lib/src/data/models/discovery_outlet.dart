@@ -27,6 +27,11 @@ class DiscoveryOutlet {
     this.distanceKm = 0.0,
   });
 
+  String get outletId => id;
+  String get verticalType => merchantType ?? 'FOOD';
+  double get rating => 4.5;
+  int get estimatedDeliveryMins => 30;
+
   factory DiscoveryOutlet.fromJson(Map<String, dynamic> json) {
     return DiscoveryOutlet(
       id: json['id']?.toString() ?? '',

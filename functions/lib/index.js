@@ -46,8 +46,15 @@ if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
-const JWT_SECRET = process.env.JWT_SECRET || 'allgo_cloud_jwt_secret_production_ready_32b';
-const FPNV_TEST_TOKEN = 'AawNgEq0Ie2YM34Jy6X2NCVP6SI-MWzhyk_k0bHWSgtsUbnXQTBlTBtNRP5SUKRt_WM5KLjWoUNS0KW7lzVXmbYHujN48HBzWGAtXw26wz8dL-hzys1-Eo5lYvBcqYLkSmYeQmFe0fnMP8JsTmk-dQJdkQ';
+// Enforce required secrets from environment; crash on startup in production if missing
+const nodeEnv = process.env.NODE_ENV || 'development';
+const JWT_SECRET = process.env.JWT_SECRET || (nodeEnv === 'production' ? '' : 'allgo_cloud_jwt_secret_dev_32b_minimum_len');
+const FPNV_TEST_TOKEN = process.env.FPNV_TEST_TOKEN || '';
+if (nodeEnv === 'production') {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+        throw new Error('FATAL: JWT_SECRET environment variable is missing or insecure (<32 chars) in production.');
+    }
+}
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: true }));
 app.use(express_1.default.json());
@@ -95,7 +102,7 @@ app.post('/v1/auth/otp/verify', async (req, res) => {
         const phone = validateIndianPhone(req.body.phone);
         const code = req.body.code ? String(req.body.code).trim() : '';
         const token = req.body.token ? String(req.body.token).trim() : '';
-        const isTestToken = token === FPNV_TEST_TOKEN || code === FPNV_TEST_TOKEN;
+        const isTestToken = Boolean(FPNV_TEST_TOKEN && (token === FPNV_TEST_TOKEN || code === FPNV_TEST_TOKEN));
         const isStandardCode = code === '123456';
         if (!isTestToken && !isStandardCode && !/^\d{6}$/.test(code)) {
             return res.status(400).json({

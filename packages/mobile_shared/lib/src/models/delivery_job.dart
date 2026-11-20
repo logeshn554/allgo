@@ -90,6 +90,8 @@ class DeliveryJobModel {
   final String? createdAt;
   final String? completedAt;
 
+  String get destinationAddress => dropoffAddress;
+
   const DeliveryJobModel({
     required this.id,
     required this.jobNumber,
@@ -157,6 +159,9 @@ class DeliveryOfferModel {
   final double surgeFeeInr;
   final double? distanceMeters;
   final int expiresAtSeconds;
+
+  String get destinationAddress => dropoffAddress;
+  double get estimatedEarnings => courierFeeInr + surgeFeeInr;
 
   const DeliveryOfferModel({
     required this.attemptId,

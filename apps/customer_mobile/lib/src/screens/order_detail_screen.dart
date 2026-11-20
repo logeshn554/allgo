@@ -4,6 +4,7 @@ import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 import '../components/order_detail_safety_and_partner_card.dart';
 import '../components/order_detail_items_and_pricing.dart';
+import '../components/post_delivery_cross_sell_card.dart';
 import 'delivery_tracking_screen.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
@@ -21,24 +22,38 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
-  late CustomerOrderDetail _order;
-  bool _isLoading = false;
+  CustomerOrderDetail? _order;
+  bool _isLoading = true;
   bool _isCancelling = false;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _order = widget.initialDetail ?? CustomerOrderDetail.dummy(widget.subOrderId);
+    _order = widget.initialDetail;
     _refreshOrder();
   }
 
   Future<void> _refreshOrder() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = _order == null;
+      _errorMessage = null;
+    });
     try {
       final updated = await ref.read(apiClientProvider).getCustomerOrderDetail(widget.subOrderId);
-      if (mounted) setState(() => _order = updated);
-    } catch (_) {} finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _order = updated;
+          _isLoading = false;
+        });
+      }
+    } catch (err) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          if (_order == null) _errorMessage = err.toString();
+        });
+      }
     }
   }
 
@@ -54,7 +69,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
-  Widget _buildStatusHeader() {
+  Widget _buildStatusHeader(CustomerOrderDetail order) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -68,15 +83,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Order #${_order.subOrderNumber}', style: AllGoTypography.heading3.copyWith(fontSize: 16)),
+              Text('Order #${order.subOrderNumber}', style: AllGoTypography.heading3.copyWith(fontSize: 16)),
               const SizedBox(height: 4),
-              Text('Placed: ${_order.createdAt.split("T")[0]}', style: AllGoTypography.caption),
+              Text('Placed: ${order.createdAt.contains("T") ? order.createdAt.split("T")[0] : order.createdAt}', style: AllGoTypography.caption),
             ],
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: AllGoColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-            child: Text(_order.status, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AllGoColors.primary)),
+            child: Text(order.status, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AllGoColors.primary)),
           ),
         ],
       ),
@@ -85,12 +100,32 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isCancellable = _order.status == 'PLACED' || _order.status == 'MERCHANT_ACCEPTED';
+    final order = _order;
+    if (order == null) {
+      return Scaffold(
+        backgroundColor: AllGoColors.background,
+        appBar: AppBar(title: const Text('Order Details')),
+        body: Center(
+          child: _isLoading
+              ? const CircularProgressIndicator()
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_errorMessage ?? 'Order not found', style: AllGoTypography.subtitle),
+                    const SizedBox(height: 12),
+                    ElevatedButton(onPressed: _refreshOrder, child: const Text('Retry')),
+                  ],
+                ),
+        ),
+      );
+    }
+
+    final isCancellable = order.status == 'PLACED' || order.status == 'MERCHANT_ACCEPTED';
 
     return Scaffold(
       backgroundColor: AllGoColors.background,
       appBar: AppBar(
-        title: Text(_order.subOrderNumber),
+        title: Text(order.subOrderNumber),
         actions: [
           IconButton(icon: const Icon(Icons.refresh), onPressed: _isLoading ? null : _refreshOrder),
         ],
@@ -100,19 +135,26 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _buildStatusHeader(),
+            _buildStatusHeader(order),
             const SizedBox(height: 16),
             OrderDetailSafetyAndPartnerCard(
-              order: _order,
+              order: order,
               onTrackDelivery: () {
-                if (_order.deliveryJob != null) {
+                if (order.deliveryJob != null) {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => DeliveryTrackingScreen(jobId: _order.deliveryJob!.id)),
+                    MaterialPageRoute(builder: (_) => DeliveryTrackingScreen(jobId: order.deliveryJob!['id']?.toString() ?? '')),
                   );
                 }
               },
             ),
-            OrderDetailItemsAndPricing(order: _order),
+            OrderDetailItemsAndPricing(order: order),
+            if (order.status == 'DELIVERED') ...[
+              CrossSellBannerView(
+                config: const CrossSellConfig(),
+                onBookRide: () => Navigator.of(context).pushNamed('/rides'),
+                onSendParcel: () => Navigator.of(context).pushNamed('/parcels'),
+              ),
+            ],
             if (isCancellable) ...[
               const SizedBox(height: 20),
               OutlinedButton(

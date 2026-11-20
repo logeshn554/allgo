@@ -16,7 +16,7 @@ import { MerchantAcceptOrderDto, MerchantRejectOrderDto } from '../dto/ordering.
 
 @Controller('v1/merchants/orders')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('MERCHANT_ADMIN')
+@Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
 export class MerchantOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

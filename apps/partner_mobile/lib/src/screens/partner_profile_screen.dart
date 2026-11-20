@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'phone_login_screen.dart';
 import 'partner_earnings_screen.dart';
 import 'partner_support_screen.dart';
 import 'partner_notifications_screen.dart';
+import 'partner_edit_profile_screen.dart';
+import 'partner_vehicle_edit_screen.dart';
+import 'partner_bank_edit_screen.dart';
+import 'partner_emergency_sos_screen.dart';
 
 class PartnerProfileScreen extends ConsumerWidget {
   const PartnerProfileScreen({super.key});
@@ -30,7 +33,6 @@ class PartnerProfileScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           children: [
-            // Partner Profile Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -42,7 +44,7 @@ class PartnerProfileScreen extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: AllGoColors.secondaryLight.withOpacity(0.3),
+                    backgroundColor: AllGoColors.secondaryLight.withValues(alpha: 0.3),
                     child: const Icon(Icons.two_wheeler, size: 32, color: AllGoColors.secondary),
                   ),
                   const SizedBox(width: 16),
@@ -64,12 +66,17 @@ class PartnerProfileScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: AllGoColors.secondary),
+                    tooltip: 'Edit Profile',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PartnerEditProfileScreen()),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
-
-            // Cash-in-Hand Monitor
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -102,7 +109,6 @@ class PartnerProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-
             _buildActionTile(
               'Unified Earnings & Settlements',
               'Weekly payouts, statements, and commission breakdown',
@@ -116,20 +122,43 @@ class PartnerProfileScreen extends ConsumerWidget {
               () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerNotificationsScreen())),
             ),
             _buildActionTile(
+              'Emergency SOS & Safety Contacts',
+              'Configure emergency contacts and instant 112 / AllGo SOS trigger',
+              Icons.emergency_outlined,
+              () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerEmergencySosScreen())),
+            ),
+            _buildActionTile(
               'Partner Support & Disputes',
               '24/7 dedicated fleet support and fare adjustments',
               Icons.support_agent,
               () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PartnerSupportScreen())),
             ),
+            _buildActionTile(
+              'App Language / மொழி / भाषा',
+              'Choose preferred display language for partner app',
+              Icons.language,
+              () => LanguageSelectionSheet.show(context),
+            ),
             const SizedBox(height: 16),
-
-            _buildTile('Assigned Vehicle', 'TVS Apache 160 (TN 09 AB 1234)', Icons.motorcycle),
-            _buildTile('Bank Account Details', 'HDFC Bank ending in •••• 4012 (Penny-drop verified)', Icons.account_balance),
+            _buildTile(
+              'Assigned Vehicle',
+              'TVS Apache 160 (TN 09 AB 1234)',
+              Icons.motorcycle,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PartnerVehicleEditScreen()),
+              ),
+            ),
+            _buildTile(
+              'Bank Account Details',
+              'HDFC Bank ending in •••• 4012 (Penny-drop verified)',
+              Icons.account_balance,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PartnerBankEditScreen()),
+              ),
+            ),
             _buildTile('Document Center', 'DL, RC, Commercial Insurance valid', Icons.verified_user_outlined),
             _buildTile('Duty Hours & Fatigue Policy', 'Max 12 hours continuous duty enforced', Icons.schedule),
-
             const SizedBox(height: 32),
-
             AllGoButton(
               label: 'Log Out of Partner App',
               variant: AllGoButtonVariant.outlined,
@@ -151,43 +180,37 @@ class PartnerProfileScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AllGoColors.divider, width: 0.6),
       ),
-      child: ListTile(
-        leading: Icon(icon, color: AllGoColors.secondary, size: 22),
-        title: Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: AllGoTypography.caption),
-        trailing: const Icon(Icons.chevron_right, size: 18, color: AllGoColors.textTertiary),
-        onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: Icon(icon, color: AllGoColors.secondary, size: 22),
+          title: Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          subtitle: Text(subtitle, style: AllGoTypography.caption),
+          trailing: const Icon(Icons.chevron_right, size: 18, color: AllGoColors.textTertiary),
+          onTap: onTap,
+        ),
       ),
     );
   }
 
-  Widget _buildTile(String title, String subtitle, IconData icon) {
+  Widget _buildTile(String title, String subtitle, IconData icon, {VoidCallback? onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AllGoColors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AllGoColors.divider, width: 0.6),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: AllGoColors.textSecondary, size: 22),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: AllGoTypography.caption),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, size: 18, color: AllGoColors.textTertiary),
-        ],
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          leading: Icon(icon, color: AllGoColors.textSecondary, size: 22),
+          title: Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          subtitle: Text(subtitle, style: AllGoTypography.caption),
+          trailing: const Icon(Icons.chevron_right, size: 18, color: AllGoColors.textTertiary),
+          onTap: onTap,
+        ),
       ),
     );
   }
 }
-

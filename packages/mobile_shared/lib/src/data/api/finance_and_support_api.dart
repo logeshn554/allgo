@@ -287,5 +287,3 @@ class FinanceAndSupportApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to fetch merchant settlements');
   }
 }
-
-}

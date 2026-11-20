@@ -16,7 +16,7 @@ import { DatabaseService } from '../../database/database.service.js';
 
 @Controller('v1/merchants/delivery')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+@Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
 export class MerchantDeliveryController {
   constructor(
     private readonly deliveryJobService: DeliveryJobService,

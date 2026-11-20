@@ -1,19 +1,34 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service.js';
 import { LedgerService } from '../ledger/ledger.service.js';
+
+export interface WalletTopupOrderResult {
+  orderId: string;
+  gatewayOrderId: string;
+  amountInr: number;
+  currency: string;
+  keyId?: string;
+  status: string;
+}
+
+export interface WebhookResult {
+  handled: boolean;
+  event: string;
+  idempotentDuplicate?: boolean;
+  creditedWallet?: any;
+}
 
 @Injectable()
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
+  private readonly razorpayKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder';
 
   constructor(
     private readonly db: DatabaseService,
     private readonly ledger: LedgerService
   ) {}
 
-  /**
-   * Get or create wallet for a user
-   */
   async getOrCreateWallet(userId: string) {
     let res = await this.db.query(
       `SELECT * FROM wallets WHERE user_id = $1;`,
@@ -31,7 +46,6 @@ export class WalletService {
 
     const wallet = res.rows[0];
 
-    // Reconcile and verify against authoritative ledger entries
     const ledgerSumRes = await this.db.query(
       `SELECT 
          COALESCE(SUM(CASE WHEN direction = 'CREDIT' THEN amount_inr ELSE -amount_inr END), 0.00) as ledger_balance
@@ -43,7 +57,6 @@ export class WalletService {
     const calculatedBalance = parseFloat(ledgerSumRes.rows[0]?.ledger_balance || '0.00');
     const storedBalance = parseFloat(wallet.balance_inr);
 
-    // If drift is detected, align with authoritative ledger
     if (Math.abs(calculatedBalance - storedBalance) > 0.009) {
       this.logger.warn(`Wallet drift detected for user ${userId}. Stored: ₹${storedBalance}, Ledger: ₹${calculatedBalance}. Reconciling.`);
       await this.db.query(
@@ -64,9 +77,37 @@ export class WalletService {
     };
   }
 
-  /**
-   * Credit customer wallet with double-entry balancing
-   */
+  async createTopupOrder(userId: string, amountInr: number): Promise<WalletTopupOrderResult> {
+    if (typeof amountInr !== 'number' || isNaN(amountInr) || amountInr <= 0) {
+      throw new BadRequestException('Topup amount must be a positive number');
+    }
+
+    const wallet = await this.getOrCreateWallet(userId);
+    if (wallet.isLocked) {
+      throw new BadRequestException('Wallet is locked. Cannot process topup.');
+    }
+
+    const gatewayOrderId = `order_${Date.now().toString(36)}_${crypto.randomBytes(4).toString('hex')}`;
+    const idempotencyKey = `topup-${userId}-${gatewayOrderId}`;
+
+    const res = await this.db.query(
+      `INSERT INTO payment_transactions (
+         customer_id, gateway_name, gateway_order_id, idempotency_key, payment_method, amount_inr, currency, status, metadata
+       ) VALUES ($1, 'RAZORPAY', $2, $3, 'WALLET', $4, 'INR', 'PENDING', $5)
+       RETURNING *;`,
+      [userId, gatewayOrderId, idempotencyKey, amountInr, JSON.stringify({ type: 'WALLET_TOPUP', userId })]
+    );
+
+    return {
+      orderId: res.rows[0].id,
+      gatewayOrderId,
+      amountInr,
+      currency: 'INR',
+      keyId: this.razorpayKeyId,
+      status: 'PENDING',
+    };
+  }
+
   async creditWallet(
     userId: string,
     amountInr: number,
@@ -124,9 +165,6 @@ export class WalletService {
     return this.getOrCreateWallet(userId);
   }
 
-  /**
-   * Debit customer wallet with double-entry balancing
-   */
   async debitWallet(
     userId: string,
     amountInr: number,
@@ -172,7 +210,6 @@ export class WalletService {
       metadata: { userId, reason },
     });
 
-    // Synchronize promotional and refundable sub-balances
     const promoAvailable = wallet.promotionalBalanceInr || 0;
     const promoDeduct = Math.round(Math.min(promoAvailable, amountInr) * 100) / 100;
     const refundableDeduct = Math.round((amountInr - promoDeduct) * 100) / 100;
@@ -189,9 +226,6 @@ export class WalletService {
     return this.getOrCreateWallet(userId);
   }
 
-  /**
-   * Get transaction history for user's wallet
-   */
   async getWalletTransactions(userId: string, limit = 50, offset = 0) {
     const wallet = await this.getOrCreateWallet(userId);
     return this.ledger.getEntries({

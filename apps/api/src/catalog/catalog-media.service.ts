@@ -53,7 +53,6 @@ export class CatalogMediaService {
       throw new PayloadTooLargeException(`Image exceeds maximum allowed size of 5 MB (actual: ${buffer.length} bytes)`);
     }
 
-    // Inspect magic bytes
     let detectedMime: string | null = null;
     let ext: string = 'jpg';
 
@@ -87,7 +86,6 @@ export class CatalogMediaService {
     }
 
     if (declaredMimeType && declaredMimeType.toLowerCase() !== detectedMime) {
-      // Allow minor jpeg/jpg variations
       if (!(declaredMimeType.toLowerCase() === 'image/jpg' && detectedMime === 'image/jpeg')) {
         throw new BadRequestException(
           `Image content mismatch: header declared '${declaredMimeType}' but magic bytes indicate '${detectedMime}'`
@@ -107,7 +105,6 @@ export class CatalogMediaService {
     buffer: Buffer,
     declaredMime?: string
   ): Promise<{ storageKey: string; imageUrl: string; images: string[] }> {
-    // 1. Verify merchant ownership of product
     const pCheck = await this.db.query(
       `SELECT i.id, i.image_url, i.images, m.owner_id
        FROM items i
@@ -127,19 +124,15 @@ export class CatalogMediaService {
       throw new ForbiddenException('You do not own this product');
     }
 
-    // 2. Validate image content
     const { mimeType, extension } = this.validateImage(buffer, declaredMime);
 
-    // 3. Generate safe server-generated storage key
     const uniqueId = crypto.randomUUID();
     const storageKey = `${uniqueId}.${extension}`;
     const filePath = path.join(this.storageRoot, storageKey);
 
-    // 4. Write file to disk
     this.ensureStorageRootExists();
     fs.writeFileSync(filePath, buffer);
 
-    // 5. Update database record
     const publicUrl = `/v1/customer/catalog/images/${storageKey}`;
     const currentImages: string[] =
       typeof pCheck.rows[0].images === 'string'
@@ -173,7 +166,6 @@ export class CatalogMediaService {
     productId: string,
     storageKey: string
   ): Promise<{ success: boolean; images: string[] }> {
-    // Verify ownership
     const pCheck = await this.db.query(
       `SELECT i.id, i.image_url, i.images, m.owner_id
        FROM items i
@@ -209,7 +201,6 @@ export class CatalogMediaService {
       [newPrimary, JSON.stringify(updatedImages), productId]
     );
 
-    // Orphan disk cleanup
     const filePath = path.join(this.storageRoot, sanitizedKey);
     try {
       if (fs.existsSync(filePath)) {

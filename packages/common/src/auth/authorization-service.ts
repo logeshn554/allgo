@@ -8,13 +8,9 @@
  * 4. Contextual role-switching enforcement (e.g. Courier mode vs Customer mode)
  */
 
-export type UserRole =
-  | 'CUSTOMER'
-  | 'PARTNER'
-  | 'MERCHANT_OPERATOR'
-  | 'MERCHANT_ADMIN'
-  | 'SUPPORT_AGENT'
-  | 'ADMIN';
+import { UserRole } from '../contracts/user-role.ts';
+
+export { UserRole };
 
 export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'BLOCKED' | 'PENDING_VERIFICATION';
 

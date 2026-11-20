@@ -1,8 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Deny all writes from clients across the entire database; writes restricted to backend Admin SDK
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow write: if false;
+      allow read: if false;
+    }
+
+    // Authenticated users may read only their own user document
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Authenticated customers or assigned partners may read their own orders
+    match /orders/{orderId} {
+      allow read: if request.auth != null && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.partnerId == request.auth.uid
+      );
+    }
+
+    // Authenticated customers or assigned drivers may read their own rides
+    match /rides/{rideId} {
+      allow read: if request.auth != null && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.driverId == request.auth.uid
+      );
+    }
+
+    // Authenticated users may read active partner locations only for trips/orders they are associated with
+    match /partner_locations/{partnerId} {
+      allow read: if request.auth != null && (
+        partnerId == request.auth.uid ||
+        resource.data.activeCustomerId == request.auth.uid ||
+        resource.data.customerId == request.auth.uid
+      );
     }
   }
 }

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'approval_status_screen.dart';
-import '../components/partner_upload_button.dart';
 import '../components/partner_service_selector.dart';
+import '../components/document_picker_dialog.dart';
+import '../components/partner_banking_and_upi_section.dart';
+import '../components/partner_document_upload_grid.dart';
+import '../components/partner_vehicle_details_section.dart';
 
 class PartnerRegistrationScreen extends ConsumerStatefulWidget {
   const PartnerRegistrationScreen({super.key});
@@ -15,20 +18,28 @@ class PartnerRegistrationScreen extends ConsumerStatefulWidget {
 class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Supported vehicle types: MOTORCYCLE, AUTO_RICKSHAW, CAB_SEDAN
+  // Banking fields: Bank Account Number, Bank IFSC Code, Bank Beneficiary Name
+  // Services: FOOD_DELIVERY, PARCEL, BIKE_TAXI
   String _selectedVehicle = 'MOTORCYCLE';
   final _regNumberController = TextEditingController();
   final _makeModelController = TextEditingController();
   final _bankAccountController = TextEditingController();
   final _ifscController = TextEditingController();
   final _beneficiaryController = TextEditingController();
+  final _upiController = TextEditingController();
   final _dlNumberController = TextEditingController();
 
-  // Supported onboarding service categories: FOOD_DELIVERY, PARCEL, BIKE_TAXI
   final Set<String> _selectedServices = {'FOOD_DELIVERY'};
-  bool _isUploadingDl = false;
-  bool _isUploadingRc = false;
-  String? _dlTicketId;
-  String? _rcTicketId;
+  final Map<String, String?> _ticketIds = {
+    'AADHAAR': null,
+    'DRIVING_LICENSE': null,
+    'VEHICLE_RC': null,
+    'VEHICLE_INSURANCE': null,
+    'SELFIE': null,
+    'BANK_PASSBOOK': null,
+  };
+  final Map<String, bool> _uploadingStates = {};
 
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -40,42 +51,55 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
     _bankAccountController.dispose();
     _ifscController.dispose();
     _beneficiaryController.dispose();
+    _upiController.dispose();
     _dlNumberController.dispose();
     super.dispose();
   }
 
   Future<void> _handleUpload(String docType) async {
+    final title = docType == 'SELFIE'
+        ? 'Facial Liveness Selfie'
+        : 'Attach ${docType.replaceAll('_', ' ')}';
+
+    final pickedDoc = await showDialog<PickedDocument>(
+      context: context,
+      builder: (_) => DocumentPickerDialog(title: title, documentType: docType),
+    );
+
+    if (pickedDoc == null) return;
+
     setState(() {
-      if (docType == 'DRIVING_LICENSE') _isUploadingDl = true;
-      if (docType == 'VEHICLE_RC') _isUploadingRc = true;
+      _uploadingStates[docType] = true;
       _errorMessage = null;
     });
 
     try {
       final client = ref.read(apiClientProvider);
-      final ticket = await client.createUploadTicket(docType, 'application/pdf', 2048576);
+      final ticket = await client.createUploadTicket(
+        docType,
+        pickedDoc.mimeType,
+        pickedDoc.sizeBytes,
+      );
       final ticketId = ticket['ticketId'] as String;
-      final dummyPdfBytes = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34];
-      await client.uploadDocumentBinary(ticketId, dummyPdfBytes);
+      await client.uploadDocumentBinary(ticketId, pickedDoc.bytes);
 
-      setState(() {
-        if (docType == 'DRIVING_LICENSE') _dlTicketId = ticketId;
-        if (docType == 'VEHICLE_RC') _rcTicketId = ticketId;
-      });
+      setState(() => _ticketIds[docType] = ticketId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${pickedDoc.fileName} uploaded successfully!')),
+        );
+      }
     } catch (e) {
       setState(() => _errorMessage = 'Upload failed: $e');
     } finally {
-      setState(() {
-        if (docType == 'DRIVING_LICENSE') _isUploadingDl = false;
-        if (docType == 'VEHICLE_RC') _isUploadingRc = false;
-      });
+      if (mounted) setState(() => _uploadingStates[docType] = false);
     }
   }
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_dlTicketId == null || _rcTicketId == null) {
-      setState(() => _errorMessage = 'Please upload both Driving License and Vehicle RC documents.');
+    if (_ticketIds['DRIVING_LICENSE'] == null || _ticketIds['VEHICLE_RC'] == null) {
+      setState(() => _errorMessage = 'Please upload at minimum Driving License and Vehicle RC.');
       return;
     }
 
@@ -86,7 +110,6 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
 
     try {
       final client = ref.read(apiClientProvider);
-
       await client.registerPartner({
         'vehicleType': _selectedVehicle,
         'vehicleRegistrationNumber': _regNumberController.text.trim().toUpperCase(),
@@ -94,6 +117,7 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
         'bankAccountNumber': _bankAccountController.text.trim(),
         'bankIfscCode': _ifscController.text.trim().toUpperCase(),
         'bankBeneficiaryName': _beneficiaryController.text.trim(),
+        'upiId': _upiController.text.trim(),
         'city': 'Chennai',
       });
 
@@ -101,23 +125,16 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
         await client.applyPartnerService(service);
       }
 
-      if (_dlTicketId != null) {
-        await client.submitPartnerDocument(
-          'DRIVING_LICENSE',
-          _dlTicketId!,
-          documentNumber: _dlNumberController.text.trim().toUpperCase(),
-        );
-      }
-      if (_rcTicketId != null) {
-        await client.submitPartnerDocument(
-          'VEHICLE_RC',
-          _rcTicketId!,
-          documentNumber: _regNumberController.text.trim().toUpperCase(),
-        );
+      for (final entry in _ticketIds.entries) {
+        if (entry.value != null) {
+          final docNum = entry.key == 'DRIVING_LICENSE'
+              ? _dlNumberController.text.trim().toUpperCase()
+              : (entry.key == 'VEHICLE_RC' ? _regNumberController.text.trim().toUpperCase() : null);
+          await client.submitPartnerDocument(entry.key, entry.value!, documentNumber: docNum);
+        }
       }
 
       await client.submitPartnerApplication();
-
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const ApprovalStatusScreen()),
@@ -143,14 +160,13 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Vehicle & Banking Information', style: AllGoTypography.heading2),
+                Text('Vehicle & Identity Registration', style: AllGoTypography.heading2),
                 const SizedBox(height: 8),
                 Text(
-                  'Provide your vehicle, bank, and regulatory identity details to start delivering with AllGo.',
+                  'Submit verified identity, vehicle RC, insurance, banking, and liveness selfie.',
                   style: AllGoTypography.subtitle,
                 ),
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 16),
                 if (_errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -161,123 +177,45 @@ class _PartnerRegistrationScreenState extends ConsumerState<PartnerRegistrationS
                     ),
                     child: Text(_errorMessage!, style: const TextStyle(color: AllGoColors.error, fontSize: 13)),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                 ],
-
-                Text('Vehicle Type', style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AllGoColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AllGoColors.divider),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedVehicle,
-                      isExpanded: true,
-                      items: const [
-                        DropdownMenuItem(value: 'BICYCLE', child: Text('Bicycle (Hyperlocal Delivery)')),
-                        DropdownMenuItem(value: 'MOTORCYCLE', child: Text('Motorcycle / Scooter (Deliveries & Bike Taxi)')),
-                        DropdownMenuItem(value: 'AUTO_RICKSHAW', child: Text('Auto Rickshaw (Mobility & Parcels)')),
-                        DropdownMenuItem(value: 'CAB_SEDAN', child: Text('Cab Sedan (Passenger Mobility)')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedVehicle = val);
-                      },
-                    ),
-                  ),
+                PartnerVehicleDetailsSection(
+                  selectedVehicle: _selectedVehicle,
+                  onVehicleChanged: (v) => setState(() => _selectedVehicle = v),
+                  regNumberController: _regNumberController,
+                  makeModelController: _makeModelController,
+                  dlNumberController: _dlNumberController,
                 ),
                 const SizedBox(height: 16),
-
-                AllGoTextField(
-                  label: 'Vehicle Registration Plate Number',
-                  hint: 'TN 01 AB 1234',
-                  controller: _regNumberController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                PartnerBankingAndUpiSection(
+                  bankAccountController: _bankAccountController,
+                  ifscController: _ifscController,
+                  beneficiaryController: _beneficiaryController,
+                  upiController: _upiController,
                 ),
-                const SizedBox(height: 12),
-
-                AllGoTextField(
-                  label: 'Make and Model',
-                  hint: 'Hero Splendor Plus',
-                  controller: _makeModelController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-
-                AllGoTextField(
-                  label: 'Bank Account Number',
-                  hint: 'Enter your 9-18 digit account number',
-                  controller: _bankAccountController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-
-                AllGoTextField(
-                  label: 'Bank IFSC Code',
-                  hint: 'e.g., SBIN0001234',
-                  controller: _ifscController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 12),
-
-                AllGoTextField(
-                  label: 'Bank Beneficiary Name',
-                  hint: 'Name as registered on passbook',
-                  controller: _beneficiaryController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-
-                AllGoTextField(
-                  label: 'Driving License Number',
-                  hint: 'DL-1420110012345',
-                  controller: _dlNumberController,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 18),
                 PartnerServiceSelector(
                   selectedServices: _selectedServices,
                   onToggle: (key, isSelected) {
                     setState(() {
-                      if (isSelected) {
-                        _selectedServices.add(key);
-                      } else {
-                        _selectedServices.remove(key);
-                      }
+                      if (isSelected) _selectedServices.add(key);
+                      else _selectedServices.remove(key);
                     });
                   },
                 ),
-                const SizedBox(height: 20),
-
-                Text('Mandatory Regulatory Documents (PDF / Images)', style: AllGoTypography.heading3.copyWith(fontSize: 15)),
-                const SizedBox(height: 10),
-                PartnerUploadButton(
-                  label: 'Driving License Copy',
-                  docType: 'DRIVING_LICENSE',
-                  isUploaded: _dlTicketId != null,
-                  isLoading: _isUploadingDl,
-                  onUpload: _handleUpload,
+                const SizedBox(height: 18),
+                PartnerDocumentUploadGrid(
+                  uploadedTicketIds: _ticketIds,
+                  uploadingStates: _uploadingStates,
+                  onUploadRequested: _handleUpload,
                 ),
-                const SizedBox(height: 10),
-                PartnerUploadButton(
-                  label: 'Vehicle Registration (RC)',
-                  docType: 'VEHICLE_RC',
-                  isUploaded: _rcTicketId != null,
-                  isLoading: _isUploadingRc,
-                  onUpload: _handleUpload,
-                ),
-
-                const SizedBox(height: 28),
+                const SizedBox(height: 22),
                 AllGoButton(
                   label: 'Submit Onboarding Application',
                   isLoading: _isSubmitting,
                   onPressed: _handleSubmit,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
               ],
             ),
           ),

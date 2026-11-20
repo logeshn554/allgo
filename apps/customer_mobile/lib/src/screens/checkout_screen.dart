@@ -6,6 +6,8 @@ import '../components/checkout_address_selector.dart';
 import '../components/checkout_payment_selector.dart';
 import '../components/checkout_bill_summary.dart';
 import 'order_detail_screen.dart';
+import 'address_editor_dialog.dart';
+import 'saved_addresses_screen.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -61,61 +63,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     } catch (_) {}
   }
 
-  void _showAddAddressDialog() {
-    final labelCtrl = TextEditingController(text: 'Home');
-    final nameCtrl = TextEditingController(text: 'Ramesh');
-    final phoneCtrl = TextEditingController(text: '+919876543210');
-    final line1Ctrl = TextEditingController(text: '42, 2nd Avenue, Anna Nagar');
-    final pinCtrl = TextEditingController(text: '600040');
-
-    showDialog(
+  Future<void> _showAddAddressDialog() async {
+    final newAddr = await showDialog<CustomerAddressModel>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Delivery Address'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AllGoTextField(label: 'Address Label', controller: labelCtrl),
-              const SizedBox(height: 8),
-              AllGoTextField(label: 'Recipient Name', controller: nameCtrl),
-              const SizedBox(height: 8),
-              AllGoTextField(label: 'Phone Number', controller: phoneCtrl),
-              const SizedBox(height: 8),
-              AllGoTextField(label: 'Street Address', controller: line1Ctrl),
-              const SizedBox(height: 8),
-              AllGoTextField(label: 'PIN Code', controller: pinCtrl),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final newAddr = await ref.read(apiClientProvider).createCustomerAddress(
-                CustomerAddressModel(
-                  id: '',
-                  label: labelCtrl.text,
-                  recipientName: nameCtrl.text,
-                  recipientPhone: phoneCtrl.text,
-                  addressLine1: line1Ctrl.text,
-                  city: 'Chennai',
-                  postalCode: pinCtrl.text,
-                  latitude: 13.0827,
-                  longitude: 80.2707,
-                ),
-              );
-              setState(() {
-                _addresses.add(newAddr);
-                _selectedAddress = newAddr;
-              });
-            },
-            child: const Text('Save Address'),
-          ),
-        ],
-      ),
+      builder: (ctx) => const AddressEditorDialog(),
     );
+
+    if (newAddr != null && mounted) {
+      setState(() {
+        _addresses.add(newAddr);
+        _selectedAddress = newAddr;
+      });
+    }
   }
 
   Future<void> _handlePlaceOrder() async {

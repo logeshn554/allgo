@@ -15,9 +15,6 @@ export class CartService {
     private readonly pricingService: PricingService
   ) {}
 
-  /**
-   * Get or create active cart for customer
-   */
   async getOrCreateCart(customerId: string): Promise<string> {
     const res = await this.db.query(
       `INSERT INTO carts (customer_id)
@@ -29,9 +26,6 @@ export class CartService {
     return res.rows[0].id;
   }
 
-  /**
-   * Get cart with items, live prices and totals
-   */
   async getCart(customerId: string): Promise<any> {
     const cartId = await this.getOrCreateCart(customerId);
 
@@ -74,7 +68,6 @@ export class CartService {
       address: firstItem.outlet_address,
     };
 
-    // Calculate live pricing
     const pricing = await this.pricingService.calculateCheckoutTotals(
       itemsRes.rows,
       firstItem.outlet_id
@@ -111,13 +104,9 @@ export class CartService {
     };
   }
 
-  /**
-   * Add item to customer cart with single-outlet enforcement
-   */
   async addToCart(customerId: string, dto: AddToCartDto): Promise<any> {
     const cartId = await this.getOrCreateCart(customerId);
 
-    // 1. Verify item exists and is active
     const itemRes = await this.db.query(
       `SELECT i.id, i.name, i.is_active, cat.outlet_id, o.merchant_id, m.status as merchant_status
        FROM items i
@@ -138,7 +127,6 @@ export class CartService {
       throw new BadRequestException(`Item "${item.name}" is currently unavailable`);
     }
 
-    // 2. Verify outlet belongs to merchant and is active
     const outletRes = await this.db.query(
       `SELECT id, outlet_name, outlet_status FROM outlets WHERE id = $1 AND merchant_id = $2;`,
       [dto.outletId, item.merchant_id]
@@ -153,7 +141,6 @@ export class CartService {
       throw new BadRequestException(`Outlet "${outlet.outlet_name}" is currently closed or unapproved`);
     }
 
-    // 3. Check inventory stock
     const invRes = await this.db.query(
       `SELECT stock_quantity, is_in_stock FROM inventory WHERE outlet_id = $1 AND item_id = $2;`,
       [dto.outletId, dto.itemId]
@@ -166,7 +153,6 @@ export class CartService {
       }
     }
 
-    // 4. Single-Outlet Cart Check
     const existingCartItemsRes = await this.db.query(
       `SELECT ci.outlet_id, o.outlet_name
        FROM cart_items ci
@@ -191,15 +177,12 @@ export class CartService {
           });
         }
 
-        // Replace existing cart items
         await this.db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cartId]);
       }
     }
 
-    // 5. Insert or update item in cart
     const selectedOptionsJson = JSON.stringify(dto.selectedOptions || []);
 
-    // Check if identical item (with same variant and options) already exists in cart
     const existingItemRes = await this.db.query(
       `SELECT id, quantity FROM cart_items
        WHERE cart_id = $1 AND item_id = $2 AND outlet_id = $3
@@ -207,7 +190,6 @@ export class CartService {
          AND selected_options = $5::jsonb;`,
       [cartId, dto.itemId, dto.outletId, dto.variantId || null, selectedOptionsJson]
     );
-
     if (existingItemRes.rows.length > 0) {
       const newQty = existingItemRes.rows[0].quantity + dto.quantity;
       await this.db.query(
@@ -231,16 +213,10 @@ export class CartService {
         ]
       );
     }
-
     return this.getCart(customerId);
   }
-
-  /**
-   * Update quantity or options of item in cart
-   */
   async updateCartItem(customerId: string, cartItemId: string, dto: UpdateCartItemDto): Promise<any> {
     const cartId = await this.getOrCreateCart(customerId);
-
     if (dto.quantity <= 0) {
       await this.db.query(`DELETE FROM cart_items WHERE id = $1 AND cart_id = $2;`, [cartItemId, cartId]);
     } else {
@@ -255,22 +231,13 @@ export class CartService {
         [dto.quantity, selectedOptionsJson, dto.specialInstructions || null, cartItemId, cartId]
       );
     }
-
     return this.getCart(customerId);
   }
-
-  /**
-   * Remove item from cart
-   */
   async removeCartItem(customerId: string, cartItemId: string): Promise<any> {
     const cartId = await this.getOrCreateCart(customerId);
     await this.db.query(`DELETE FROM cart_items WHERE id = $1 AND cart_id = $2;`, [cartItemId, cartId]);
     return this.getCart(customerId);
   }
-
-  /**
-   * Clear entire cart
-   */
   async clearCart(customerId: string): Promise<void> {
     const cartId = await this.getOrCreateCart(customerId);
     await this.db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cartId]);

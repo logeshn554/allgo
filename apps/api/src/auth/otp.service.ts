@@ -8,21 +8,30 @@ import { ConfigService } from '../config/config.service.js';
 import { RedisService } from '../redis/redis.service.js';
 import { LocalOtpDeliveryAdapter } from './adapters/local-otp-delivery.adapter.js';
 import { SendOtpDto } from './dto/send-otp.dto.js';
+import { SmsAbuseProtectionService } from './sms-abuse-protection.service.js';
+import { IndiaDltSmsGateway } from '../notifications/sms/india-dlt-sms.gateway.js';
+import { DLT_TEMPLATES } from '../notifications/sms/sms-gateway.interface.js';
 
 @Injectable()
 export class OtpService {
   private readonly otpSecurityService: OtpSecurityService;
+  private readonly abuseProtection: SmsAbuseProtectionService;
+  private readonly dltSmsGateway: IndiaDltSmsGateway;
 
   constructor(
     private readonly config: ConfigService,
     private readonly redis: RedisService,
     private readonly otpAdapter: LocalOtpDeliveryAdapter,
+    abuseProtection?: SmsAbuseProtectionService,
+    dltSmsGateway?: IndiaDltSmsGateway
   ) {
     this.otpSecurityService = new OtpSecurityService(
       this.config.otpPepper,
       this.config.otpTtlSeconds,
       this.config.otpMaxAttempts
     );
+    this.abuseProtection = abuseProtection || new SmsAbuseProtectionService(this.redis);
+    this.dltSmsGateway = dltSmsGateway || new IndiaDltSmsGateway(this.config);
   }
 
   validateIndianPhone(phone: string): string {
@@ -42,48 +51,32 @@ export class OtpService {
   async sendOtp(dto: SendOtpDto, clientIp: string = '127.0.0.1'): Promise<{ status: string; cooldownSeconds: number }> {
     const phone = this.validateIndianPhone(dto.phone);
 
-    // 1. Enforce 60-second resend cooldown
-    const cooldownKey = `otp:cooldown:${phone}`;
-    const inCooldown = await this.redis.exists(cooldownKey);
-    if (inCooldown) {
-      throw new BadRequestException('Please wait 60 seconds before requesting another OTP.');
+    // Abuse Protection: Per-phone, per-IP limits, and SMS-pumping alerts
+    const abuseCheck = await this.abuseProtection.checkAndRecordSmsRequest(phone, clientIp);
+    if (!abuseCheck.allowed) {
+      throw new BadRequestException(abuseCheck.reason || 'SMS limit exceeded.');
     }
 
-    // 2. Enforce Hourly Phone Rate Limit (max 3/hr)
-    const phoneRateKey = `otp:rate:phone:${phone}`;
-    const phoneRequests = await this.redis.hincrby(phoneRateKey, 'count', 1);
-    if (phoneRequests === 1) {
-      await this.redis.expire(phoneRateKey, 3600);
-    }
-    if (phoneRequests > 3) {
-      throw new BadRequestException('Too many OTP requests for this phone number. Please try again in an hour.');
-    }
-
-    // 3. Enforce IP Rate Limit (max 5/15min)
-    const ipRateKey = `otp:rate:ip:${clientIp}`;
-    const ipRequests = await this.redis.hincrby(ipRateKey, 'count', 1);
-    if (ipRequests === 1) {
-      await this.redis.expire(ipRateKey, 900);
-    }
-    if (ipRequests > 5) {
-      throw new BadRequestException('Too many OTP requests from this network. Please try again later.');
-    }
-
-    // 4. Generate cryptographically secure 6-digit OTP
+    // Generate cryptographically secure 6-digit OTP
     const otp = this.otpSecurityService.generateSecureOtp(6);
     const hmacDigest = this.otpSecurityService.computeOtpHmac(phone, otp);
 
-    // 5. Store challenge in Redis with 300s TTL (never store plaintext OTP)
+    // Store challenge in Redis with 300s TTL (never store plaintext OTP)
     const challengeKey = `otp:challenge:${phone}`;
     await this.redis.hset(challengeKey, 'hmac', hmacDigest);
     await this.redis.hset(challengeKey, 'attempts', '0');
     await this.redis.expire(challengeKey, this.config.otpTtlSeconds);
 
-    // 6. Set resend cooldown in Redis (60s)
-    await this.redis.setex(cooldownKey, this.config.otpResendCooldownSeconds, '1');
-
-    // 7. Deliver OTP via local adapter
-    await this.otpAdapter.deliverOtp(phone, otp);
+    // Deliver OTP: Production uses India DLT SMS Gateway. Local dev uses LocalOtpDeliveryAdapter
+    if (this.config.isProduction) {
+      await this.dltSmsGateway.sendCriticalAlert(
+        phone,
+        `Your AllGo security code is ${otp}. Valid for 5 minutes. Do not share.`,
+        { dltTemplateId: DLT_TEMPLATES.OTP_VERIFICATION }
+      );
+    } else {
+      await this.otpAdapter.deliverOtp(phone, otp);
+    }
 
     return {
       status: 'OTP_SENT',

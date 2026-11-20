@@ -1,0 +1,1 @@
+{"version":3,"file":"service-vertical.js","sourceRoot":"","sources":["../../src/contracts/service-vertical.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB;;GAEG;AACH,MAAM,CAAC,MAAM,eAAe,GAAG;IAC7B,YAAY,EAAE,cAAc;IAC5B,eAAe,EAAE,iBAAiB;IAClC,eAAe,EAAE,iBAAiB;CAC1B,CAAC;AAIX,MAAM,CAAC,MAAM,qBAAqB,GAAG,CAAC,CAAC,UAAU,CAAC,eAAe,CAAC,CAAC"}

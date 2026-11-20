@@ -115,7 +115,7 @@ class MerchantSpecialClosuresTab extends StatelessWidget {
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: AllGoColors.error),
-                          onPressed: () => onDeleteClosure(closure.id),
+                          onPressed: () => onDeleteClosure(closure.id ?? ''),
                         ),
                       ),
                     );

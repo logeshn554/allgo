@@ -1,0 +1,13 @@
+{
+  "@@locale": "ta",
+  "appTitle": "ஆல்கோ பார்ட்னர்",
+  "partnerDuty": "பணி & வேலைகள்",
+  "modeDeliveries": "டெலிவரி மட்டும்",
+  "modeRides": "பயணங்கள் மட்டும்",
+  "modeAllJobs": "அனைத்து வேலைகள் (அதிக வருமானம்)",
+  "unifiedEarnings": "ஒருங்கிணைந்த தினசரி வருமானம்",
+  "nextJobMatching": "இறக்குமிடம் அருகே அடுத்த வேலை",
+  "proofOfDelivery": "டெலிவரி சான்று",
+  "handoverOtp": "ஒப்படைப்பு OTP",
+  "languagePicker": "மொழியைத் தேர்ந்தெடுக்கவும்"
+}

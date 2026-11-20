@@ -10,6 +10,7 @@ class AllGoTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final bool obscureText;
   final Widget? prefix;
+  final Widget? prefixIcon;
   final Widget? suffix;
   final void Function(String)? onChanged;
   final bool enabled;
@@ -24,6 +25,7 @@ class AllGoTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.prefix,
+    this.prefixIcon,
     this.suffix,
     this.onChanged,
     this.enabled = true,
@@ -54,7 +56,7 @@ class AllGoTextField extends StatelessWidget {
           style: AllGoTypography.bodyLarge,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: prefix,
+            prefixIcon: prefixIcon ?? prefix,
             suffixIcon: suffix,
           ),
         ),

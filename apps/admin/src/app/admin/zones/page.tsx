@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../../../lib/api-client';
 import { ZonesMetrics } from '../../../components/zones/ZonesMetrics';
@@ -7,21 +6,16 @@ import { ZonesTable } from '../../../components/zones/ZonesTable';
 import { ZoneSurgeModal } from '../../../components/zones/ZoneSurgeModal';
 import { CreateZoneModal } from '../../../components/zones/CreateZoneModal';
 import { ServiceabilitySimulator } from '../../../components/zones/ServiceabilitySimulator';
-
 export default function ServiceZonesPage() {
   const [zones, setZones] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Surge Modal State
   const [selectedZoneForSurge, setSelectedZoneForSurge] = useState<any | null>(null);
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.5);
   const [surgeReason, setSurgeReason] = useState('');
   const [isSurgeActive, setIsSurgeActive] = useState(true);
   const [isSavingSurge, setIsSavingSurge] = useState(false);
-
-  // New Zone Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
   const [newZoneCode, setNewZoneCode] = useState('');
@@ -44,15 +38,12 @@ export default function ServiceZonesPage() {
     )
   );
   const [isCreatingZone, setIsCreatingZone] = useState(false);
-
-  // Serviceability Simulator State
   const [showSimulator, setShowSimulator] = useState(false);
   const [simLat, setSimLat] = useState('13.0850');
   const [simLng, setSimLng] = useState('80.2150');
   const [simVertical, setSimVertical] = useState('FOOD');
   const [simResult, setSimResult] = useState<any | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
-
   const fetchZones = async () => {
     setIsLoading(true);
     setErrorMessage(null);
@@ -65,11 +56,9 @@ export default function ServiceZonesPage() {
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     fetchZones();
   }, []);
-
   const handleOpenSurgeModal = (zone: any) => {
     setSelectedZoneForSurge(zone);
     const foodSetting = zone.service_settings?.find((s: any) => s.verticalType === 'FOOD');
@@ -77,7 +66,6 @@ export default function ServiceZonesPage() {
     setIsSurgeActive(foodSetting?.isSurgeActive ?? true);
     setSurgeReason(foodSetting?.surgeReason || '');
   };
-
   const handleSaveSurge = async () => {
     if (!selectedZoneForSurge) return;
     if (!surgeReason.trim()) {
@@ -101,7 +89,6 @@ export default function ServiceZonesPage() {
       setIsSavingSurge(false);
     }
   };
-
   const handleCreateZone = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsCreatingZone(true);
@@ -114,7 +101,6 @@ export default function ServiceZonesPage() {
         setIsCreatingZone(false);
         return;
       }
-
       await adminApi.createZone({
         name: newZoneName.trim(),
         code: newZoneCode.trim().toUpperCase(),
@@ -143,7 +129,6 @@ export default function ServiceZonesPage() {
           },
         ],
       });
-
       setShowCreateModal(false);
       setNewZoneName('');
       setNewZoneCode('');
@@ -155,7 +140,6 @@ export default function ServiceZonesPage() {
       setIsCreatingZone(false);
     }
   };
-
   const handleRunSimulator = async () => {
     setIsSimulating(true);
     setSimResult(null);
@@ -170,13 +154,11 @@ export default function ServiceZonesPage() {
       setIsSimulating(false);
     }
   };
-
   const totalZones = zones.length;
   const activeZones = zones.filter((z) => z.is_active).length;
   const surgeActiveCount = zones.filter((z) =>
     z.service_settings?.some((s: any) => s.isSurgeActive && s.surgeMultiplier > 1.0)
   ).length;
-
   return (
     <div style={{ padding: '32px', backgroundColor: '#F8FAFC', minHeight: '100vh' }}>
       {/* Top Banner */}
@@ -212,22 +194,18 @@ export default function ServiceZonesPage() {
           </button>
         </div>
       </div>
-
       {successMessage && (
         <div style={{ padding: '12px 16px', backgroundColor: '#ECFDF5', color: '#065F46', borderRadius: '8px', marginBottom: '20px', border: '1px solid #A7F3D0', display: 'flex', justifyContent: 'space-between' }}>
           <span>✓ {successMessage}</span>
           <button onClick={() => setSuccessMessage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065F46' }}>✕</button>
         </div>
       )}
-
       {errorMessage && (
         <div style={{ padding: '12px 16px', backgroundColor: '#FEF2F2', color: '#991B1B', borderRadius: '8px', marginBottom: '20px', border: '1px solid #FECACA' }}>
           ⚠ {errorMessage}
         </div>
       )}
-
       <ZonesMetrics totalZones={totalZones} activeZones={activeZones} surgeActiveCount={surgeActiveCount} />
-
       <ServiceabilitySimulator
         showSimulator={showSimulator}
         simLat={simLat}
@@ -240,9 +218,7 @@ export default function ServiceZonesPage() {
         isSimulating={isSimulating}
         handleRunSimulator={handleRunSimulator}
       />
-
       <ZonesTable zones={zones} isLoading={isLoading} onOpenSurgeModal={handleOpenSurgeModal} />
-
       <ZoneSurgeModal
         selectedZoneForSurge={selectedZoneForSurge}
         isSurgeActive={isSurgeActive}
@@ -255,7 +231,6 @@ export default function ServiceZonesPage() {
         onSaveSurge={handleSaveSurge}
         isSavingSurge={isSavingSurge}
       />
-
       <CreateZoneModal
         showCreateModal={showCreateModal}
         onClose={() => setShowCreateModal(false)}

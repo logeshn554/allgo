@@ -22,7 +22,8 @@ export type ScreenName =
   | 'admin_dispatch'
   | 'customer_onboarding'
   | 'partner_kyc'
-  | 'merchant_setup';
+  | 'merchant_setup'
+  | 'wallet';
 
 interface Props {
   onNavigate: (screen: ScreenName) => void;
@@ -50,6 +51,7 @@ export const HomePage: React.FC<Props> = ({ onNavigate }) => {
         <ServiceCard title="Instant Grocery" subtitle="15-min delivery" iconKey="grocery" onPress={() => onNavigate('grocery')} />
         <ServiceCard title="Book a Ride" subtitle="Bike, Auto & Cab" iconKey="rides" onPress={() => onNavigate('rides')} />
         <ServiceCard title="Send Parcel" subtitle="Door-to-door" iconKey="parcel" onPress={() => onNavigate('parcel')} />
+        <ServiceCard title="AllGo Wallet" subtitle="Refunds & Cash" iconKey="wallet" onPress={() => onNavigate('wallet')} />
         <ServiceCard title="Driver Engine" subtitle="PoD & Earnings" iconKey="bike" onPress={() => onNavigate('driver')} />
         <ServiceCard title="Merchant KDS" subtitle="Prep timers & 86ing" iconKey="grocery" onPress={() => onNavigate('kds')} />
         <ServiceCard title="Central Dispatch" subtitle="God View & Disputes" iconKey="rides" onPress={() => onNavigate('admin_dispatch')} />

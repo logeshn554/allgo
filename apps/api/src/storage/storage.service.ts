@@ -4,6 +4,8 @@ import { CreateUploadTicketDto } from './dto/create-upload-ticket.dto.js';
 import { UploadTicketRepository, UploadTicket } from './data/upload-ticket.repository.js';
 import { FileStorageService } from './file-storage.service.js';
 import { UploadTicketService } from './upload-ticket.service.js';
+import { CloudKmsService } from './cloud-kms.service.js';
+import { SignedUrlOptions, StoredFileMetadata } from './file-storage.interface.js';
 
 export { UploadTicket };
 
@@ -14,10 +16,8 @@ export class StorageService implements OnModuleInit {
   private readonly fileStorage: FileStorageService;
   private readonly ticketService: UploadTicketService;
   private readonly ticketRepo: UploadTicketRepository;
+  private readonly kmsService: CloudKmsService;
 
-  /**
-   * Scan hook preserved for testing monkey-patching in storage-and-encryption.spec.ts.
-   */
   public scanFileWithClamAv = async (filePath: string): Promise<{ clean: boolean; error?: string }> => {
     return this.fileStorage.scanFileWithClamAv(filePath);
   };
@@ -27,20 +27,23 @@ export class StorageService implements OnModuleInit {
     fileStorage?: FileStorageService,
     ticketService?: UploadTicketService,
     ticketRepo?: UploadTicketRepository,
+    kmsService?: CloudKmsService,
   ) {
+    this.kmsService = kmsService || new CloudKmsService();
     if (fileStorage && ticketService && ticketRepo) {
       this.fileStorage = fileStorage;
       this.ticketService = ticketService;
       this.ticketRepo = ticketRepo;
     } else {
       this.ticketRepo = new UploadTicketRepository(this.db);
-      this.fileStorage = new FileStorageService();
+      this.fileStorage = new FileStorageService(this.kmsService);
       this.ticketService = new UploadTicketService(this.ticketRepo, this.fileStorage);
     }
   }
 
   onModuleInit() {
     this.fileStorage.ensureStorageRootExists();
+    this.kmsService.initializeKms();
   }
 
   public getStorageRoot(): string {
@@ -63,19 +66,36 @@ export class StorageService implements OnModuleInit {
     return this.fileStorage.getFileBuffer(storageKey);
   }
 
-  async createTicket(userId: string, dto: CreateUploadTicketDto): Promise<UploadTicket> {
+  public async generateSignedUploadUrl(storageKey: string, options?: SignedUrlOptions): Promise<string> {
+    return this.fileStorage.generateSignedUploadUrl(storageKey, options);
+  }
+
+  public async generateSignedDownloadUrl(storageKey: string, options?: SignedUrlOptions): Promise<string> {
+    return this.fileStorage.generateSignedDownloadUrl(storageKey, options);
+  }
+
+  public async uploadKmsEncryptedFile(
+    storageKey: string,
+    buffer: Buffer,
+    declaredMimeType: string,
+    kmsKeyId?: string
+  ): Promise<StoredFileMetadata> {
+    return this.fileStorage.uploadBufferWithKms(storageKey, buffer, declaredMimeType, kmsKeyId);
+  }
+
+  public async createTicket(userId: string, dto: CreateUploadTicketDto): Promise<UploadTicket> {
     return this.ticketService.createTicket(userId, dto);
   }
 
-  async getTicket(ticketId: string): Promise<UploadTicket | null> {
+  public async getTicket(ticketId: string): Promise<UploadTicket | null> {
     return this.ticketService.getTicket(ticketId);
   }
 
-  async saveUploadedFile(ticketId: string, userId: string, buffer: Buffer): Promise<UploadTicket> {
+  public async saveUploadedFile(ticketId: string, userId: string, buffer: Buffer): Promise<UploadTicket> {
     return this.ticketService.saveUploadedFile(ticketId, userId, buffer, this.scanFileWithClamAv);
   }
 
-  async linkTicket(
+  public async linkTicket(
     ticketId: string,
     userId: string,
     entityType: 'partner' | 'merchant',
@@ -84,7 +104,7 @@ export class StorageService implements OnModuleInit {
     return this.ticketService.linkTicket(ticketId, userId, entityType, entityId);
   }
 
-  async cleanupOrphanUploads(): Promise<{ cleanedCount: number }> {
+  public async cleanupOrphanUploads(): Promise<{ cleanedCount: number }> {
     return this.ticketService.cleanupOrphanUploads();
   }
 }

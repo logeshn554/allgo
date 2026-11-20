@@ -7,6 +7,11 @@ import { TokenSessionService } from './token-session.service.js';
 import { LocalOtpDeliveryAdapter } from './adapters/local-otp-delivery.adapter.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
+import { FirebaseAdminAuthService } from './firebase-auth.service.js';
+import { FirebaseSessionExchangeService } from './firebase-session-exchange.service.js';
+import { AppCheckGuard } from './guards/app-check.guard.js';
+import { SmsAbuseProtectionService } from './sms-abuse-protection.service.js';
+import { IndiaDltSmsGateway } from '../notifications/sms/india-dlt-sms.gateway.js';
 
 @Module({
   controllers: [AuthController],
@@ -18,7 +23,23 @@ import { RolesGuard } from '../common/guards/roles.guard.js';
     LocalOtpDeliveryAdapter,
     JwtAuthGuard,
     RolesGuard,
+    FirebaseAdminAuthService,
+    FirebaseSessionExchangeService,
+    AppCheckGuard,
+    SmsAbuseProtectionService,
+    IndiaDltSmsGateway,
   ],
-  exports: [AuthService, JwtAuthGuard, RolesGuard, LocalOtpDeliveryAdapter, AuthRepository],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    RolesGuard,
+    LocalOtpDeliveryAdapter,
+    AuthRepository,
+    FirebaseAdminAuthService,
+    FirebaseSessionExchangeService,
+    AppCheckGuard,
+    SmsAbuseProtectionService,
+    IndiaDltSmsGateway,
+  ],
 })
 export class AuthModule {}

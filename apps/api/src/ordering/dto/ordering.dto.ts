@@ -35,6 +35,7 @@ export class PlaceOrderDto {
   deliveryInstructions?: string;
   customerNotes?: string;
   idempotencyKey?: string;
+  scheduledFor?: string;
 }
 
 export class MerchantAcceptOrderDto {
@@ -61,6 +62,21 @@ export class CreateAddressDto {
   postalCode!: string;
   latitude!: number;
   longitude!: number;
+  isDefault?: boolean;
+}
+
+export class UpdateAddressDto {
+  label?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  landmark?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
   isDefault?: boolean;
 }
 

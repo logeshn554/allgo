@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { UsersService } from './users.service.js';
+import { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
@@ -23,6 +24,46 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update customer/user self-service profile (IDOR-safe)' })
+  @ApiResponse({ status: 200, description: 'User profile successfully updated' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    const userId = req.user?.userId || req.user?.sub;
+    if (!userId) {
+      throw new ForbiddenException('User context is missing');
+    }
+    return this.usersService.updateUserProfile(userId, dto);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update user self-service profile alias (IDOR-safe)' })
+  @ApiResponse({ status: 200, description: 'User profile successfully updated' })
+  async updateMe(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    return this.updateProfile(req, dto);
+  }
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Retrieve own profile for authenticated user' })
+  @ApiResponse({ status: 200, description: 'User profile details' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@Req() req: any) {
+    const userId = req.user?.userId || req.user?.sub;
+    if (!userId) {
+      throw new ForbiddenException('User context is missing');
+    }
+    return this.usersService.getUserById(userId);
+  }
+
+  @Get('me')
+  @ApiOperation({ summary: 'Retrieve own profile alias for authenticated user' })
+  @ApiResponse({ status: 200, description: 'User profile details' })
+  async getMe(@Req() req: any) {
+    return this.getProfile(req);
+  }
 
   @Get()
   @Roles('ADMIN')

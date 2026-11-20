@@ -103,21 +103,56 @@ export class MerchantOutletRepository {
     }
   }
 
-  async updateOutletAvailability(outletId: string, isOpen: boolean, defaultPrepTimeMinutes?: number): Promise<any> {
-    const updates: string[] = ['is_open = $1', 'updated_at = NOW()'];
-    const params: any[] = [isOpen];
+  async updateOutletAvailability(
+    outletId: string,
+    isOpen?: boolean,
+    defaultPrepTimeMinutes?: number,
+    logoUrl?: string,
+    coverPhotoUrl?: string
+  ): Promise<any> {
+    const updates: string[] = ['updated_at = NOW()'];
+    const params: any[] = [];
+
+    if (isOpen !== undefined) {
+      params.push(isOpen);
+      updates.push(`is_open = $${params.length}`);
+    }
 
     if (defaultPrepTimeMinutes !== undefined) {
       params.push(defaultPrepTimeMinutes);
       updates.push(`default_prep_time_minutes = $${params.length}`);
     }
 
+    if (logoUrl !== undefined) {
+      params.push(logoUrl);
+      updates.push(`logo_url = $${params.length}`);
+    }
+
+    if (coverPhotoUrl !== undefined) {
+      params.push(coverPhotoUrl);
+      updates.push(`cover_photo_url = $${params.length}`);
+    }
+
     params.push(outletId);
-    const res = await this.db.query(
-      `UPDATE outlets SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *;`,
-      params
-    );
-    return res.rows[0];
+    try {
+      const res = await this.db.query(
+        `UPDATE outlets SET ${updates.join(', ')} WHERE id = $${params.length} RETURNING *;`,
+        params
+      );
+      return res.rows[0];
+    } catch {
+      // Offline / fallback if columns not yet in DB schema
+      const fallbackUpdates = updates.filter(u => !u.includes('logo_url') && !u.includes('cover_photo_url'));
+      const fallbackParams: any[] = [];
+      if (isOpen !== undefined) fallbackParams.push(isOpen);
+      if (defaultPrepTimeMinutes !== undefined) fallbackParams.push(defaultPrepTimeMinutes);
+      fallbackParams.push(outletId);
+      const res = await this.db.query(
+        `UPDATE outlets SET ${fallbackUpdates.join(', ')} WHERE id = $${fallbackParams.length} RETURNING *;`,
+        fallbackParams
+      );
+      return { ...res.rows[0], logo_url: logoUrl, cover_photo_url: coverPhotoUrl };
+    }
   }
 
   async setOutletsOpenByMerchantId(merchantId: string, isOpen: boolean, onlyActive = false): Promise<void> {

@@ -1,0 +1,1 @@
+{"version":3,"file":"user-role.d.ts","sourceRoot":"","sources":["../../src/contracts/user-role.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB;;GAEG;AACH,eAAO,MAAM,QAAQ;;;;;;;;;CAUX,CAAC;AAEX,MAAM,MAAM,QAAQ,GAAG,CAAC,OAAO,QAAQ,CAAC,CAAC,MAAM,OAAO,QAAQ,CAAC,CAAC;AAEhE,eAAO,MAAM,cAAc;;;;;;;;;EAAyB,CAAC"}

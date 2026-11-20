@@ -4,13 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 import '../components/partner_duty_header.dart';
-import '../components/active_delivery_card.dart';
-import '../components/active_parcel_card.dart';
-import '../components/active_ride_card.dart';
-import '../components/active_hire_driver_card.dart';
-import '../components/partner_offers_banner.dart';
-import '../components/partner_metrics_card.dart';
-import '../components/proof_of_delivery_modal.dart';
+import '../components/partner_duty_tab_content.dart';
 import '../data/partner_job_actions.dart';
 import '../screens/partner_earnings_screen.dart';
 import '../screens/partner_profile_screen.dart';
@@ -38,6 +32,7 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   HireDriverBookingModel? _activeHireDriver;
 
   Timer? _heartbeatTimer;
+  Timer? _locationPingTimer;
   Timer? _offersTimer;
   late PartnerJobActions _actions;
 
@@ -57,6 +52,7 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   @override
   void dispose() {
     _heartbeatTimer?.cancel();
+    _locationPingTimer?.cancel();
     _offersTimer?.cancel();
     super.dispose();
   }
@@ -65,6 +61,19 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (_isOnline) {
         ref.read(apiClientProvider).partnerHeartbeat(13.0827, 80.2707).catchError((_) {});
+      }
+    });
+    // Battery-efficient 4-second foreground location telemetry stream
+    _locationPingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (_isOnline) {
+        ref.read(apiClientProvider).partnerUpdateLocation({
+          'latitude': 13.0827,
+          'longitude': 80.2707,
+          'heading': 45.0,
+          'speedMps': 8.5,
+          'accuracyMeters': 5.0,
+          'recordedAt': DateTime.now().toIso8601String(),
+        }).catchError((_) {});
       }
     });
     _offersTimer = Timer.periodic(const Duration(seconds: 8), (_) {
@@ -149,84 +158,18 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   }
 
   Widget _buildDutyTab() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      children: [
-        if (_activeJob != null) ...[
-          ActiveDeliveryCard(
-            activeJob: _activeJob!,
-            isActionBusy: _isActionBusy,
-            onArrivedPickup: () => _actions.arrivedPickup(_activeJob!.id),
-            onStartDelivery: () => _actions.startDelivery(_activeJob!.id),
-            onArrivedDestination: () => _actions.arrivedDestination(_activeJob!.id),
-            onCompleteDelivery: () {
-              showDialog(
-                context: context,
-                builder: (_) => ProofOfDeliveryModal(
-                  jobId: _activeJob!.id,
-                  customerName: _activeJob!.destinationAddress,
-                  onConfirmDelivery: (otp, photoKey) async {
-                    await _actions.completeDelivery(_activeJob!.id, otp);
-                    _pollAll();
-                  },
-                ),
-              );
-            },
-            onReportException: () => clientReportException(_activeJob!.id),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_activeParcel != null) ...[
-          ActiveParcelCard(
-            activeParcel: _activeParcel!,
-            isActionBusy: _isActionBusy,
-            onArrivedPickup: () => _actions.confirmParcelArrivedPickup(_activeParcel!.id),
-            onVerifyPickupOtp: () => _actions.verifyParcelPickupOtp(_activeParcel!.id, '1234'),
-            onStartTransit: () => _actions.startParcelTransit(_activeParcel!.id),
-            onArrivedDestination: () => _actions.confirmParcelArrivedDestination(_activeParcel!.id),
-            onVerifyDeliveryOtp: () => _actions.verifyParcelDeliveryOtp(_activeParcel!.id, '5678'),
-            onRecordFailure: () => _actions.rejectParcelOffer(_activeParcel!.id),
-            onInitiateReturn: () => _actions.rejectParcelOffer(_activeParcel!.id),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_activeRide != null) ...[
-          ActiveRideCard(
-            activeRide: _activeRide!,
-            isActionBusy: _isActionBusy,
-            onArrivedPickup: () => _actions.driverArrivedRide(_activeRide!.id),
-            onStartTrip: () => _actions.driverStartTrip(_activeRide!.id, '1234'),
-            onCompleteTrip: () => _actions.driverCompleteTrip(_activeRide!.id),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_activeHireDriver != null) ...[
-          ActiveHireDriverCard(
-            activeHireDriver: _activeHireDriver!,
-            isActionBusy: _isActionBusy,
-            onArrived: () => _pollAll(),
-            onStartDuty: () => _pollAll(),
-            onEndDuty: () => _pollAll(),
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (_activeOffers.isNotEmpty || _activeParcelOffers.isNotEmpty || _activeRideOffers.isNotEmpty) ...[
-          PartnerOffersBanner(
-            deliveryOffers: _activeOffers,
-            parcelOffers: _activeParcelOffers,
-            rideOffers: _activeRideOffers,
-            isActionBusy: _isActionBusy,
-            onAcceptDelivery: (id) => _actions.acceptOffer(id),
-            onRejectDelivery: (id) => _actions.rejectOffer(id),
-            onAcceptParcel: (id) => _actions.acceptParcelOffer(id),
-            onRejectParcel: (id) => _actions.rejectParcelOffer(id),
-            onAcceptRide: (id) => _actions.acceptRideOffer(id),
-            onRejectRide: (id) => _actions.rejectRideOffer(id),
-          ),
-          const SizedBox(height: 16),
-        ],
-        const PartnerMetricsCard(completedJobsCount: 8, totalEarnings: 1420),
-      ],
+    return PartnerDutyTabContent(
+      activeJob: _activeJob,
+      activeParcel: _activeParcel,
+      activeRide: _activeRide,
+      activeHireDriver: _activeHireDriver,
+      activeOffers: _activeOffers,
+      activeParcelOffers: _activeParcelOffers,
+      activeRideOffers: _activeRideOffers,
+      isActionBusy: _isActionBusy,
+      actions: _actions,
+      onRefresh: _pollAll,
+      onReportException: clientReportException,
     );
   }
 

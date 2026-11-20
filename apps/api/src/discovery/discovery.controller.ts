@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Delete,
+  Param,
   Query,
   UseGuards,
   Request,
@@ -88,5 +90,34 @@ export class DiscoveryController {
   async clearSearchHistory(@Request() req: any) {
     const customerId = req.user?.userId || req.user?.id;
     return this.discoveryService.clearSearchHistory(customerId);
+  }
+
+  @Get('favorites')
+  @UseGuards(JwtAuthGuard)
+  async getFavoriteStores(@Request() req: any) {
+    const customerId = req.user?.userId || req.user?.id;
+    return this.discoveryService.getFavoriteStores(customerId);
+  }
+
+  @Post('favorites/:outletId')
+  @UseGuards(JwtAuthGuard)
+  async toggleFavoriteStore(@Request() req: any, @Param('outletId') outletId: string) {
+    const customerId = req.user?.userId || req.user?.id;
+    return this.discoveryService.toggleFavoriteStore(customerId, outletId);
+  }
+
+  @Get('recently-viewed')
+  @UseGuards(JwtAuthGuard)
+  async getRecentlyViewedStores(@Request() req: any) {
+    const customerId = req.user?.userId || req.user?.id;
+    return this.discoveryService.getRecentlyViewedStores(customerId);
+  }
+
+  @Post('recently-viewed/:outletId')
+  @UseGuards(JwtAuthGuard)
+  async recordStoreView(@Request() req: any, @Param('outletId') outletId: string) {
+    const customerId = req.user?.userId || req.user?.id;
+    await this.discoveryService.recordStoreView(customerId, outletId);
+    return { success: true };
   }
 }

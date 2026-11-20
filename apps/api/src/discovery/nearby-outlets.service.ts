@@ -21,4 +21,20 @@ export class NearbyOutletsService {
     await this.discoveryRepo.clearSearchHistory(customerId);
     return { success: true };
   }
+
+  async recordStoreView(customerId: string, outletId: string): Promise<void> {
+    await this.discoveryRepo.recordStoreView(customerId, outletId);
+  }
+
+  async getRecentlyViewedStores(customerId: string): Promise<any[]> {
+    return this.discoveryRepo.getRecentlyViewedStores(customerId);
+  }
+
+  async toggleFavoriteStore(customerId: string, outletId: string): Promise<{ isFavorite: boolean }> {
+    return this.discoveryRepo.toggleFavoriteStore(customerId, outletId);
+  }
+
+  async getFavoriteStores(customerId: string): Promise<any[]> {
+    return this.discoveryRepo.getFavoriteStores(customerId);
+  }
 }

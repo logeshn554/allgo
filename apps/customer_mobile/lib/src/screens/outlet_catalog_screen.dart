@@ -25,6 +25,8 @@ class OutletCatalogScreen extends ConsumerStatefulWidget {
 class _OutletCatalogScreenState extends ConsumerState<OutletCatalogScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isFavorite = false;
+  bool _isTogglingFav = false;
 
   OutletOpenStatusModel? _outletStatus;
   List<ProductItem> _products = [];
@@ -38,6 +40,49 @@ class _OutletCatalogScreenState extends ConsumerState<OutletCatalogScreen> {
   void initState() {
     super.initState();
     _loadAll();
+    _recordStoreView();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _recordStoreView() async {
+    try {
+      await ref.read(apiClientProvider).recordStoreView(widget.outletId);
+    } catch (_) {}
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final favs = await ref.read(apiClientProvider).getFavoriteStores();
+      if (mounted) {
+        setState(() {
+          _isFavorite = favs.any((f) => f.id == widget.outletId);
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _handleToggleFavorite() async {
+    setState(() => _isTogglingFav = true);
+    try {
+      final newStatus = await ref.read(apiClientProvider).toggleFavoriteStore(widget.outletId);
+      if (mounted) {
+        setState(() {
+          _isFavorite = newStatus;
+          _isTogglingFav = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newStatus ? 'Added to favorite stores' : 'Removed from favorites'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isTogglingFav = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
+    }
   }
 
   @override
@@ -50,7 +95,7 @@ class _OutletCatalogScreenState extends ConsumerState<OutletCatalogScreen> {
     setState(() => _isLoading = true);
     final client = ref.read(apiClientProvider);
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<dynamic>([
         client.getCustomerOutletStatus(widget.outletId),
         client.getCustomerOutletProducts(widget.outletId),
         client.getCustomerOutletCategories(widget.outletId),
@@ -130,6 +175,14 @@ class _OutletCatalogScreenState extends ConsumerState<OutletCatalogScreen> {
       appBar: AppBar(
         title: Text(widget.outletName),
         actions: [
+          IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorite ? Colors.red : null,
+            ),
+            tooltip: _isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+            onPressed: _isTogglingFav ? null : _handleToggleFavorite,
+          ),
           IconButton(
             icon: const Icon(Icons.shopping_bag_outlined),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),

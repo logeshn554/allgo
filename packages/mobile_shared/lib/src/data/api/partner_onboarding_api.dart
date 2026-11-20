@@ -35,7 +35,7 @@ class PartnerOnboardingApi {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Authorization': 'Bearer $token',
-        'X-AllGo-Role': activeRole,
+        'X-AllGo-Role': base.getActiveRole(),
       },
       body: bytes,
     );

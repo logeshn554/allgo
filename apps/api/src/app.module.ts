@@ -10,6 +10,8 @@ import { MerchantModule } from './merchant/merchant.module.js';
 import { PartnerModule } from './partner/partner.module.js';
 import { EncryptionModule } from './common/encryption/encryption.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { MapsModule } from './common/maps/maps.module.js';
+import { ComplianceModule } from './common/compliance/compliance.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { DeliveryModule } from './delivery/delivery.module.js';
 import { MobilityModule } from './mobility/mobility.module.js';
@@ -21,6 +23,8 @@ import { FinanceModule } from './finance/finance.module.js';
 import { SupportModule } from './support/support.module.js';
 import { RatingsModule } from './ratings/ratings.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { SchedulingModule } from './common/scheduling/scheduling.module.js';
+import { CallingModule } from './common/calling/calling.module.js';
 import { GlobalHttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { StructuredLoggingInterceptor } from './common/interceptors/logging.interceptor.js';
 
@@ -36,6 +40,8 @@ import { StructuredLoggingInterceptor } from './common/interceptors/logging.inte
     PartnerModule,
     EncryptionModule,
     StorageModule,
+    MapsModule,
+    ComplianceModule,
     CatalogModule,
     DeliveryModule,
     MobilityModule,
@@ -47,6 +53,8 @@ import { StructuredLoggingInterceptor } from './common/interceptors/logging.inte
     SupportModule,
     RatingsModule,
     NotificationsModule,
+    SchedulingModule,
+    CallingModule,
   ],
   providers: [
     {
@@ -60,4 +68,3 @@ import { StructuredLoggingInterceptor } from './common/interceptors/logging.inte
   ],
 })
 export class AppModule {}
-

@@ -15,7 +15,7 @@ export class LocalOtpDeliveryAdapter implements OtpDeliveryAdapter {
   async deliverOtp(phone: string, otp: string): Promise<boolean> {
     if (this.config.isProduction) {
       this.logger.error('CRITICAL: LocalOtpDeliveryAdapter must NOT be active in production!');
-      return false;
+      throw new Error('FATAL: LocalOtpDeliveryAdapter is strictly disallowed in production environment.');
     }
 
     // Store in dev buffer for local test automation and local client emulator

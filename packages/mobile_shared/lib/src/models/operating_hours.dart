@@ -1,16 +1,20 @@
 class OperatingHourIntervalModel {
   final String? id;
+  final String? outletId;
   final int dayOfWeek; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   final String openTime;
   final String closeTime;
+  final int slotIndex;
   final bool isOvernight;
   final bool isClosed;
 
   const OperatingHourIntervalModel({
     this.id,
+    this.outletId,
     required this.dayOfWeek,
     required this.openTime,
     required this.closeTime,
+    this.slotIndex = 0,
     this.isOvernight = false,
     this.isClosed = false,
   });
@@ -18,18 +22,23 @@ class OperatingHourIntervalModel {
   factory OperatingHourIntervalModel.fromJson(Map<String, dynamic> json) {
     return OperatingHourIntervalModel(
       id: json['id'] as String?,
-      dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? 0,
-      openTime: json['openTime'] as String? ?? '09:00:00',
-      closeTime: json['closeTime'] as String? ?? '22:00:00',
-      isOvernight: json['isOvernight'] as bool? ?? false,
-      isClosed: json['isClosed'] as bool? ?? false,
+      outletId: json['outletId'] as String? ?? json['outlet_id'] as String?,
+      dayOfWeek: (json['dayOfWeek'] as num?)?.toInt() ?? (json['day_of_week'] as num?)?.toInt() ?? 0,
+      openTime: json['openTime'] as String? ?? json['open_time'] as String? ?? '09:00:00',
+      closeTime: json['closeTime'] as String? ?? json['close_time'] as String? ?? '22:00:00',
+      slotIndex: (json['slotIndex'] as num?)?.toInt() ?? (json['slot_index'] as num?)?.toInt() ?? 0,
+      isOvernight: json['isOvernight'] as bool? ?? json['is_overnight'] as bool? ?? false,
+      isClosed: json['isClosed'] as bool? ?? json['is_closed'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
+    if (outletId != null) 'outletId': outletId,
     'dayOfWeek': dayOfWeek,
     'openTime': openTime,
     'closeTime': closeTime,
+    'slotIndex': slotIndex,
     'isOvernight': isOvernight,
     'isClosed': isClosed,
   };
@@ -51,15 +60,18 @@ class OperatingHourIntervalModel {
 class SpecialClosureModel {
   final String? id;
   final String closureDate;
-  final String reason;
+  final String? reason;
   final bool isFullDay;
   final String? openTime;
   final String? closeTime;
 
+  String get startDate => closureDate;
+  String get endDate => closureDate;
+
   const SpecialClosureModel({
     this.id,
     required this.closureDate,
-    required this.reason,
+    this.reason,
     this.isFullDay = true,
     this.openTime,
     this.closeTime,
@@ -68,11 +80,11 @@ class SpecialClosureModel {
   factory SpecialClosureModel.fromJson(Map<String, dynamic> json) {
     return SpecialClosureModel(
       id: json['id'] as String?,
-      closureDate: json['closureDate'] as String? ?? '',
-      reason: json['reason'] as String? ?? '',
-      isFullDay: json['isFullDay'] as bool? ?? true,
-      openTime: json['openTime'] as String?,
-      closeTime: json['closeTime'] as String?,
+      closureDate: json['closureDate'] as String? ?? json['closure_date'] as String? ?? '',
+      reason: json['reason'] as String?,
+      isFullDay: json['isFullDay'] as bool? ?? json['is_full_day'] as bool? ?? true,
+      openTime: json['openTime'] as String? ?? json['open_time'] as String?,
+      closeTime: json['closeTime'] as String? ?? json['close_time'] as String?,
     );
   }
 

@@ -26,6 +26,15 @@
 	<string>AllGo Partner requires background location to assign nearby delivery and ride requests accurately.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>AllGo Partner uses location for route navigation and dispatch tracking.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<!-- Google Maps API Key for iOS restricted by iOS Bundle Identifier in.allgo.partner -->
+	<key>GoogleMapsApiKey</key>
+	<string>$(GOOGLE_MAPS_CLIENT_IOS_KEY)</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

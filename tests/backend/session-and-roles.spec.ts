@@ -152,5 +152,45 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
         }
       );
     });
+
+    it('should update user self-service profile and persist changes', async () => {
+      const controller = new UsersController(usersService);
+      const req = { user: { userId: 'usr_admin_001', roles: ['CUSTOMER'] } };
+
+      const updated = await controller.updateProfile(req, {
+        fullName: 'Karthik Raja',
+        defaultLanguage: 'ta',
+      });
+
+      assert.strictEqual(updated.fullName, 'Karthik Raja');
+      assert.strictEqual(updated.defaultLanguage, 'ta');
+
+      // Fetch via getProfile to confirm persistence
+      const profile = await controller.getProfile(req);
+      assert.strictEqual(profile.fullName, 'Karthik Raja');
+      assert.strictEqual(profile.defaultLanguage, 'ta');
+
+      // Also verify updateMe alias works
+      const aliasUpdated = await controller.updateMe(req, {
+        fullName: 'Karthik R',
+      });
+      assert.strictEqual(aliasUpdated.fullName, 'Karthik R');
+      assert.strictEqual(aliasUpdated.defaultLanguage, 'ta');
+    });
+
+    it('should enforce IDOR prevention and reject profile update without user context', async () => {
+      const controller = new UsersController(usersService);
+      const unauthReq = { user: undefined };
+
+      await assert.rejects(
+        async () => {
+          await controller.updateProfile(unauthReq, { fullName: 'Hacker' });
+        },
+        {
+          name: 'ForbiddenException',
+          message: 'User context is missing',
+        }
+      );
+    });
   });
 });

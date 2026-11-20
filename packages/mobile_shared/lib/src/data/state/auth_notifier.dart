@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/user.dart';
-import '../api/api_client.dart';
+import '../../models/user.dart';
+import '../../api/api_client.dart';
 import '../storage/token_storage.dart';
 
 enum AuthStatus {
@@ -113,6 +113,48 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> updateProfile({
+    String? fullName,
+    String? email,
+    String? avatarUrl,
+    String? defaultLanguage,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    try {
+      final updated = await apiClient.auth.updateProfile(
+        fullName: fullName,
+        email: email,
+        avatarUrl: avatarUrl,
+        defaultLanguage: defaultLanguage,
+      );
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: updated,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: e.toString().replaceFirst('ApiException: ', ''),
+      );
+      return false;
+    }
+  }
+
+  void updateLanguage(String languageCode) {
+    apiClient.activeLanguage = languageCode;
+    if (state.user != null) {
+      final updatedUser = state.user!.copyWith(defaultLanguage: languageCode);
+      state = state.copyWith(user: updatedUser);
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    state = state.copyWith(status: AuthStatus.loading);
+    await apiClient.auth.deleteAccount();
+    state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
   Future<void> logout() async {
     state = state.copyWith(status: AuthStatus.loading);
     await apiClient.logout();
@@ -125,7 +167,7 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) => SecureTokenStorage(
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(tokenStorageProvider);
-  return ApiClient(tokenStorage: storage);
+  return ApiClient.createDefault(tokenStorage: storage);
 });
 
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {

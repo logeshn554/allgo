@@ -28,9 +28,6 @@ export class ParcelsService {
     return crypto.randomInt(1000, 9999).toString();
   }
 
-  /**
-   * Create an intra-city parcel courier order with Dual OTP
-   */
   async createParcel(senderId: string, dto: CreateParcelDeliveryDto): Promise<any> {
     const distanceKm = this.fareService.calculateDistanceKm(
       dto.pickupLocation,
@@ -97,13 +94,9 @@ export class ParcelsService {
     return parcel;
   }
 
-  /**
-   * Courier accepts parcel delivery
-   */
   async assignCourier(courierUserId: string, parcelId: string): Promise<any> {
     const partner = await this.continuityService.getPartnerByUserId(courierUserId);
 
-    // Mutual exclusion check & lock
     await this.continuityService.acquireVerticalLock(partner.id, 'PARCEL');
 
     const pRes = await this.db.query('SELECT * FROM parcels WHERE id = $1;', [parcelId]);
@@ -123,9 +116,6 @@ export class ParcelsService {
     return res.rows[0];
   }
 
-  /**
-   * Courier verifies Sender Pickup OTP -> transitions to PICKED_UP
-   */
   async verifyPickupOtp(courierUserId: string, parcelId: string, otp: string): Promise<any> {
     const partner = await this.continuityService.getPartnerByUserId(courierUserId);
     const parcel = await this.getParcelOrThrow(parcelId);
@@ -148,9 +138,6 @@ export class ParcelsService {
     return res.rows[0];
   }
 
-  /**
-   * Courier starts transit
-   */
   async startTransit(courierUserId: string, parcelId: string): Promise<any> {
     const partner = await this.continuityService.getPartnerByUserId(courierUserId);
     const parcel = await this.getParcelOrThrow(parcelId);
@@ -166,9 +153,6 @@ export class ParcelsService {
     return res.rows[0];
   }
 
-  /**
-   * Courier verifies Recipient Delivery OTP -> transitions to DELIVERED
-   */
   async verifyDeliveryOtp(courierUserId: string, parcelId: string, otp: string): Promise<any> {
     const partner = await this.continuityService.getPartnerByUserId(courierUserId);
     const parcel = await this.getParcelOrThrow(parcelId);
@@ -188,7 +172,6 @@ export class ParcelsService {
       [parcelId]
     );
 
-    // Record courier earnings ledger entry
     const payout = Number(parcel.partner_payout_inr);
     await this.db.query(
       `INSERT INTO partner_earnings_entries (
@@ -197,15 +180,11 @@ export class ParcelsService {
       [partner.id, payout, payout]
     );
 
-    // Release vertical lock
     await this.continuityService.releaseVerticalLock(partner.id);
 
     return res.rows[0];
   }
 
-  /**
-   * Get Parcel Tracking Details
-   */
   async getParcelDetails(userId: string, role: string, parcelId: string): Promise<any> {
     const res = await this.db.query(
       `SELECT pcl.*,
@@ -234,7 +213,6 @@ export class ParcelsService {
       pickupAddress: p.pickup_address,
       dropoffAddress: p.drop_address,
       totalAmountInr: Number(p.total_amount_inr),
-      // Sender sees pickup OTP; Recipient/Customer sees delivery OTP; Courier sees neither in advance
       pickupOtp: isSender ? p.pickup_otp : null,
       deliveryOtp: isSender ? p.delivery_otp : null,
       courier: p.partner_id

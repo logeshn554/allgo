@@ -11,6 +11,9 @@ class ParcelQuote {
   final double totalAmountInr;
   final String expiresAt;
 
+  String get quoteId => serviceType;
+  double get totalFareInr => totalAmountInr;
+
   const ParcelQuote({
     required this.serviceType,
     required this.distanceKm,

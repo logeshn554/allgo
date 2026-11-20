@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module.js';
 import { RedisModule } from '../redis/redis.module.js';
 import { ConfigModule } from '@nestjs/config';
+import { MapsModule } from '../common/maps/maps.module.js';
 
 import { DeliveryGateway } from './delivery.gateway.js';
 import { PartnerAvailabilityService } from './partner-availability.service.js';
@@ -21,6 +22,7 @@ import { DeliveryJobLifecycleService } from './delivery-job-lifecycle.service.js
 import { DeliveryHandoverService } from './delivery-handover.service.js';
 import { DeliveryExceptionService } from './delivery-exception.service.js';
 import { AdminDeliverySupervisionService } from './admin-delivery-supervision.service.js';
+import { MultiStoreBatchingService } from './multi-store-batching.service.js';
 
 // Facades
 import { DispatchEngineService } from './dispatch-engine.service.js';
@@ -34,7 +36,7 @@ import { CustomerDeliveryController } from './controllers/customer-delivery.cont
 import { AdminDispatchController } from './controllers/admin-dispatch.controller.js';
 
 @Module({
-  imports: [DatabaseModule, RedisModule, ConfigModule],
+  imports: [DatabaseModule, RedisModule, ConfigModule, MapsModule],
   controllers: [
     DeliveryJobController,
     MerchantDeliveryController,
@@ -59,6 +61,7 @@ import { AdminDispatchController } from './controllers/admin-dispatch.controller
     DeliveryHandoverService,
     DeliveryExceptionService,
     AdminDeliverySupervisionService,
+    MultiStoreBatchingService,
     // Facades
     DispatchEngineService,
     DeliveryJobService,
@@ -78,6 +81,7 @@ import { AdminDispatchController } from './controllers/admin-dispatch.controller
     DeliveryHandoverService,
     DeliveryExceptionService,
     AdminDeliverySupervisionService,
+    MultiStoreBatchingService,
     DispatchEngineService,
     DeliveryJobService,
   ],

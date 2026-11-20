@@ -8,7 +8,7 @@ import { CreateProductDto, UpdateProductDto, ProductQueryDto } from './dto/produ
 
 @Controller('v1/merchants')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+@Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
 export class MerchantProductController {
   constructor(
     private readonly catalogService: CatalogService,

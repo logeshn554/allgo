@@ -9,6 +9,8 @@ import { AdminPartnerReviewService } from './admin-partner-review.service.js';
 import { PartnerService } from './partner.service.js';
 import { PartnerController } from './partner.controller.js';
 import { AdminPartnerController } from './admin-partner.controller.js';
+import { PartnerVerificationOnboardingService } from './partner-verification-onboarding.service.js';
+import { RekognitionLivenessProvider, ExternalBackgroundCheckProvider } from './interfaces/mock-liveness-and-bgc.provider.js';
 
 @Module({
   imports: [DatabaseModule, StorageModule, EncryptionModule],
@@ -19,7 +21,14 @@ import { AdminPartnerController } from './admin-partner.controller.js';
     PartnerServiceApplicationService,
     AdminPartnerReviewService,
     PartnerService,
+    PartnerVerificationOnboardingService,
+    RekognitionLivenessProvider,
+    ExternalBackgroundCheckProvider,
   ],
-  exports: [PartnerService, PartnerRepository],
+  exports: [
+    PartnerService,
+    PartnerRepository,
+    PartnerVerificationOnboardingService,
+  ],
 })
 export class PartnerModule {}

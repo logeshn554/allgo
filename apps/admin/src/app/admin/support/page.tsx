@@ -1,8 +1,7 @@
 'use client';
-
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api-client';
-
+import { TicketDetailPane } from '@/components/support/TicketDetailPane';
 export default function SupportAdminPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +12,6 @@ export default function SupportAdminPage() {
   const [isInternalNote, setIsInternalNote] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -26,11 +24,9 @@ export default function SupportAdminPage() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchTickets();
   }, [statusFilter]);
-
   const handleSelectTicket = async (id: string) => {
     try {
       setError(null);
@@ -41,24 +37,20 @@ export default function SupportAdminPage() {
       setError(err.message || 'Failed to load ticket details');
     }
   };
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTicket || !replyText.trim()) return;
-
     try {
       await adminApi.addSupportMessage(selectedTicket.id, replyText, isInternalNote);
       setReplyText('');
       setIsInternalNote(false);
       setActionSuccess(isInternalNote ? 'Internal note added.' : 'Customer reply sent.');
-      // Refresh thread
       handleSelectTicket(selectedTicket.id);
       fetchTickets();
     } catch (err: any) {
       setError(err.message || 'Failed to send message');
     }
   };
-
   const handleUpdateStatus = async (newStatus: string) => {
     if (!selectedTicket) return;
     try {
@@ -70,7 +62,6 @@ export default function SupportAdminPage() {
       setError(err.message || 'Failed to update ticket status');
     }
   };
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -99,19 +90,16 @@ export default function SupportAdminPage() {
           </select>
         </div>
       </div>
-
       {actionSuccess && (
         <div style={{ backgroundColor: '#DCFCE7', border: '1px solid #16A34A', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', color: '#166534' }}>
           ✓ {actionSuccess}
         </div>
       )}
-
       {error && (
         <div style={{ backgroundColor: '#FEE2E2', border: '1px solid #EF4444', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', color: '#991B1B' }}>
           ⚠ {error}
         </div>
       )}
-
       <div style={{ display: 'grid', gridTemplateColumns: selectedTicket ? '1fr 1fr' : '1fr', gap: '24px' }}>
         {/* TICKET QUEUE */}
         <div style={{ background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '16px' }}>
@@ -158,119 +146,18 @@ export default function SupportAdminPage() {
             </div>
           )}
         </div>
-
-        {/* TICKET DETAILS & CONVERSATION */}
         {selectedTicket && (
-          <div style={{ background: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '16px' }}>
-              <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 4px 0' }}>{selectedTicket.subject}</h2>
-                <div style={{ fontSize: '12px', color: '#64748B' }}>
-                  From: {selectedTicket.creator_name || selectedTicket.creator_phone} ({selectedTicket.creator_role})
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedTicket(null)}
-                style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#64748B' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* STATUS ACTIONS */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-              <button
-                onClick={() => handleUpdateStatus('IN_PROGRESS')}
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', cursor: 'pointer' }}
-              >
-                Set IN_PROGRESS
-              </button>
-              <button
-                onClick={() => handleUpdateStatus('ESCALATED')}
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px', border: 'none', backgroundColor: '#FEE2E2', color: '#991B1B', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Escalate Dispute
-              </button>
-              <button
-                onClick={() => handleUpdateStatus('RESOLVED')}
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px', border: 'none', backgroundColor: '#DCFCE7', color: '#166534', fontWeight: 'bold', cursor: 'pointer' }}
-              >
-                Mark RESOLVED
-              </button>
-              <button
-                onClick={() => handleUpdateStatus('CLOSED')}
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px', border: '1px solid #94A3B8', backgroundColor: '#F1F5F9', color: '#475569', cursor: 'pointer' }}
-              >
-                Close Ticket
-              </button>
-            </div>
-
-            {/* MESSAGE THREAD */}
-            <div style={{ flex: 1, maxHeight: '350px', overflowY: 'auto', marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: m.is_internal ? '#FEF3C7' : m.sender_role === 'ADMIN' ? '#EFF6FF' : '#F1F5F9',
-                    border: m.is_internal ? '1px solid #F59E0B' : '1px solid #E2E8F0',
-                    alignSelf: m.sender_role === 'ADMIN' ? 'flex-end' : 'flex-start',
-                    maxWidth: '85%',
-                  }}
-                >
-                  <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: m.is_internal ? '#B45309' : '#475569' }}>
-                    {m.is_internal ? '🔒 INTERNAL ADMIN NOTE (Private)' : `${m.sender_name || m.sender_role}`} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#0F172A', whiteSpace: 'pre-wrap' }}>{m.message}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* REPLY / INTERNAL NOTE FORM */}
-            <form onSubmit={handleSendMessage} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
-              <div style={{ marginBottom: '8px' }}>
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder={isInternalNote ? "Add internal note (visible ONLY to admins)..." : "Write reply to customer/partner..."}
-                  rows={3}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    borderRadius: '6px',
-                    border: isInternalNote ? '2px solid #F59E0B' : '1px solid #CBD5E1',
-                    fontSize: '13px',
-                  }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#B45309', fontWeight: 'bold' }}>
-                  <input
-                    type="checkbox"
-                    checked={isInternalNote}
-                    onChange={(e) => setIsInternalNote(e.target.checked)}
-                  />
-                  Mark as Internal Note (Never visible to customer)
-                </label>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '6px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: isInternalNote ? '#D97706' : '#00C853',
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {isInternalNote ? 'Add Note' : 'Send Reply'}
-                </button>
-              </div>
-            </form>
-          </div>
+          <TicketDetailPane
+            selectedTicket={selectedTicket}
+            messages={messages}
+            replyText={replyText}
+            setReplyText={setReplyText}
+            isInternalNote={isInternalNote}
+            setIsInternalNote={setIsInternalNote}
+            onClose={() => setSelectedTicket(null)}
+            onUpdateStatus={handleUpdateStatus}
+            onSendMessage={handleSendMessage}
+          />
         )}
       </div>
     </div>

@@ -2,8 +2,10 @@ import {
   Controller,
   Get,
   Param,
+  Query,
   UseGuards,
   Request,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { DeliveryJobService } from '../delivery-job.service.js';
@@ -52,5 +54,54 @@ export class CustomerDeliveryController {
   @Get('jobs/:id/tracking')
   async getTrackingSnapshot(@Request() req: any, @Param('id') id: string) {
     return this.deliveryJobService.getJobTrackingDetails(req.user.userId, 'CUSTOMER', id);
+  }
+
+  @Get('jobs/:id/events/sync')
+  async syncMissedEvents(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Query('since') since?: string
+  ) {
+    const job = await this.db.query(
+      'SELECT id, customer_id, assigned_partner_id FROM delivery_jobs WHERE id = $1;',
+      [id]
+    );
+    if (job.rows.length === 0 || job.rows[0].customer_id !== req.user.userId) {
+      throw new NotFoundException('Delivery job not found or unauthorized');
+    }
+
+    let query = `
+      SELECT id, delivery_job_id, from_status, to_status, actor_role, reason, created_at
+      FROM delivery_status_events
+      WHERE delivery_job_id = $1
+    `;
+    const params: any[] = [id];
+    if (since) {
+      query += ` AND created_at > $2`;
+      params.push(new Date(since));
+    }
+    query += ` ORDER BY created_at ASC;`;
+
+    const eventsRes = await this.db.query(query, params);
+
+    let latestLocation = null;
+    const partnerId = job.rows[0].assigned_partner_id;
+    if (partnerId) {
+      latestLocation = await this.deliveryJobService.getJobTrackingDetails(req.user.userId, 'CUSTOMER', id);
+    }
+
+    return {
+      jobId: id,
+      syncedAt: new Date().toISOString(),
+      events: eventsRes.rows.map((e: any) => ({
+        id: e.id,
+        fromStatus: e.from_status,
+        toStatus: e.to_status,
+        actorRole: e.actor_role,
+        reason: e.reason,
+        createdAt: e.created_at,
+      })),
+      currentSnapshot: latestLocation,
+    };
   }
 }

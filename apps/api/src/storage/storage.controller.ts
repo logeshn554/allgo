@@ -7,9 +7,9 @@ import {
   Body,
   Req,
   Res,
+  Query,
   UseGuards,
   ForbiddenException,
-  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
@@ -32,7 +32,16 @@ export class StorageController {
   @ApiOperation({ summary: 'Generate a short-lived document upload ticket' })
   @ApiResponse({ status: 201, description: 'Upload ticket created' })
   async createTicket(@Req() req: any, @Body() dto: CreateUploadTicketDto) {
-    return this.storageService.createTicket(req.user.userId, dto);
+    const ticket = await this.storageService.createTicket(req.user.userId, dto);
+    const signedUploadUrl = await this.storageService.generateSignedUploadUrl(ticket.storage_key, {
+      action: 'write',
+      expiresInSeconds: 3600,
+      contentType: ticket.mime_type,
+    });
+    return {
+      ...ticket,
+      signedUploadUrl,
+    };
   }
 
   @Post('upload/:ticketId')
@@ -40,13 +49,23 @@ export class StorageController {
   @ApiOperation({ summary: 'Upload document binary data for an active upload ticket' })
   @ApiResponse({ status: 200, description: 'File validated and stored' })
   async uploadFile(@Req() req: any, @Param('ticketId') ticketId: string) {
-    // In express, raw body buffer or chunk stream
     const chunks: Buffer[] = [];
     for await (const chunk of req) {
       chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
     }
     const fullBuffer = Buffer.concat(chunks);
     return this.storageService.saveUploadedFile(ticketId, req.user.userId, fullBuffer);
+  }
+
+  @Get('signed-url/:storageKey')
+  @ApiOperation({ summary: 'Obtain temporary signed URL for authorized document download' })
+  async getSignedUrl(@Req() req: any, @Param('storageKey') storageKey: string) {
+    await this.assertAccessPermission(req.user.userId, req.user.roles || [], storageKey);
+    const downloadUrl = await this.storageService.generateSignedDownloadUrl(storageKey, {
+      action: 'read',
+      expiresInSeconds: 900,
+    });
+    return { storageKey, downloadUrl, expiresInSeconds: 900 };
   }
 
   @Get(['download/:storageKey', 'documents/:storageKey'])
@@ -57,57 +76,7 @@ export class StorageController {
     @Param('storageKey') storageKey: string,
     @Res() res: Response
   ) {
-    const userId = req.user.userId;
-    const roles: string[] = req.user.roles || [];
-    const isAdmin = roles.includes('ADMIN');
-
-    // If not admin, verify ownership via partner_documents, merchant_documents, or document_upload_tickets
-    if (!isAdmin) {
-      let isOwner = false;
-      try {
-        const ticketRes = await this.db.query(
-          `SELECT uploader_user_id FROM document_upload_tickets WHERE storage_key = $1;`,
-          [storageKey]
-        );
-        if (ticketRes.rows.length > 0 && ticketRes.rows[0].uploader_user_id === userId) {
-          isOwner = true;
-        }
-
-        if (!isOwner) {
-          const partnerDocRes = await this.db.query(
-            `SELECT p.user_id FROM partner_documents pd
-             JOIN partners p ON p.id = pd.partner_id
-             WHERE pd.storage_key = $1;`,
-            [storageKey]
-          );
-          if (partnerDocRes.rows.length > 0 && partnerDocRes.rows[0].user_id === userId) {
-            isOwner = true;
-          }
-        }
-
-        if (!isOwner) {
-          const merchantDocRes = await this.db.query(
-            `SELECT m.owner_id FROM merchant_documents md
-             JOIN merchants m ON m.id = md.merchant_id
-             WHERE md.storage_key = $1;`,
-            [storageKey]
-          );
-          if (merchantDocRes.rows.length > 0 && merchantDocRes.rows[0].owner_id === userId) {
-            isOwner = true;
-          }
-        }
-      } catch {
-        // Fallback for in-memory or offline tickets
-        const ticket = await this.storageService.getTicket(storageKey);
-        if (ticket && ticket.uploader_user_id === userId) {
-          isOwner = true;
-        }
-      }
-
-      if (!isOwner) {
-        throw new ForbiddenException('You do not have permission to access or download this document');
-      }
-    }
+    await this.assertAccessPermission(req.user.userId, req.user.roles || [], storageKey);
 
     const buffer = this.storageService.getFileBuffer(storageKey);
     const mimeType = storageKey.endsWith('.pdf')
@@ -120,5 +89,53 @@ export class StorageController {
     res.setHeader('Content-Disposition', `inline; filename="${storageKey}"`);
     res.setHeader('Content-Length', buffer.length);
     res.send(buffer);
+  }
+
+  private async assertAccessPermission(userId: string, roles: string[], storageKey: string): Promise<void> {
+    if (roles.includes('ADMIN')) return;
+
+    let isOwner = false;
+    try {
+      const ticketRes = await this.db.query(
+        `SELECT uploader_user_id FROM document_upload_tickets WHERE storage_key = $1;`,
+        [storageKey]
+      );
+      if (ticketRes.rows.length > 0 && ticketRes.rows[0].uploader_user_id === userId) {
+        isOwner = true;
+      }
+
+      if (!isOwner) {
+        const partnerDocRes = await this.db.query(
+          `SELECT p.user_id FROM partner_documents pd
+           JOIN partners p ON p.id = pd.partner_id
+           WHERE pd.storage_key = $1;`,
+          [storageKey]
+        );
+        if (partnerDocRes.rows.length > 0 && partnerDocRes.rows[0].user_id === userId) {
+          isOwner = true;
+        }
+      }
+
+      if (!isOwner) {
+        const merchantDocRes = await this.db.query(
+          `SELECT m.owner_id FROM merchant_documents md
+           JOIN merchants m ON m.id = md.merchant_id
+           WHERE md.storage_key = $1;`,
+          [storageKey]
+        );
+        if (merchantDocRes.rows.length > 0 && merchantDocRes.rows[0].owner_id === userId) {
+          isOwner = true;
+        }
+      }
+    } catch {
+      const ticket = await this.storageService.getTicket(storageKey);
+      if (ticket && ticket.uploader_user_id === userId) {
+        isOwner = true;
+      }
+    }
+
+    if (!isOwner) {
+      throw new ForbiddenException('You do not have permission to access or download this document');
+    }
   }
 }

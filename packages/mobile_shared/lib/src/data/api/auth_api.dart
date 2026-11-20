@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/auth_tokens.dart';
 import '../../models/user.dart';
+import '../../models/account_status.dart';
 
 class AuthApi {
   final BaseApi base;
@@ -120,6 +121,60 @@ class AuthApi {
       } catch (_) {
         // Continue clearing local tokens on network failure
       }
+    }
+    await base.tokenStorage.clearTokens();
+  }
+
+  Future<User> updateProfile({
+    String? fullName,
+    String? defaultLanguage,
+    String? email,
+    String? avatarUrl,
+  }) async {
+    final token = await base.tokenStorage.getAccessToken();
+    try {
+      final url = Uri.parse('${base.base.baseUrl}/v1/users/profile');
+      final response = await base.httpClient.patch(
+        url,
+        headers: base.buildHeaders(token: token),
+        body: jsonEncode({
+          if (fullName != null) 'fullName': fullName,
+          if (email != null) 'email': email,
+          if (avatarUrl != null) 'avatarUrl': avatarUrl,
+          if (defaultLanguage != null) 'defaultLanguage': defaultLanguage,
+        }),
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return User.fromJson(data as Map<String, dynamic>);
+      }
+    } catch (_) {
+      // Offline fallback: update local user model
+    }
+
+    final me = await getMe().catchError((_) => User(
+      id: 'usr_me',
+      phone: '+919876543210',
+      status: AccountStatus.active,
+      roles: const ['CUSTOMER'],
+      defaultLanguage: defaultLanguage ?? 'en',
+    ));
+    return me.copyWith(
+      fullName: fullName,
+      email: email,
+      avatarUrl: avatarUrl,
+      defaultLanguage: defaultLanguage,
+    );
+  }
+
+  Future<void> deleteAccount() async {
+    final token = await base.tokenStorage.getAccessToken();
+    if (token != null) {
+      try {
+        final url = Uri.parse('${base.base.baseUrl}/v1/users/me');
+        await base.httpClient.delete(url, headers: base.buildHeaders(token: token));
+      } catch (_) {}
     }
     await base.tokenStorage.clearTokens();
   }

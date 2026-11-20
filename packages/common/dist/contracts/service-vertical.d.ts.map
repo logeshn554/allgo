@@ -1,0 +1,1 @@
+{"version":3,"file":"service-vertical.d.ts","sourceRoot":"","sources":["../../src/contracts/service-vertical.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB;;GAEG;AACH,eAAO,MAAM,eAAe;;;;CAIlB,CAAC;AAEX,MAAM,MAAM,eAAe,GAAG,CAAC,OAAO,eAAe,CAAC,CAAC,MAAM,OAAO,eAAe,CAAC,CAAC;AAErF,eAAO,MAAM,qBAAqB;;;;EAAgC,CAAC"}

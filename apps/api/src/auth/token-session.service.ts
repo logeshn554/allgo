@@ -83,7 +83,7 @@ export class TokenSessionService {
       accessToken,
       refreshToken,
       tokenType: 'Bearer',
-      expiresIn: 3600,
+      expiresIn: 900,
       user,
     };
   }
@@ -155,7 +155,7 @@ export class TokenSessionService {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
         tokenType: 'Bearer',
-        expiresIn: 3600,
+        expiresIn: 900,
         user,
       };
     } catch (err: any) {

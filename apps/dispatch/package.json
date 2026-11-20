@@ -3,7 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AllGo Dispatch Engine & Real-Time Tracking Service",
+  "description": "AllGo Real-Time Dispatch Engine & Matching Service",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
   "dependencies": {
     "@allgo/common": "*"
   }

@@ -28,6 +28,8 @@ class _MerchantRegistrationScreenState extends ConsumerState<MerchantRegistratio
   final _descriptionController = TextEditingController();
 
   // Step 3: Location
+  final _outletNameController = TextEditingController();
+  final _cityController = TextEditingController();
   final _addressLine1Controller = TextEditingController();
   final _addressLine2Controller = TextEditingController();
   final _postalCodeController = TextEditingController();
@@ -88,6 +90,8 @@ class _MerchantRegistrationScreenState extends ConsumerState<MerchantRegistratio
     _ownerEmailController.dispose();
     _businessNameController.dispose();
     _descriptionController.dispose();
+    _outletNameController.dispose();
+    _cityController.dispose();
     _addressLine1Controller.dispose();
     _addressLine2Controller.dispose();
     _postalCodeController.dispose();
@@ -135,7 +139,10 @@ class _MerchantRegistrationScreenState extends ConsumerState<MerchantRegistratio
         'bankBeneficiaryName': _bankBeneficiaryController.text.trim().isNotEmpty
             ? _bankBeneficiaryController.text.trim()
             : _businessNameController.text.trim(),
-        'outletName': _businessNameController.text.trim(),
+        'outletName': _outletNameController.text.trim().isNotEmpty
+            ? _outletNameController.text.trim()
+            : _businessNameController.text.trim(),
+        'city': _cityController.text.trim().isNotEmpty ? _cityController.text.trim() : 'Chennai',
         'addressLine1': _addressLine1Controller.text.trim().isNotEmpty ? _addressLine1Controller.text.trim() : 'Commercial Road',
         'addressLine2': _addressLine2Controller.text.trim().isNotEmpty ? _addressLine2Controller.text.trim() : null,
         'postalCode': _postalCodeController.text.trim().isNotEmpty ? _postalCodeController.text.trim() : '600040',

@@ -11,6 +11,7 @@ import { OrderStatusStepper } from '../components/OrderStatusStepper.tsx';
 import { OtpPinBox } from '../components/OtpPinBox.tsx';
 import { RoutePolylineView } from '../components/RoutePolylineView.tsx';
 import { MaskedCallModal } from '../components/MaskedCallModal.tsx';
+import { MaskedChatDisputeDrawer } from '../components/MaskedChatDisputeDrawer.tsx';
 
 interface Props {
   orderId: string;
@@ -129,9 +130,15 @@ export const TrackOrderPage: React.FC<Props> = ({ orderId, onBackHome, onOpenDri
         <Text style={styles.driverText}>Driver Partner Drop-off Console →</Text>
       </TouchableOpacity>
 
-      {/* Masked Call & Ephemeral Chat Modal */}
+      {/* Masked Call & In-App Chat / Dispute Drawer */}
+      {showMaskedModal && (
+        <MaskedChatDisputeDrawer
+          orderId={orderId}
+          onClose={() => setShowMaskedModal(false)}
+        />
+      )}
       <MaskedCallModal
-        visible={showMaskedModal}
+        visible={false}
         orderId={orderId}
         session={maskedSession}
         onClose={() => setShowMaskedModal(false)}

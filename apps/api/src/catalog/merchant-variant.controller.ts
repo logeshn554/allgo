@@ -13,7 +13,7 @@ import {
 
 @Controller('v1/merchants')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+@Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
 export class MerchantVariantController {
   constructor(private readonly catalogService: CatalogService) {}
 

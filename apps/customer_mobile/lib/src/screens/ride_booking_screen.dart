@@ -103,8 +103,8 @@ class _RideBookingScreenState extends ConsumerState<RideBookingScreen> {
     if (_activeRide == null) return;
     setState(() => _isCancelling = true);
     try {
-      final updated = await ref.read(apiClientProvider).cancelRide(_activeRide!.id, reason: 'Customer cancelled');
-      if (mounted) setState(() => _activeRide = updated);
+      await ref.read(apiClientProvider).cancelRide(_activeRide!.id, reason: 'Customer cancelled');
+      if (mounted) setState(() => _activeRide = null);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
     } finally {

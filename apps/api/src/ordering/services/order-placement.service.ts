@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, Optional } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service.js';
 import { OrderRepository } from '../data/order.repository.js';
@@ -9,6 +9,7 @@ import { AddressService } from './address.service.js';
 import { InventoryReservationService } from './inventory-reservation.service.js';
 import { PaymentService } from './payment.service.js';
 import { PlaceOrderDto } from '../dto/ordering.dto.js';
+import { CloudTasksGateway } from '../../common/scheduling/cloud-tasks.gateway.js';
 
 @Injectable()
 export class OrderPlacementService {
@@ -22,7 +23,8 @@ export class OrderPlacementService {
     private readonly pricingService: PricingService,
     private readonly addressService: AddressService,
     private readonly inventoryReservation: InventoryReservationService,
-    private readonly paymentService: PaymentService
+    private readonly paymentService: PaymentService,
+    @Optional() private readonly cloudTasksGateway?: CloudTasksGateway
   ) {}
 
   async placeOrder(customerId: string, dto: PlaceOrderDto, getOrderDetailsFn: (subOrderId: string, userId: string, role: string) => Promise<any>): Promise<any> {
@@ -205,6 +207,17 @@ export class OrderPlacementService {
       );
 
       await this.orderRepo.clearCart(client, cart.cartId);
+
+      if (dto.scheduledFor && this.cloudTasksGateway) {
+        const scheduledDate = new Date(dto.scheduledFor);
+        await this.cloudTasksGateway.scheduleTask({
+          taskName: `cloud_task_order_${subOrderId}`,
+          targetType: 'SCHEDULED_ORDER',
+          targetId: subOrderId,
+          scheduledFor: scheduledDate,
+          payload: { orderGroupId, subOrderId, customerId, scheduledFor: scheduledDate.toISOString() },
+        });
+      }
 
       await client.query('COMMIT;');
 

@@ -179,14 +179,12 @@ export class CatalogProductService {
       });
       optionsByGroup.set(opt.option_group_id, list);
     }
-
     const optionGroups = rawGroups.map((g: any) => ({
       id: g.id, itemId: g.item_id, name: g.name,
       minSelections: g.min_selections, maxSelections: g.max_selections,
       isRequired: Boolean(g.is_required), displayOrder: g.display_order,
       options: optionsByGroup.get(g.id) || [],
     }));
-
     return {
       id: p.id, outletId: targetOutletId, categoryId: p.category_id,
       categoryName: p.category_name, name: p.name, description: p.description,
@@ -206,15 +204,12 @@ export class CatalogProductService {
       variants, optionGroups,
     };
   }
-
   async updateProduct(userId: string, productId: string, dto: UpdateProductDto): Promise<any> {
     await this.catalogRepo.verifyProductOwnership(userId, productId);
     const cur = await this.productRepo.findProductBasePrices(productId);
     if (!cur) throw new NotFoundException('Product not found');
-
     const targetBase = dto.basePriceInr !== undefined ? dto.basePriceInr : parseFloat(cur.base_price_inr);
     const targetSale = dto.salePriceInr !== undefined ? dto.salePriceInr : cur.sale_price_inr ? parseFloat(cur.sale_price_inr) : null;
-
     if (targetBase < 0) throw new BadRequestException('Base price must be non-negative');
     if (targetSale !== null && targetSale !== undefined) {
       if (targetSale < 0) throw new BadRequestException('Sale price must be non-negative');
@@ -222,7 +217,6 @@ export class CatalogProductService {
         throw new BadRequestException(`Sale price (${targetSale}) cannot exceed base price (${targetBase})`);
       }
     }
-
     const updates: Record<string, any> = {};
     const fieldMap: Record<string, string> = {
       name: 'name', categoryId: 'category_id', description: 'description',
@@ -237,15 +231,12 @@ export class CatalogProductService {
     if (dto.name !== undefined) updates['name'] = dto.name.trim();
     if (dto.images !== undefined) updates['images'] = JSON.stringify(dto.images);
     if (dto.dietaryFlags !== undefined) updates['dietary_flags'] = JSON.stringify(dto.dietaryFlags);
-
     return this.productRepo.updateProduct(productId, updates);
   }
-
   async archiveProduct(userId: string, productId: string): Promise<any> {
     await this.catalogRepo.verifyProductOwnership(userId, productId);
     return this.productRepo.archiveProduct(productId);
   }
-
   async deleteProduct(userId: string, productId: string): Promise<{ success: boolean }> {
     await this.catalogRepo.verifyProductOwnership(userId, productId);
     await this.productRepo.softDeleteProduct(productId);

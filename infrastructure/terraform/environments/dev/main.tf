@@ -113,3 +113,66 @@ module "monitoring" {
   budget_amount_inr         = var.budget_amount_inr
   enable_overnight_shutdown = true
 }
+
+# 7. Cloud Plumbing Modules (Phase G)
+module "pubsub" {
+  source      = "../../modules/pubsub"
+  project_id  = var.project_id
+  environment = "dev"
+}
+
+module "cloudtasks" {
+  source      = "../../modules/cloudtasks"
+  project_id  = var.project_id
+  environment = "dev"
+  region      = var.region
+}
+
+module "scheduler" {
+  source      = "../../modules/scheduler"
+  project_id  = var.project_id
+  environment = "dev"
+  region      = var.region
+}
+
+module "bigquery" {
+  source              = "../../modules/bigquery"
+  project_id          = var.project_id
+  environment         = "dev"
+  region              = var.region
+  deletion_protection = false
+}
+
+module "secretmanager" {
+  source      = "../../modules/secretmanager"
+  project_id  = var.project_id
+  environment = "dev"
+}
+
+module "cloudarmor" {
+  source      = "../../modules/cloudarmor"
+  project_id  = var.project_id
+  environment = "dev"
+}
+
+module "loadbalancer" {
+  source             = "../../modules/loadbalancer"
+  project_id         = var.project_id
+  environment        = "dev"
+  security_policy_id = module.cloudarmor.policy_id
+}
+
+module "storage" {
+  source        = "../../modules/storage"
+  project_id    = var.project_id
+  environment   = "dev"
+  region        = var.region
+  force_destroy = true
+}
+
+module "kms" {
+  source      = "../../modules/kms"
+  project_id  = var.project_id
+  environment = "dev"
+  region      = var.region
+}

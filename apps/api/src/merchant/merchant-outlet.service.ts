@@ -35,7 +35,13 @@ export class MerchantOutletService {
       throw new ForbiddenException('Cross-merchant outlet access rejected');
     }
 
-    return this.outletRepo.updateOutletAvailability(outletId, dto.isOpen, dto.defaultPrepTimeMinutes);
+    return this.outletRepo.updateOutletAvailability(
+      outletId,
+      dto.isOpen,
+      dto.defaultPrepTimeMinutes,
+      dto.logoUrl,
+      dto.coverPhotoUrl
+    );
   }
 
   async createOutlet(userId: string, dto: CreateOutletDto, inMemoryOutlets?: Map<string, any[]>): Promise<any> {

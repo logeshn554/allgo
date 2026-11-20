@@ -121,3 +121,75 @@ module "monitoring" {
   budget_amount_inr         = var.budget_amount_inr
   enable_overnight_shutdown = false
 }
+
+# 7. Cloud Plumbing Modules (Phase G)
+module "pubsub" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/pubsub"
+  project_id  = var.project_id
+  environment = "prod"
+}
+
+module "cloudtasks" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/cloudtasks"
+  project_id  = var.project_id
+  environment = "prod"
+  region      = var.region
+}
+
+module "scheduler" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/scheduler"
+  project_id  = var.project_id
+  environment = "prod"
+  region      = var.region
+}
+
+module "bigquery" {
+  count               = var.enable_prod ? 1 : 0
+  source              = "../../modules/bigquery"
+  project_id          = var.project_id
+  environment         = "prod"
+  region              = var.region
+  deletion_protection = true
+}
+
+module "secretmanager" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/secretmanager"
+  project_id  = var.project_id
+  environment = "prod"
+}
+
+module "cloudarmor" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/cloudarmor"
+  project_id  = var.project_id
+  environment = "prod"
+}
+
+module "loadbalancer" {
+  count              = var.enable_prod ? 1 : 0
+  source             = "../../modules/loadbalancer"
+  project_id         = var.project_id
+  environment        = "prod"
+  security_policy_id = module.cloudarmor[0].policy_id
+}
+
+module "storage" {
+  count         = var.enable_prod ? 1 : 0
+  source        = "../../modules/storage"
+  project_id    = var.project_id
+  environment   = "prod"
+  region        = var.region
+  force_destroy = false
+}
+
+module "kms" {
+  count       = var.enable_prod ? 1 : 0
+  source      = "../../modules/kms"
+  project_id  = var.project_id
+  environment = "prod"
+  region      = var.region
+}

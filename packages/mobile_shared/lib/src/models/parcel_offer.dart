@@ -14,6 +14,9 @@ class ParcelOffer {
   final double payoutInr;
   final String offerExpiresAt;
 
+  String get dropoffAddress => dropAddress;
+  double get partnerEarnings => payoutInr;
+
   const ParcelOffer({
     required this.attemptId,
     required this.parcelId,

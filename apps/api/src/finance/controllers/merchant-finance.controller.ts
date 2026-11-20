@@ -22,7 +22,7 @@ export class MerchantFinanceController {
   ) {}
 
   @Get('overview')
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiOperation({ summary: 'Get merchant sales overview and financials' })
   async getMerchantFinancialOverview(@Req() req: any) {
     const merchantId = await this.financeRepo.getMerchantIdByOwnerId(req.user.userId);
@@ -47,7 +47,7 @@ export class MerchantFinanceController {
   }
 
   @Get('settlements')
-  @Roles('MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
+  @Roles('MERCHANT', 'MERCHANT_ADMIN', 'MERCHANT_OPERATOR')
   @ApiOperation({ summary: 'Get merchant settlements history' })
   async getMerchantSettlements(@Req() req: any) {
     const merchantId = await this.financeRepo.getMerchantIdByOwnerId(req.user.userId);

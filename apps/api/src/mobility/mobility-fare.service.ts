@@ -22,9 +22,6 @@ export interface RideFareEstimate {
 export class MobilityFareService {
   constructor(private readonly db: DatabaseService) {}
 
-  /**
-   * Haversine distance in kilometers with urban routing winding factor (1.25x)
-   */
   calculateDistanceKm(p1: CoordinatesDto, p2: CoordinatesDto): number {
     const R = 6371; // Earth radius in km
     const dLat = ((p2.latitude - p1.latitude) * Math.PI) / 180;
@@ -41,9 +38,6 @@ export class MobilityFareService {
     return Math.max(roadKm, 0.5);
   }
 
-  /**
-   * Estimate city travel duration in minutes based on vehicle speed profile
-   */
   estimateDurationMinutes(distanceKm: number, category: VehicleCategory): number {
     let avgSpeedKmh = 22; // default
     if (category === 'BIKE') avgSpeedKmh = 26;
@@ -55,9 +49,6 @@ export class MobilityFareService {
     return Math.max(Math.round(rawMinutes), 5);
   }
 
-  /**
-   * Regulatory State-by-State Feature Gate Verification
-   */
   async checkStateClearance(
     stateCode: string = 'TN',
     vertical: 'RIDE' | 'HIRE_DRIVER' | 'BIKE_TAXI'
@@ -93,9 +84,6 @@ export class MobilityFareService {
     return true;
   }
 
-  /**
-   * Estimate ride fares across all vehicle categories
-   */
   async estimateRideFares(
     pickup: CoordinatesDto,
     dropoff: CoordinatesDto,
@@ -147,9 +135,6 @@ export class MobilityFareService {
     return estimates;
   }
 
-  /**
-   * Calculate single ride fare breakdown for booking
-   */
   async calculateRideBookingFare(
     category: VehicleCategory,
     distanceKm: number,
@@ -200,9 +185,6 @@ export class MobilityFareService {
     };
   }
 
-  /**
-   * Calculate parcel delivery fee based on distance and category
-   */
   async calculateParcelFare(
     distanceKm: number,
     category: PackageCategory = 'GENERAL',
@@ -233,9 +215,6 @@ export class MobilityFareService {
     return Math.round(total * 100) / 100;
   }
 
-  /**
-   * Calculate hire-driver booking fare
-   */
   calculateHireDriverFare(
     durationHours: 4 | 8 | 12,
     scheduledStartTime: Date
@@ -248,7 +227,6 @@ export class MobilityFareService {
     if (durationHours === 8) packageFare = 900.0;
     else if (durationHours === 12) packageFare = 1300.0;
 
-    // Check if scheduled time falls between 22:00 and 06:00
     const startHour = scheduledStartTime.getHours();
     const isNight = startHour >= 22 || startHour < 6;
     const nightAllowance = isNight ? 200.0 : 0.0;

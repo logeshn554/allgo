@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
-import { CreateAddressDto } from '../dto/ordering.dto.js';
+import { CreateAddressDto, UpdateAddressDto } from '../dto/ordering.dto.js';
 
 @Injectable()
 export class AddressService {
@@ -121,6 +121,103 @@ export class AddressService {
     return savedAddr;
   }
 
+  async updateSavedAddress(addressId: string, customerId: string, dto: UpdateAddressDto): Promise<any> {
+    const existing = await this.getSavedAddress(addressId, customerId);
+
+    if (dto.isDefault) {
+      await this.db.query(
+        `UPDATE addresses SET is_default = FALSE WHERE user_id = $1;`,
+        [customerId]
+      );
+      await this.db.query(
+        `UPDATE customer_saved_addresses SET is_default = FALSE WHERE customer_id = $1;`,
+        [customerId]
+      );
+    }
+
+    const label = dto.label ? dto.label.trim().toUpperCase() : existing.label;
+    const recipientName = dto.recipientName ?? existing.recipient_name;
+    const recipientPhone = dto.recipientPhone ?? existing.recipient_phone;
+    const addressLine1 = dto.addressLine1 ?? existing.address_line1;
+    const addressLine2 = dto.addressLine2 !== undefined ? dto.addressLine2 : existing.address_line2;
+    const landmark = dto.landmark !== undefined ? dto.landmark : existing.landmark;
+    const city = dto.city ?? existing.city;
+    const state = dto.state ?? existing.state;
+    const postalCode = dto.postalCode ?? existing.postal_code;
+    const latitude = dto.latitude ?? Number(existing.latitude);
+    const longitude = dto.longitude ?? Number(existing.longitude);
+    const isDefault = dto.isDefault !== undefined ? dto.isDefault : existing.is_default;
+
+    const res = await this.db.query(
+      `UPDATE addresses SET
+         label = $1, recipient_name = $2, recipient_phone = $3,
+         address_line1 = $4, address_line2 = $5, landmark = $6,
+         city = $7, state = $8, postal_code = $9,
+         location = ST_SetSRID(ST_MakePoint($10, $11), 4326),
+         is_default = $12, updated_at = NOW()
+       WHERE id = $13 AND user_id = $14
+       RETURNING id, label, recipient_name, recipient_phone, address_line1, address_line2,
+                 landmark, city, state, postal_code, is_default,
+                 ST_Y(location::geometry) as latitude, ST_X(location::geometry) as longitude;`,
+      [
+        label,
+        recipientName,
+        recipientPhone,
+        addressLine1,
+        addressLine2,
+        landmark,
+        city,
+        state,
+        postalCode,
+        longitude,
+        latitude,
+        isDefault,
+        addressId,
+        customerId,
+      ]
+    );
+
+    if (res.rows.length === 0) {
+      throw new NotFoundException('Delivery address not found');
+    }
+
+    try {
+      await this.db.query(
+        `UPDATE customer_saved_addresses SET
+           label = $1, recipient_name = $2, recipient_phone = $3,
+           address_line1 = $4, address_line2 = $5, landmark = $6,
+           city = $7, state = $8, postal_code = $9,
+           location = ST_SetSRID(ST_MakePoint($10, $11), 4326),
+           is_default = $12
+         WHERE id = $13 AND customer_id = $14;`,
+        [
+          label,
+          recipientName,
+          recipientPhone,
+          addressLine1,
+          addressLine2,
+          landmark,
+          city,
+          state,
+          postalCode,
+          longitude,
+          latitude,
+          isDefault,
+          addressId,
+          customerId,
+        ]
+      );
+    } catch {
+      // ignore secondary table failure
+    }
+
+    return res.rows[0];
+  }
+
+  async setDefaultAddress(addressId: string, customerId: string): Promise<any> {
+    return this.updateSavedAddress(addressId, customerId, { isDefault: true });
+  }
+
   async deleteSavedAddress(addressId: string, customerId: string): Promise<void> {
     const res = await this.db.query(
       `DELETE FROM addresses WHERE id = $1 AND user_id = $2 RETURNING id;`,
@@ -140,38 +237,7 @@ export class AddressService {
     dropoffLat: number,
     dropoffLng: number
   ): Promise<{ serviceable: boolean; distanceKm: number; maxRadiusKm: number }> {
-    const outletRes = await this.db.query(
-      `SELECT id, outlet_name, ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng
-       FROM outlets WHERE id = $1;`,
-      [outletId]
-    );
-
-    if (outletRes.rows.length === 0) {
-      throw new NotFoundException('Outlet not found');
-    }
-
-    const outlet = outletRes.rows[0];
-    const maxRadiusKm = 15.0; // 15 km serviceability radius limit
-
-    const R = 6371;
-    const dLat = ((dropoffLat - Number(outlet.lat)) * Math.PI) / 180;
-    const dLon = ((dropoffLng - Number(outlet.lng)) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((Number(outlet.lat) * Math.PI) / 180) *
-        Math.cos((dropoffLat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distanceKm = Math.round(R * c * 1.25 * 10) / 10;
-
-    const serviceable = distanceKm <= maxRadiusKm;
-    if (!serviceable) {
-      throw new BadRequestException(
-        `Destination is outside the outlet's delivery range (${distanceKm} km, max supported is ${maxRadiusKm} km)`
-      );
-    }
-
-    return { serviceable: true, distanceKm, maxRadiusKm };
+    const { OutletServiceabilityService } = await import("./outlet-serviceability.service.js");
+    return new OutletServiceabilityService(this.db).validateServiceability(outletId, dropoffLat, dropoffLng);
   }
 }

@@ -3,6 +3,7 @@ import { DatabaseModule } from '../database/database.module.js';
 import { RedisModule } from '../redis/redis.module.js';
 import { MobilityFareService } from './mobility-fare.service.js';
 import { PartnerContinuityService } from './partner-continuity.service.js';
+import { PartnerContinuityExtensionService } from './partner-continuity-extension.service.js';
 import { RideRepository } from './data/ride.repository.js';
 import { RideAssignmentRepository } from './data/ride-assignment.repository.js';
 import { RideEventRepository } from './data/ride-event.repository.js';
@@ -28,6 +29,7 @@ import { AdminMobilityController } from './controllers/admin-mobility.controller
   providers: [
     MobilityFareService,
     PartnerContinuityService,
+    PartnerContinuityExtensionService,
     RideRepository,
     RideAssignmentRepository,
     RideEventRepository,
@@ -52,6 +54,7 @@ import { AdminMobilityController } from './controllers/admin-mobility.controller
   exports: [
     MobilityFareService,
     PartnerContinuityService,
+    PartnerContinuityExtensionService,
     RidesService,
     ParcelsService,
     HireDriverService,

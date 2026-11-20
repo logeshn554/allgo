@@ -13,12 +13,13 @@ import '../models/merchant_outlet.dart';
 import '../models/option_group.dart';
 import '../models/operating_hours.dart';
 import '../models/delivery_job.dart';
-import '../models/mobility.dart';
+import '../models/mobility.dart' hide ParcelModel;
 import '../models/discovery.dart';
 import '../models/parcel.dart';
 import '../models/parcel_quote.dart';
 import '../models/parcel_offer.dart';
 import '../storage/token_storage.dart';
+import '../security/certificate_pinning.dart';
 import '../data/api/base_api.dart';
 import '../data/api/auth_api.dart';
 import '../data/api/partner_onboarding_api.dart';
@@ -59,6 +60,22 @@ class ApiClient {
   late final CustomerParcelApi customerParcel;
   late final DiscoveryApi discovery;
   late final FinanceAndSupportApi financeSupport;
+
+  factory ApiClient.createDefault({
+    String? baseUrl,
+    TokenStorage? tokenStorage,
+    String activeRole = 'CUSTOMER',
+    String activeLanguage = 'en',
+    bool enablePinning = true,
+  }) {
+    return ApiClient(
+      baseUrl: baseUrl,
+      tokenStorage: tokenStorage,
+      httpClient: CertificatePinningConfig.createPinnedHttpClient(enablePinning: enablePinning),
+      activeRole: activeRole,
+      activeLanguage: activeLanguage,
+    );
+  }
 
   ApiClient({
     String? baseUrl,
@@ -108,6 +125,7 @@ class ApiClient {
   Future<Map<String, dynamic>> sendOtp(String phone) => auth.sendOtp(phone);
   Future<AuthTokens> verifyOtp(String phone, String code, {String? platform}) => auth.verifyOtp(phone, code, platform: platform);
   Future<User> getMe() => auth.getMe();
+  Future<User> updateProfile({String? fullName, String? email, String? avatarUrl, String? defaultLanguage}) => auth.updateProfile(fullName: fullName, email: email, avatarUrl: avatarUrl, defaultLanguage: defaultLanguage);
   Future<void> logout() => auth.logout();
   Future<bool> checkHealth() => auth.checkHealth();
   Future<Map<String, dynamic>> createUploadTicket(String documentType, String mimeType, int fileSizeBytes) => partnerOnboarding.createUploadTicket(documentType, mimeType, fileSizeBytes);
@@ -130,6 +148,20 @@ class ApiClient {
   Future<List<SpecialClosureModel>> getOutletSpecialClosures(String outletId) => merchantHours.getOutletSpecialClosures(outletId);
   Future<SpecialClosureModel> addOutletSpecialClosure(String outletId, Map<String, dynamic> data) => merchantHours.addOutletSpecialClosure(outletId, data);
   Future<void> deleteOutletSpecialClosure(String outletId, String closureId) => merchantHours.deleteOutletSpecialClosure(outletId, closureId);
+  Future<Map<String, dynamic>> toggleOutletTemporaryClosure(
+    String outletId, {
+    bool? isClosed,
+    bool? isTemporarilyClosed,
+    String? reason,
+    String? temporaryClosureReason,
+    String? closureUntil,
+    String? reopensAt,
+  }) => merchantHours.toggleOutletTemporaryClosure(
+    outletId,
+    isTemporarilyClosed: isTemporarilyClosed ?? isClosed ?? false,
+    temporaryClosureReason: temporaryClosureReason ?? reason,
+    reopensAt: reopensAt ?? closureUntil,
+  );
   Future<List<ProductItem>> getMerchantProducts({String? categoryId, String? search}) => merchantCatalog.getMerchantProducts(categoryId: categoryId, search: search);
   Future<ProductItem> createMerchantProduct(Map<String, dynamic> data) => merchantCatalog.createMerchantProduct(data);
   Future<void> updateMerchantProduct(String productId, Map<String, dynamic> data) => merchantCatalog.updateMerchantProduct(productId, data);
@@ -147,7 +179,20 @@ class ApiClient {
   Future<OptionItem> createProductOption(String groupId, Map<String, dynamic> data) => merchantCatalog.createProductOption(groupId, data);
   Future<void> setOutletProductOverride(String outletId, String productId, Map<String, dynamic> data,) => merchantCatalog.setOutletProductOverride(outletId, productId, data);
   Future<MerchantDashboardData> getMerchantDashboard() => merchantOrders.getMerchantDashboard();
-  Future<void> updateOutletStatus(String outletId, bool isOpen, {int? defaultPrepTimeMinutes}) => merchantOrders.updateOutletStatus(outletId, isOpen, defaultPrepTimeMinutes: defaultPrepTimeMinutes);
+  Future<void> updateOutletStatus(
+    String outletId,
+    bool? isOpen, {
+    int? defaultPrepTimeMinutes,
+    String? logoUrl,
+    String? coverPhotoUrl,
+  }) =>
+      merchantOrders.updateOutletStatus(
+        outletId,
+        isOpen,
+        defaultPrepTimeMinutes: defaultPrepTimeMinutes,
+        logoUrl: logoUrl,
+        coverPhotoUrl: coverPhotoUrl,
+      );
   Future<List<MerchantOrder>> getMerchantOrders({String? status}) => merchantOrders.getMerchantOrders(status: status);
   Future<MerchantOrder> getMerchantOrderById(String orderId) => merchantOrders.getMerchantOrderById(orderId);
   Future<void> updateOrderStatus(String orderId, String targetStatus, {int? prepTimeMinutes, String? rejectionReason}) => merchantOrders.updateOrderStatus(orderId, targetStatus, prepTimeMinutes: prepTimeMinutes, rejectionReason: rejectionReason);
@@ -172,12 +217,50 @@ class ApiClient {
   Future<void> partnerArrivedPickup(String jobId) => partnerDelivery.partnerArrivedPickup(jobId);
   Future<void> partnerStartDelivery(String jobId) => partnerDelivery.partnerStartDelivery(jobId);
   Future<void> partnerArrivedDestination(String jobId) => partnerDelivery.partnerArrivedDestination(jobId);
+  Future<void> partnerCompleteDelivery(
+    String jobId, {
+    String? pin,
+    String? handoverOtp,
+    String? proofType,
+    String? photoStorageKey,
+    double? latitude,
+    double? longitude,
+  }) => partnerDelivery.partnerCompleteDelivery(
+    jobId,
+    pin: pin ?? handoverOtp,
+    proofType: proofType,
+    photoStorageKey: photoStorageKey,
+    latitude: latitude,
+    longitude: longitude,
+  );
   Future<void> partnerReportException(String jobId, String exceptionType, String details) => partnerDelivery.partnerReportException(jobId, exceptionType, details);
   Future<List<PartnerEarningsModel>> getPartnerEarnings() => partnerDelivery.getPartnerEarnings();
   Future<PartnerModeConfigModel> getPartnerContinuityMode() => partnerMobility.getPartnerContinuityMode();
+  Future<PartnerModeConfigModel> updatePartnerContinuityMode(
+    dynamic modeOrData, {
+    bool isOnline = true,
+  }) {
+    if (modeOrData is Map<String, dynamic>) {
+      return partnerMobility.updatePartnerContinuityMode(
+        preferredMode: modeOrData['preferredMode'] as String? ?? 'DELIVERIES_ONLY',
+        isOnline: modeOrData['isOnline'] as bool? ?? true,
+      );
+    }
+    return partnerMobility.updatePartnerContinuityMode(
+      preferredMode: modeOrData.toString(),
+      isOnline: isOnline,
+    );
+  }
   Future<RideModel> driverAssignRide(String rideId) => partnerMobility.driverAssignRide(rideId);
   Future<RideModel> driverArrivedRide(String rideId) => partnerMobility.driverArrivedRide(rideId);
-  Future<RideModel> driverStartTrip({required String rideId, required String startOtp}) => partnerMobility.driverStartTrip(rideId: rideId, startOtp: startOtp);
+  Future<RideModel> driverStartTrip(
+    String rideId, {
+    String? startOtp,
+    String? otp,
+  }) => partnerMobility.driverStartTrip(
+    rideId: rideId,
+    startOtp: startOtp ?? otp ?? '',
+  );
   Future<RideModel> driverCompleteTrip(String rideId) => partnerMobility.driverCompleteTrip(rideId);
   Future<List<RideOfferModel>> getPartnerRideOffers() => partnerMobility.getPartnerRideOffers();
   Future<RideModel> acceptRideOffer(String attemptId) => partnerMobility.acceptRideOffer(attemptId);
@@ -203,6 +286,7 @@ class ApiClient {
   Future<List<ParcelModel>> getPartnerParcelHistory({int limit = 20, int offset = 0}) => partnerParcel.getPartnerParcelHistory(limit: limit, offset: offset);
   Future<List<DeliveryJobModel>> getCustomerActiveDeliveries() => customerOrdering.getCustomerActiveDeliveries();
   Future<DeliveryJobModel> getCustomerDeliveryTracking(String jobId) => customerOrdering.getCustomerDeliveryTracking(jobId);
+  Future<Map<String, dynamic>> syncMissedDeliveryEvents(String jobId, {String? since}) => customerOrdering.syncMissedDeliveryEvents(jobId, since: since);
   Future<CartModel> getCart() => customerOrdering.getCart();
   Future<CartModel> updateCartItemQuantity(String cartItemId, int quantity) => customerOrdering.updateCartItemQuantity(cartItemId, quantity);
   Future<CartModel> removeCartItem(String cartItemId) => customerOrdering.removeCartItem(cartItemId);
@@ -212,10 +296,119 @@ class ApiClient {
   Future<Map<String, dynamic>> cancelCustomerOrder(String subOrderId, String reason) => customerOrdering.cancelCustomerOrder(subOrderId, reason);
   Future<List<CustomerAddressModel>> listCustomerAddresses() => customerOrdering.listCustomerAddresses();
   Future<CustomerAddressModel> createCustomerAddress(CustomerAddressModel address) => customerOrdering.createCustomerAddress(address);
+  Future<CustomerAddressModel> updateCustomerAddress(String addressId, CustomerAddressModel address) => customerOrdering.updateCustomerAddress(addressId, address);
+  Future<CustomerAddressModel> setDefaultCustomerAddress(String addressId) => customerOrdering.setDefaultCustomerAddress(addressId);
   Future<void> deleteCustomerAddress(String addressId) => customerOrdering.deleteCustomerAddress(addressId);
+  Future<CartModel> addToCart({
+    required String outletId,
+    String? itemId,
+    String? productId,
+    int quantity = 1,
+    String? variantId,
+    List<Map<String, dynamic>>? selectedOptions,
+    List<String>? selectedOptionIds,
+    String? specialInstructions,
+    bool replaceOutlet = false,
+  }) {
+    final effectiveItemId = itemId ?? productId ?? '';
+    final effectiveOptions = selectedOptions ??
+        selectedOptionIds?.map((id) => <String, dynamic>{'optionId': id}).toList();
+    return customerOrdering.addToCart(
+      outletId: outletId,
+      itemId: effectiveItemId,
+      quantity: quantity,
+      variantId: variantId,
+      selectedOptions: effectiveOptions,
+      specialInstructions: specialInstructions,
+      replaceOutlet: replaceOutlet,
+    );
+  }
+
+  Future<CartPricingModel> getCheckoutEstimate({
+    String? outletId,
+    List<Map<String, dynamic>>? items,
+    String? paymentMethod,
+    Map<String, dynamic>? customerLocation,
+    String? couponCode,
+  }) async {
+    if (outletId != null && items != null) {
+      return customerOrdering.getCheckoutEstimate(
+        outletId: outletId,
+        items: items,
+        customerLocation: customerLocation,
+        couponCode: couponCode,
+      );
+    }
+    final cart = await getCart();
+    return customerOrdering.getCheckoutEstimate(
+      outletId: cart.outlet?.id ?? '',
+      items: cart.items
+          .map((i) => {
+                'itemId': i.itemId,
+                'quantity': i.quantity,
+                if (i.variantId != null) 'variantId': i.variantId,
+              })
+          .toList(),
+      customerLocation: customerLocation,
+      couponCode: couponCode,
+    );
+  }
+
+  Future<Map<String, dynamic>> placeOrder({
+    String? addressId,
+    String? deliveryAddressId,
+    String paymentMethod = 'COD',
+    String? couponCode,
+    String? deliveryInstructions,
+    String? customerNotes,
+    String? idempotencyKey,
+  }) =>
+      customerOrdering.placeOrder(
+        deliveryAddressId: addressId ?? deliveryAddressId ?? '',
+        paymentMethod: paymentMethod,
+        couponCode: couponCode,
+        deliveryInstructions: deliveryInstructions,
+        customerNotes: customerNotes,
+        idempotencyKey: idempotencyKey,
+      );
+
   Future<RideModel> getRide(String rideId) => customerMobility.getRide(rideId);
-  Future<void> cancelRide({required String rideId, String? reason}) => customerMobility.cancelRide(rideId: rideId, reason: reason);
-  Future<ParcelModel> getParcel(String parcelId) => customerMobility.getParcel(parcelId);
+  Future<void> cancelRide(String rideId, {String? reason}) => customerMobility.cancelRide(rideId: rideId, reason: reason);
+  Future<void> triggerRideSos(String rideId, {required double latitude, required double longitude, String? reason}) =>
+      customerMobility.triggerRideSos(rideId: rideId, latitude: latitude, longitude: longitude, reason: reason);
+  Future<dynamic> estimateRideFare(Map<String, dynamic> req) => customerMobility.estimateRideFare(
+        pickupLat: (req['pickupLatitude'] as num?)?.toDouble() ?? 13.0827,
+        pickupLng: (req['pickupLongitude'] as num?)?.toDouble() ?? 80.2707,
+        dropoffLat: (req['destinationLatitude'] as num?)?.toDouble() ?? 13.0837,
+        dropoffLng: (req['destinationLongitude'] as num?)?.toDouble() ?? 80.2750,
+        stateCode: (req['stateCode'] as String?) ?? 'TN',
+      );
+  Future<RideModel> bookRide(Map<String, dynamic> req) => customerMobility.bookRide(
+        vehicleCategory: (req['serviceType'] as String?) ?? 'SEDAN',
+        pickupLat: (req['pickupLatitude'] as num?)?.toDouble() ?? 13.0827,
+        pickupLng: (req['pickupLongitude'] as num?)?.toDouble() ?? 80.2707,
+        pickupAddress: (req['pickupAddress'] as String?) ?? '',
+        dropoffLat: (req['destinationLatitude'] as num?)?.toDouble() ?? 13.0837,
+        dropoffLng: (req['destinationLongitude'] as num?)?.toDouble() ?? 80.2750,
+        dropoffAddress: (req['destinationAddress'] as String?) ?? '',
+        stateCode: (req['stateCode'] as String?) ?? 'TN',
+      );
+  Future<dynamic> estimateHireDriver(Map<String, dynamic> req) => customerMobility.estimateHireDriver(
+        durationHours: (req['durationHours'] as num?)?.toInt() ?? 4,
+        scheduledStartTime: (req['scheduledStartTime'] as String?) ?? DateTime.now().toIso8601String(),
+        transmission: (req['transmissionType'] as String?) ?? 'MANUAL',
+        stateCode: (req['stateCode'] as String?) ?? 'TN',
+      );
+  Future<HireDriverBookingModel> bookHireDriver(Map<String, dynamic> req) => customerMobility.bookHireDriver(
+        durationHours: (req['durationHours'] as num?)?.toInt() ?? 4,
+        scheduledStartTime: (req['scheduledStartTime'] as String?) ?? DateTime.now().toIso8601String(),
+        transmission: (req['transmissionType'] as String?) ?? 'MANUAL',
+        pickupLat: (req['reportingLatitude'] as num?)?.toDouble() ?? 13.0827,
+        pickupLng: (req['reportingLongitude'] as num?)?.toDouble() ?? 80.2707,
+        pickupAddress: (req['reportingAddress'] as String?) ?? '',
+        stateCode: (req['stateCode'] as String?) ?? 'TN',
+      );
+  Future<ParcelModel> getParcel(String parcelId) => customerParcel.getParcelDetails(parcelId);
   Future<HireDriverBookingModel> getHireDriverBooking(String bookingId) => customerMobility.getHireDriverBooking(bookingId);
   Future<ParcelQuote> quoteParcel(Map<String, dynamic> quoteRequest) => customerParcel.quoteParcel(quoteRequest);
   Future<List<Map<String, dynamic>>> getParcelRestrictions() => customerParcel.getParcelRestrictions();
@@ -226,12 +419,46 @@ class ApiClient {
   Future<List<ParcelModel>> listCustomerParcels({int limit = 20, int offset = 0, String? status}) => customerParcel.listCustomerParcels(limit: limit, offset: offset, status: status);
   Future<ParcelModel> cancelParcelBooking(String parcelId, {required String reason}) => customerParcel.cancelParcelBooking(parcelId, reason: reason);
   Future<Map<String, dynamic>> getCustomerOutletDetails(String outletId) => discovery.getCustomerOutletDetails(outletId);
+  Future<Map<String, dynamic>> getCustomerOutletProducts(
+    String outletId, {
+    String? categoryId,
+    bool? isVeg,
+    String? search,
+    int? page,
+    int? limit,
+  }) =>
+      discovery.getCustomerOutletProducts(
+        outletId,
+        categoryId: categoryId,
+        isVeg: isVeg,
+        search: search,
+        page: page,
+        limit: limit,
+      );
+  Future<List<DiscoveryOutlet>> listServiceableOutlets({
+    String? verticalType,
+    double? lat,
+    double? latitude,
+    double? lng,
+    double? longitude,
+    double? radiusKm,
+  }) =>
+      discovery.listServiceableOutlets(
+        verticalType: verticalType,
+        latitude: lat ?? latitude,
+        longitude: lng ?? longitude,
+        radiusKm: radiusKm,
+      );
   Future<OutletOpenStatusModel> getCustomerOutletStatus(String outletId) => discovery.getCustomerOutletStatus(outletId);
   Future<List<dynamic>> getCustomerOutletCategories(String outletId) => discovery.getCustomerOutletCategories(outletId);
   Future<ProductItem> getCustomerProductDetails(String productId, {String? outletId}) => discovery.getCustomerProductDetails(productId, outletId: outletId);
   Future<List<SearchSuggestion>> getSearchSuggestions(String query, {String? verticalType}) => discovery.getSearchSuggestions(query, verticalType: verticalType);
   Future<List<DiscoveryCategory>> listCategories({String? verticalType}) => discovery.listCategories(verticalType: verticalType);
   Future<List<EligiblePromotion>> listEligiblePromotions() => discovery.listEligiblePromotions();
+  Future<List<DiscoveryOutlet>> getFavoriteStores() => discovery.getFavoriteStores();
+  Future<bool> toggleFavoriteStore(String outletId) => discovery.toggleFavoriteStore(outletId);
+  Future<List<DiscoveryOutlet>> getRecentlyViewedStores() => discovery.getRecentlyViewedStores();
+  Future<void> recordStoreView(String outletId) => discovery.recordStoreView(outletId);
   Future<Map<String, dynamic>> getCustomerWallet() => financeSupport.getCustomerWallet();
   Future<Map<String, dynamic>> topupCustomerWallet(double amountInr) => financeSupport.topupCustomerWallet(amountInr);
   Future<List<dynamic>> getCustomerWalletTransactions() => financeSupport.getCustomerWalletTransactions();

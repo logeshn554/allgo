@@ -60,9 +60,21 @@ erDiagram
     USERS ||--o{ HIRE_DRIVER_BOOKINGS : reserves
     PARTNERS ||--o{ HIRE_DRIVER_BOOKINGS : chauffeurs
     
+    USERS ||--o{ REFERRAL_CODES : shares
+    REFERRAL_CODES ||--o{ REFERRAL_REDEMPTIONS : redeems
+    DELIVERY_LEGS ||--o| DELIVERY_JOBS : executes_as
+    USERS ||--o{ SUPPORT_TICKETS : creates
+
     ORDER_GROUPS ||--o{ PAYMENTS : settles
     WALLETS ||--o{ LEDGER_ENTRIES : journals
 ```
+
+### Table Nomenclature Reconciliation
+The physical PostgreSQL database schema matches the domain model entities with the following canonical table names:
+- **`delivery_jobs`**: Implements fulfillment tracking and execution state for delivery legs/jobs (`delivery_jobs` created in `005_phase4_dispatch_and_delivery.sql`).
+- **`support_tickets`**: Tracks customer and partner dispute and grievance tickets (`support_tickets` created in `001_initial_schema.sql`).
+- **`hire_driver_bookings`**: Manages reservations for professional chauffeurs (`hire_driver_bookings` created in `001_initial_schema.sql`).
+- **`referral_codes` & `referral_redemptions`**: Manages viral acquisition tokens, tracking, abuse detection, and referral rewards (`013_phase_f_features.sql`).
 
 ---
 

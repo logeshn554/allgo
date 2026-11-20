@@ -10,6 +10,14 @@ export interface AppConfig {
   otpTtlSeconds: number;
   otpMaxAttempts: number;
   otpResendCooldownSeconds: number;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
+  razorpayWebhookSecret?: string;
+  googleMapsApiKey?: string;
+  firebaseServiceAccountKey?: string;
+  smsGatewayApiKey?: string;
+  gcsBucketName?: string;
+  kmsKeyId?: string;
 }
 
 export function validateAndLoadConfig(): AppConfig {
@@ -27,7 +35,7 @@ export function validateAndLoadConfig(): AppConfig {
   const otpPepper =
     process.env.OTP_PEPPER || 'allgo_local_dev_otp_pepper_secret_minimum_16_characters';
 
-  // In production, enforce non-default secrets
+  // In production, enforce all critical operational variables
   if (nodeEnv === 'production') {
     if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
       throw new Error('FATAL: JWT_SECRET must be set and at least 32 characters long in production.');
@@ -36,7 +44,28 @@ export function validateAndLoadConfig(): AppConfig {
       throw new Error('FATAL: OTP_PEPPER must be set and at least 16 characters long in production.');
     }
     if (!process.env.DATABASE_URL) {
-      console.warn('WARN: DATABASE_URL not set in production. Using repository fallback mode.');
+      throw new Error('FATAL: DATABASE_URL must be configured in production.');
+    }
+    if (!process.env.REDIS_URL) {
+      throw new Error('FATAL: REDIS_URL must be configured in production.');
+    }
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error('FATAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in production.');
+    }
+    if (!process.env.GOOGLE_MAPS_SERVER_API_KEY && !process.env.GOOGLE_MAPS_API_KEY) {
+      throw new Error('FATAL: GOOGLE_MAPS_SERVER_API_KEY must be set in production.');
+    }
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+      throw new Error('FATAL: FIREBASE_SERVICE_ACCOUNT_KEY must be set in production.');
+    }
+    if (!process.env.SMS_GATEWAY_API_KEY) {
+      throw new Error('FATAL: SMS_GATEWAY_API_KEY must be set in production.');
+    }
+    if (!process.env.GCS_BUCKET_NAME) {
+      throw new Error('FATAL: GCS_BUCKET_NAME must be set in production.');
+    }
+    if (!process.env.KMS_KEY_ID) {
+      throw new Error('FATAL: KMS_KEY_ID must be set in production.');
     }
   }
 
@@ -46,12 +75,19 @@ export function validateAndLoadConfig(): AppConfig {
     databaseUrl,
     redisUrl,
     jwtSecret,
-    jwtExpiresIn: '1h',
-    jwtRefreshExpiresIn: '30d',
+    jwtExpiresIn: '15m',
+    jwtRefreshExpiresIn: '7d',
     otpPepper,
     otpTtlSeconds: 300,
     otpMaxAttempts: 3,
     otpResendCooldownSeconds: 60,
+    razorpayKeyId: process.env.RAZORPAY_KEY_ID,
+    razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET,
+    razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
+    googleMapsApiKey: process.env.GOOGLE_MAPS_SERVER_API_KEY || process.env.GOOGLE_MAPS_API_KEY,
+    firebaseServiceAccountKey: process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+    smsGatewayApiKey: process.env.SMS_GATEWAY_API_KEY,
+    gcsBucketName: process.env.GCS_BUCKET_NAME,
+    kmsKeyId: process.env.KMS_KEY_ID,
   };
 }
-

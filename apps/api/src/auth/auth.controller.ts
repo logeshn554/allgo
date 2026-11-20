@@ -16,14 +16,30 @@ import { SendOtpDto } from './dto/send-otp.dto.js';
 import { VerifyOtpDto } from './dto/verify-otp.dto.js';
 import { RefreshTokenDto } from './dto/refresh-token.dto.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+import { AppCheckGuard } from './guards/app-check.guard.js';
+import { FirebaseSessionExchangeService, ExchangeSessionDto } from './firebase-session-exchange.service.js';
 
 @ApiTags('auth')
 @Controller('v1/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly sessionExchange: FirebaseSessionExchangeService
+  ) {}
+
+  @Post('session')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AppCheckGuard)
+  @ApiOperation({ summary: 'Exchange Firebase ID token for AllGo session tokens' })
+  @ApiResponse({ status: 200, description: 'Authentication successful, JWT tokens issued' })
+  @ApiResponse({ status: 401, description: 'Invalid Firebase ID token' })
+  async exchangeSession(@Body() dto: ExchangeSessionDto) {
+    return this.sessionExchange.exchangeFirebaseToken(dto);
+  }
 
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AppCheckGuard)
   @ApiOperation({ summary: 'Send 6-digit OTP to Indian mobile number' })
   @ApiResponse({ status: 200, description: 'OTP dispatched successfully' })
   @ApiResponse({ status: 400, description: 'Invalid phone or rate limit exceeded' })
@@ -84,4 +100,3 @@ export class AuthController {
     return user || req.user;
   }
 }
-
