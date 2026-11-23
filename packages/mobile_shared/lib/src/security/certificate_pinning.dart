@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
@@ -19,7 +20,7 @@ class CertificatePinningConfig {
         if (host.contains('localhost') || host.contains('10.0.2.2')) {
           return true; // Allow local emulators in debug mode
         }
-        final certSha256 = cert.sha256.map((b) => b.toRadixString(16).padLeft(2, '0')).join('').toUpperCase();
+        final certSha256 = sha256.convert(cert.der).toString().toUpperCase();
         return trustedSha256Fingerprints.contains(certSha256);
       };
 

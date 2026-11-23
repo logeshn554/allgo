@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/discovery.dart';
 import '../../models/product_item.dart';

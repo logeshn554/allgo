@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/mobility.dart';
 
@@ -268,4 +267,27 @@ class CustomerMobilityApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to fetch hire driver booking');
   }
 
+  Future<List<RideModel>> listRides() async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/rides');
+    final response = await base.httpClient.get(url, headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final list = data as List<dynamic>;
+      return list.map((e) => RideModel.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to list rides');
+  }
+
+  Future<List<HireDriverBookingModel>> listBookings() async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/hire-driver');
+    final response = await base.httpClient.get(url, headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final list = data as List<dynamic>;
+      return list.map((e) => HireDriverBookingModel.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to list hire driver bookings');
+  }
 }

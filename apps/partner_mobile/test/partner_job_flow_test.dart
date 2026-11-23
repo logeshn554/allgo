@@ -1,54 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
-import 'package:allgo_partner_mobile/src/components/partner_duty_tab_content.dart';
-import 'package:allgo_partner_mobile/src/components/active_delivery_card.dart';
-import 'package:allgo_partner_mobile/src/data/partner_job_actions.dart';
+import 'package:partner_mobile/src/components/active_delivery_card.dart';
 
 void main() {
   group('Partner Job Flow Tests', () {
     testWidgets('ActiveDeliveryCard renders order details, address and action buttons', (tester) async {
-      final mockJob = DeliveryJobModel(
+      final mockJob = const DeliveryJobModel(
         id: 'job_delivery_partner_42',
-        orderId: 'ord_sample_202',
-        orderNumber: 'AG-2026-4444',
-        status: 'ACCEPTED',
+        jobNumber: 'AG-2026-4444',
+        verticalType: 'FOOD',
+        status: 'ASSIGNED',
         pickupAddress: 'Anjappar Chettinad, T. Nagar',
-        deliveryAddress: 'Greenways Road, RA Puram',
-        driverName: 'Suresh Kumar',
-        driverPhone: '+919988771122',
-        driverVehicleNumber: 'TN 07 CD 5678',
-        estimatedMinutesRemaining: 20,
-        estimatedDeliveryTime: DateTime.now().add(const Duration(minutes: 20)),
-        items: const [],
+        dropoffAddress: 'Greenways Road, RA Puram',
+        courierFeeInr: 65.0,
       );
 
-      bool reachedClicked = false;
+      bool arrivedPickupClicked = false;
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ActiveDeliveryCard(
-              job: mockJob,
+              activeJob: mockJob,
               isActionBusy: false,
-              onReachedPickup: () => reachedClicked = true,
-              onPickupOrder: () {},
-              onReachedDrop: () {},
-              onStartDropOtp: () {},
+              onArrivedPickup: () => arrivedPickupClicked = true,
+              onStartDelivery: () {},
+              onArrivedDestination: () {},
+              onCompleteDelivery: () {},
+              onReportException: () {},
             ),
           ),
         ),
       );
 
-      expect(find.text('ACTIVE DELIVERY'), findsOneWidget);
-      expect(find.text('AG-2026-4444'), findsOneWidget);
+      expect(find.text('ACTIVE DELIVERY: ASSIGNED'), findsOneWidget);
       expect(find.text('Anjappar Chettinad, T. Nagar'), findsOneWidget);
-      expect(find.text('Arrived at Store'), findsOneWidget);
+      expect(find.text('Greenways Road, RA Puram'), findsOneWidget);
+      expect(find.text('Arrived at Store / Pickup'), findsOneWidget);
 
-      await tester.tap(find.text('Arrived at Store'));
+      await tester.tap(find.text('Arrived at Store / Pickup'));
       await tester.pump();
-      expect(reachedClicked, isTrue);
+
+      expect(arrivedPickupClicked, isTrue);
     });
   });
 }

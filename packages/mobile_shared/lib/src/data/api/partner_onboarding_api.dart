@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
-import '../../models/partner_profile.dart';
 
 class PartnerOnboardingApi {
   final BaseApi base;

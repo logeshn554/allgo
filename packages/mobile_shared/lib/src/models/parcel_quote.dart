@@ -13,6 +13,8 @@ class ParcelQuote {
 
   String get quoteId => serviceType;
   double get totalFareInr => totalAmountInr;
+  double get fareInr => totalAmountInr;
+  int get estimatedDurationMinutes => (distanceKm * 4 + 10).round();
 
   const ParcelQuote({
     required this.serviceType,

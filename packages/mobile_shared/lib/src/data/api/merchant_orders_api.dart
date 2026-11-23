@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/merchant_order.dart';
 import '../../models/merchant_dashboard_data.dart';

@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
 import '../../models/auth_tokens.dart';
 import '../../models/user.dart';
-import '../../models/account_status.dart';
 
 class AuthApi {
   final BaseApi base;

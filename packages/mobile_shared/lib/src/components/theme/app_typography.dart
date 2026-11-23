@@ -56,4 +56,10 @@ class AllGoTypography {
     fontWeight: FontWeight.w400,
     color: AllGoColors.textTertiary,
   );
+
+  static const TextStyle bodySmall = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    color: AllGoColors.textTertiary,
+  );
 }

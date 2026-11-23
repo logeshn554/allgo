@@ -1,23 +1,17 @@
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
-import '../models/account_status.dart';
 import '../models/user.dart';
 import '../models/auth_tokens.dart';
-import '../models/merchant_profile.dart';
+import '../models/customer_address.dart';
 import '../models/merchant_order.dart';
 import '../models/customer_order.dart';
 import '../models/product_item.dart';
 import '../models/merchant_dashboard_data.dart';
-import '../models/partner_profile.dart';
-import '../models/merchant_outlet.dart';
 import '../models/option_group.dart';
 import '../models/operating_hours.dart';
 import '../models/delivery_job.dart';
 import '../models/mobility.dart' hide ParcelModel;
 import '../models/discovery.dart';
 import '../models/parcel.dart';
-import '../models/parcel_quote.dart';
-import '../models/parcel_offer.dart';
 import '../storage/token_storage.dart';
 import '../security/certificate_pinning.dart';
 import '../data/api/base_api.dart';
@@ -113,18 +107,11 @@ class ApiClient {
     maps = MapsApi(_baseApi);
   }
 
-  Map<String, String> _buildHeaders({String? token, bool requiresAuth = true, String? roleContext}) {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-AllGo-Role': activeRole,
-      'Accept-Language': activeLanguage,
-    };
-    if (requiresAuth && token != null) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
-  }
+  Map<String, String> get defaultHeaders => {
+    'Content-Type': 'application/json',
+    'X-AllGo-Role': activeRole,
+    'Accept-Language': activeLanguage,
+  };
 
   Future<List<PlacePredictionModel>> searchPlaces(String input, {double? lat, double? lng}) => maps.searchPlaces(input, lat: lat, lng: lng);
   Future<GeocodeLocationModel> reverseGeocode(double lat, double lng) => maps.reverseGeocode(lat, lng);
@@ -429,6 +416,8 @@ class ApiClient {
         stateCode: (req['stateCode'] as String?) ?? 'TN',
       );
   Future<ParcelModel> getParcel(String parcelId) => customerParcel.getParcelDetails(parcelId);
+  Future<List<RideModel>> listRides() => customerMobility.listRides();
+  Future<List<HireDriverBookingModel>> listBookings() => customerMobility.listBookings();
   Future<HireDriverBookingModel> getHireDriverBooking(String bookingId) => customerMobility.getHireDriverBooking(bookingId);
   Future<ParcelQuote> quoteParcel(Map<String, dynamic> quoteRequest) => customerParcel.quoteParcel(quoteRequest);
   Future<List<Map<String, dynamic>>> getParcelRestrictions() => customerParcel.getParcelRestrictions();

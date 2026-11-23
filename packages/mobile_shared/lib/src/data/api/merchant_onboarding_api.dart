@@ -1,8 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'base_api.dart';
-import '../../models/merchant_profile.dart';
-import '../../models/merchant_outlet.dart';
 
 class MerchantOnboardingApi {
   final BaseApi base;

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class PushNotificationPayload {
   final String category;
   final String role;
