@@ -134,6 +134,8 @@ class ApiClient {
   Future<User> getMe() => auth.getMe();
   Future<User> updateProfile({String? fullName, String? email, String? avatarUrl, String? defaultLanguage}) => auth.updateProfile(fullName: fullName, email: email, avatarUrl: avatarUrl, defaultLanguage: defaultLanguage);
   Future<void> logout() => auth.logout();
+  Future<List<Map<String, dynamic>>> listDeviceSessions() => auth.listDeviceSessions();
+  Future<void> revokeDeviceSession(String deviceId) => auth.revokeDeviceSession(deviceId);
   Future<bool> checkHealth() => auth.checkHealth();
   Future<Map<String, dynamic>> createUploadTicket(String documentType, String mimeType, int fileSizeBytes) => partnerOnboarding.createUploadTicket(documentType, mimeType, fileSizeBytes);
   Future<Map<String, dynamic>> uploadDocumentBinary(String ticketId, List<int> bytes) => partnerOnboarding.uploadDocumentBinary(ticketId, bytes);

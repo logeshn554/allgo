@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import crypto from 'node:crypto';
 import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
 import { WalletService } from '../../apps/api/dist/finance/wallet/wallet.service.js';
 import { PaymentService } from '../../apps/api/dist/ordering/services/payment.service.js';
@@ -174,6 +175,28 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         if (row) row.status = 'REFUNDED';
         return { rows: [row] };
       }
+      if (s.startsWith('SELECT * FROM payment_transactions WHERE id = $1')) {
+        const row = this.payment_transactions.find((t) => t.id === params[0]);
+        return { rows: row ? [row] : [] };
+      }
+      if (s.startsWith('UPDATE payment_transactions') && s.includes('SET status = \'CAPTURED\'')) {
+        const row = this.payment_transactions.find((t) => t.id === params[2]);
+        if (row) {
+          row.status = 'CAPTURED';
+          row.gateway_payment_id = params[0];
+          row.gateway_signature = params[1];
+        }
+        return { rows: row ? [row] : [] };
+      }
+      if (s.startsWith('UPDATE payments') && s.includes('SET status = \'CAPTURED\'')) {
+        const row = this.payments.find((p) => p.order_group_id === params[2]);
+        if (row) {
+          row.status = 'CAPTURED';
+          row.gateway_payment_id = params[0];
+          row.gateway_signature = params[1];
+        }
+        return { rows: row ? [row] : [] };
+      }
 
       // Default
       return { rows: [] };
@@ -322,5 +345,101 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
     w = await walletService.getOrCreateWallet('user_idem');
     // Balance must still be 350.0 because ledger detected existing transaction reference
     assert.strictEqual(w.balanceInr, 350.0);
+  });
+
+  it('6. Razorpay online payment initiates with PENDING status and requiresAction', async () => {
+    const mockDb = new MockDb();
+    const ledger = new LedgerService(mockDb as any);
+    const walletService = new WalletService(mockDb as any, ledger);
+    const paymentService = new PaymentService(mockDb as any, walletService);
+
+    const initiation = await paymentService.initiatePayment(
+      'grp_rzp_1',
+      'sub_rzp_1',
+      'user_rzp',
+      'UPI',
+      650.0,
+      'idem_rzp_1'
+    );
+
+    assert.strictEqual(initiation.paymentMethod, 'UPI');
+    assert.strictEqual(initiation.gatewayName, 'RAZORPAY');
+    assert.strictEqual(initiation.status, 'PENDING');
+    assert.strictEqual(initiation.requiresAction, true);
+    assert.ok(initiation.gatewayOrderId, 'Expected Razorpay gateway order ID');
+  });
+
+  it('7. Razorpay signature verification validates legitimate signatures and rejects fraudulent tampering', async () => {
+    const mockDb = new MockDb();
+    const ledger = new LedgerService(mockDb as any);
+    const walletService = new WalletService(mockDb as any, ledger);
+    const paymentService = new PaymentService(mockDb as any, walletService);
+
+    const initiation = await paymentService.initiatePayment(
+      'grp_rzp_2',
+      'sub_rzp_2',
+      'user_rzp_2',
+      'CARD',
+      900.0,
+      'idem_rzp_2'
+    );
+
+    const keySecret = (paymentService as any).gateway.keySecret || 'test_secret';
+    (paymentService as any).gateway.keySecret = 'rzp_sec_allgo_testing';
+    const orderId = initiation.gatewayOrderId;
+    const paymentId = 'pay_rzp_test_999';
+
+    // 1. Legitimate HMAC-SHA256 signature
+    const validSignature = crypto
+      .createHmac('sha256', 'rzp_sec_allgo_testing')
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
+
+    // Tampered signature should be rejected
+    await assert.rejects(
+      async () => {
+        await paymentService.confirmPayment(
+          initiation.transactionId,
+          paymentId,
+          'forged_tampered_signature_xyz'
+        );
+      },
+      (err: any) => {
+        assert.match(err.message, /Invalid Razorpay payment signature/);
+        return true;
+      }
+    );
+
+    // Legitimate signature confirms payment and transitions status to CAPTURED
+    const confirmed = await paymentService.confirmPayment(
+      initiation.transactionId,
+      paymentId,
+      validSignature
+    );
+
+    assert.strictEqual(confirmed.status, 'CAPTURED');
+    assert.strictEqual(confirmed.gateway_payment_id, paymentId);
+    assert.strictEqual(confirmed.gateway_signature, validSignature);
+  });
+
+  it('8. Cash on Delivery (COD) order initiates with PENDING status without requiring immediate capture', async () => {
+    const mockDb = new MockDb();
+    const ledger = new LedgerService(mockDb as any);
+    const walletService = new WalletService(mockDb as any, ledger);
+    const paymentService = new PaymentService(mockDb as any, walletService);
+
+    const initiation = await paymentService.initiatePayment(
+      'grp_cod_1',
+      'sub_cod_1',
+      'user_cod',
+      'COD',
+      320.0,
+      'idem_cod_1'
+    );
+
+    assert.strictEqual(initiation.paymentMethod, 'COD');
+    assert.strictEqual(initiation.gatewayName, 'CASH_ON_DELIVERY');
+    assert.strictEqual(initiation.status, 'AUTHORIZED');
+    assert.strictEqual(initiation.requiresAction, false);
   });
 });

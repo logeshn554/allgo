@@ -77,4 +77,13 @@ export class AuthService {
   getDevOtpAdapter(): LocalOtpDeliveryAdapter {
     return this.otpService.getDevOtpAdapter();
   }
+
+  async listSessions(userId: string): Promise<any[]> {
+    return this.authRepo.listDeviceSessions(userId);
+  }
+
+  async revokeSession(userId: string, deviceId?: string): Promise<{ success: boolean }> {
+    await this.authRepo.deleteDeviceSession(userId, deviceId);
+    return { success: true };
+  }
 }

@@ -193,4 +193,26 @@ class AuthApi {
     }
   }
 
+  Future<List<Map<String, dynamic>>> listDeviceSessions() async {
+    final token = await base.tokenStorage.getAccessToken();
+    if (token == null) return [];
+    try {
+      final url = Uri.parse('${base.base.baseUrl}/v1/auth/sessions');
+      final response = await base.httpClient.get(url, headers: base.buildHeaders(token: token));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final list = jsonDecode(response.body) as List<dynamic>;
+        return list.map((e) => e as Map<String, dynamic>).toList();
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<void> revokeDeviceSession(String deviceId) async {
+    final token = await base.tokenStorage.getAccessToken();
+    if (token == null) return;
+    try {
+      final url = Uri.parse('${base.base.baseUrl}/v1/auth/sessions/$deviceId');
+      await base.httpClient.delete(url, headers: base.buildHeaders(token: token));
+    } catch (_) {}
+  }
 }

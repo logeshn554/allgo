@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
+  Param,
   Body,
   Req,
   Headers,
@@ -98,5 +100,29 @@ export class AuthController {
   async getMe(@Req() req: any) {
     const user = await this.authService.findUserById(req.user.userId);
     return user || req.user;
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List active device sessions for current user' })
+  async listSessions(@Req() req: any) {
+    return this.authService.listSessions(req.user.userId);
+  }
+
+  @Delete('sessions/:deviceId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke a specific device session' })
+  async revokeSession(@Req() req: any, @Param('deviceId') deviceId: string) {
+    return this.authService.revokeSession(req.user.userId, deviceId);
+  }
+
+  @Delete('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Revoke all device sessions for current user' })
+  async revokeAllSessions(@Req() req: any) {
+    return this.authService.revokeSession(req.user.userId);
   }
 }

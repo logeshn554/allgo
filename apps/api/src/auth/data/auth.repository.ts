@@ -196,6 +196,25 @@ export class AuthRepository {
     } catch {}
   }
 
+  async listDeviceSessions(userId: string): Promise<any[]> {
+    try {
+      const res = await this.db.query(
+        `SELECT id, device_id, platform, last_active_at, created_at FROM devices WHERE user_id = $1 ORDER BY last_active_at DESC;`,
+        [userId]
+      );
+      return res.rows;
+    } catch {
+      const list: any[] = [];
+      for (const [key, val] of this.memDevices.entries()) {
+        if (key.startsWith(`${userId}:`)) {
+          const deviceId = key.split(':')[1];
+          list.push({ device_id: deviceId, platform: 'ANDROID', last_active_at: new Date() });
+        }
+      }
+      return list;
+    }
+  }
+
   async deleteDeviceSession(userId: string, deviceId?: string): Promise<void> {
     try {
       if (deviceId) {

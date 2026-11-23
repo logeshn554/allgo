@@ -46,4 +46,5 @@ export 'src/components/language_selection_sheet.dart';
 export 'src/components/permission_rationale_dialog.dart';
 export 'src/screens/legal_policy_viewer_screen.dart';
 export 'src/security/certificate_pinning.dart';
+export 'src/security/biometric_auth_service.dart';
 
