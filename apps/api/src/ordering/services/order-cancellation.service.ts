@@ -35,7 +35,7 @@ export class OrderCancellationService {
       }
     }
 
-    await this.inventoryReservation.releaseReservation(order.checkout_session_id);
+    await this.inventoryReservation.releaseReservation(order.checkout_session_id, order.outlet_id);
 
     if (order.delivery_job_id) {
       try {

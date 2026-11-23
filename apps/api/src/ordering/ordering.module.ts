@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module.js';
 import { DeliveryModule } from '../delivery/delivery.module.js';
 import { StorageModule } from '../storage/storage.module.js';
+import { FinanceModule } from '../finance/finance.module.js';
 // Repositories
 import { OrderRepository } from './data/order.repository.js';
 import { OrderEventRepository } from './data/order-event.repository.js';
@@ -39,7 +40,7 @@ import { AdminOrdersController } from './controllers/admin-orders.controller.js'
 import { OrderSubstitutionController } from './controllers/order-substitution.controller.js';
 
 @Module({
-  imports: [DatabaseModule, DeliveryModule, StorageModule],
+  imports: [DatabaseModule, DeliveryModule, StorageModule, FinanceModule],
   controllers: [
     CartController,
     CheckoutController,

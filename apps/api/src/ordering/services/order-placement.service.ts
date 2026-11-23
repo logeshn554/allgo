@@ -117,7 +117,7 @@ export class OrderPlacementService {
         deliveryAddressId: dto.deliveryAddressId,
       });
 
-      const initialStatus = dto.paymentMethod === 'COD' ? 'PLACED' : 'CART';
+      const initialStatus = (dto.paymentMethod === 'COD' || dto.paymentMethod === 'WALLET') ? 'PLACED' : 'CART';
       const createdSubOrders: any[] = [];
 
       for (const [oId, oItems] of outletsMap.entries()) {

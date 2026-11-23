@@ -4,6 +4,7 @@ export interface CoordinatesDto {
 }
 
 export type VehicleCategory = 'BIKE' | 'AUTO' | 'CAB_ECONOMY' | 'CAB_PREMIUM';
+export type ParcelVehicleType = 'TWO_WHEELER' | 'THREE_WHEELER' | 'TATA_ACE' | 'PICKUP_TRUCK';
 export type PackageCategory = 'DOCUMENTS' | 'FOOD_BOX' | 'ELECTRONICS' | 'CLOTHES_ITEMS' | 'GENERAL';
 export type VehicleTransmission = 'MANUAL' | 'AUTOMATIC';
 export type PartnerOperationalMode = 'DELIVERIES_ONLY' | 'RIDES_ONLY' | 'ALL_JOBS';
@@ -50,8 +51,10 @@ export interface TriggerSosDto {
 export interface QuoteParcelFareDto {
   pickupLocation: CoordinatesDto;
   dropoffLocation: CoordinatesDto;
-  packageCategory: PackageCategory;
+  packageCategory?: PackageCategory;
+  vehicleType?: ParcelVehicleType;
   weightKg?: number;
+  isFragile?: boolean;
 }
 
 export interface CreateParcelDeliveryDto {
@@ -64,9 +67,11 @@ export interface CreateParcelDeliveryDto {
   dropoffContactName: string;
   dropoffContactPhone: string;
   packageCategory?: PackageCategory;
+  vehicleType?: ParcelVehicleType;
   weightKg?: number;
   packageDescription?: string;
   isFragile?: boolean;
+  paymentMethod?: 'COD' | 'UPI' | 'CARD' | 'WALLET';
 }
 
 export interface VerifyParcelOtpDto {

@@ -4,14 +4,17 @@ import {
   NotFoundException,
   ForbiddenException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { DatabaseService } from '../database/database.service.js';
+import { WalletService } from '../finance/wallet/wallet.service.js';
 import { MobilityFareService } from './mobility-fare.service.js';
 import { PartnerContinuityService } from './partner-continuity.service.js';
 import {
   CreateParcelDeliveryDto,
   VerifyParcelOtpDto,
+  ParcelVehicleType,
 } from './dto/mobility.dto.js';
 
 @Injectable()
@@ -21,7 +24,8 @@ export class ParcelsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly fareService: MobilityFareService,
-    private readonly continuityService: PartnerContinuityService
+    private readonly continuityService: PartnerContinuityService,
+    @Optional() private readonly walletService?: WalletService
   ) {}
 
   private generateOtp(): string {
@@ -29,6 +33,9 @@ export class ParcelsService {
   }
 
   async createParcel(senderId: string, dto: CreateParcelDeliveryDto): Promise<any> {
+    const vehicleType: ParcelVehicleType = dto.vehicleType || 'TWO_WHEELER';
+    const isFragile = Boolean(dto.isFragile);
+
     const distanceKm = this.fareService.calculateDistanceKm(
       dto.pickupLocation,
       dto.dropoffLocation
@@ -37,7 +44,9 @@ export class ParcelsService {
     const fare = await this.fareService.calculateParcelFare(
       distanceKm,
       dto.packageCategory || 'GENERAL',
-      dto.weightKg || 1.0
+      dto.weightKg || 1.0,
+      vehicleType,
+      isFragile
     );
 
     const parcelNumber = `PCL-${Date.now().toString(36).toUpperCase()}-${crypto.randomInt(100, 999)}`;
@@ -49,19 +58,32 @@ export class ParcelsService {
 
     const partnerPayout = Math.round(fare * 0.8 * 100) / 100;
 
+    let paymentStatus = 'PENDING';
+    if (dto.paymentMethod === 'WALLET' && this.walletService) {
+      const txRef = `PCL-WAL-${parcelNumber}`;
+      await this.walletService.debitWallet(
+        senderId,
+        fare,
+        `Parcel booking ${parcelNumber}`,
+        txRef,
+        'PARTNER_EARNINGS'
+      );
+      paymentStatus = 'COMPLETED';
+    }
+
     const res = await this.db.query(
       `INSERT INTO parcels (
          parcel_number, sender_id, city_id, status,
          pickup_address, pickup_location, pickup_contact_name, pickup_contact_phone,
          drop_address, drop_location, drop_contact_name, drop_contact_phone,
-         package_category, estimated_weight_kg, package_description, is_fragile,
-         pickup_otp, delivery_otp, delivery_fee_inr, total_amount_inr, partner_payout_inr
+         package_category, vehicle_type, estimated_weight_kg, package_description, is_fragile,
+         pickup_otp, delivery_otp, delivery_fee_inr, total_amount_inr, partner_payout_inr, payment_status
        ) VALUES (
          $1, $2, $3, 'CREATED',
          $4, ST_SetSRID(ST_MakePoint($5, $6), 4326), $7, $8,
          $9, ST_SetSRID(ST_MakePoint($10, $11), 4326), $12, $13,
-         $14, $15, $16, $17,
-         $18, $19, $20, $21, $22
+         $14, $15, $16, $17, $18,
+         $19, $20, $21, $22, $23, $24
        ) RETURNING *;`,
       [
         parcelNumber,
@@ -78,14 +100,16 @@ export class ParcelsService {
         dto.dropoffContactName,
         dto.dropoffContactPhone,
         dto.packageCategory || 'GENERAL',
+        vehicleType,
         dto.weightKg || 1.0,
         dto.packageDescription || 'Parcel item',
-        dto.isFragile || false,
+        isFragile,
         pickupOtp,
         deliveryOtp,
         fare,
         fare,
         partnerPayout,
+        paymentStatus,
       ]
     );
 
@@ -208,8 +232,12 @@ export class ParcelsService {
       id: p.id,
       parcelNumber: p.parcel_number,
       packageCategory: p.package_category,
+      vehicleType: p.vehicle_type || 'TWO_WHEELER',
+      isFragile: Boolean(p.is_fragile),
+      packageDescription: p.package_description,
       weightKg: Number(p.estimated_weight_kg),
       status: p.status,
+      paymentStatus: p.payment_status || 'PENDING',
       pickupAddress: p.pickup_address,
       dropoffAddress: p.drop_address,
       totalAmountInr: Number(p.total_amount_inr),

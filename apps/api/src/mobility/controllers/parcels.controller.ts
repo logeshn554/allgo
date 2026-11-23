@@ -27,10 +27,18 @@ export class ParcelsController {
   @Post('quote')
   async quoteFare(@Body() dto: QuoteParcelFareDto) {
     const dist = this.fareService.calculateDistanceKm(dto.pickupLocation, dto.dropoffLocation);
-    const fare = await this.fareService.calculateParcelFare(dist, dto.packageCategory, dto.weightKg);
+    const fare = await this.fareService.calculateParcelFare(
+      dist,
+      dto.packageCategory,
+      dto.weightKg,
+      dto.vehicleType,
+      dto.isFragile
+    );
     return {
       distanceKm: dist,
-      packageCategory: dto.packageCategory,
+      packageCategory: dto.packageCategory || 'GENERAL',
+      vehicleType: dto.vehicleType || 'TWO_WHEELER',
+      isFragile: Boolean(dto.isFragile),
       estimatedFareInr: fare,
     };
   }

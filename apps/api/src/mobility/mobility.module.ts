@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module.js';
 import { RedisModule } from '../redis/redis.module.js';
 import { MapsModule } from '../common/maps/maps.module.js';
+import { FinanceModule } from '../finance/finance.module.js';
 import { MobilityFareService } from './mobility-fare.service.js';
 import { PartnerContinuityService } from './partner-continuity.service.js';
 import { PartnerContinuityExtensionService } from './partner-continuity-extension.service.js';
@@ -26,7 +27,7 @@ import { PartnerContinuityController } from './controllers/partner-continuity.co
 import { AdminMobilityController } from './controllers/admin-mobility.controller.js';
 
 @Module({
-  imports: [DatabaseModule, RedisModule, MapsModule],
+  imports: [DatabaseModule, RedisModule, MapsModule, FinanceModule],
   providers: [
     MobilityFareService,
     PartnerContinuityService,

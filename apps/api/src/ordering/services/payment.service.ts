@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, Optional } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { DatabaseService } from '../../database/database.service.js';
+import { WalletService } from '../../finance/wallet/wallet.service.js';
 import { PaymentGateway } from '../gateways/payment-gateway.interface.js';
 import { RazorpayPaymentGateway } from '../gateways/razorpay-payment.gateway.js';
 
@@ -19,12 +20,20 @@ export interface PaymentInitiationResult {
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
   private readonly gateway: PaymentGateway;
+  private readonly walletService?: WalletService;
 
   constructor(
     private readonly db: DatabaseService,
-    gateway?: PaymentGateway
+    @Optional() arg2?: WalletService | PaymentGateway,
+    @Optional() arg3?: PaymentGateway
   ) {
-    this.gateway = gateway || new RazorpayPaymentGateway();
+    if (arg2 && 'createOrder' in arg2) {
+      this.gateway = arg2 as PaymentGateway;
+      this.walletService = undefined;
+    } else {
+      this.walletService = arg2 as WalletService | undefined;
+      this.gateway = arg3 || new RazorpayPaymentGateway();
+    }
   }
 
   async initiatePayment(
@@ -56,7 +65,19 @@ export class PaymentService {
       gatewayOrderId = orderRes.id;
     }
 
-    const initialStatus = (isCod || isWallet) ? 'AUTHORIZED' : 'PENDING';
+    if (isWallet && this.walletService) {
+      const txRef = `ORD-WAL-${orderGroupId.slice(0, 8)}-${subOrderId.slice(0, 8)}-${Date.now().toString(36)}`;
+      await this.walletService.debitWallet(
+        customerId,
+        amountInr,
+        `Payment for order ${orderGroupId}`,
+        txRef,
+        'MERCHANT_SETTLEMENT',
+        runner
+      );
+    }
+
+    const initialStatus = isCod ? 'AUTHORIZED' : (isWallet ? 'CAPTURED' : 'PENDING');
     const idemKey = idempotencyKey || `idem-${orderGroupId}-${Date.now()}`;
 
     const res = await runner.query(
@@ -134,7 +155,19 @@ export class PaymentService {
   }
 
   async processRefund(subOrderId: string, amountInr: number, reason: string): Promise<any> {
-    const transRes = await this.db.query(
+    // Idempotency: return existing refund if already processed for this sub-order
+    const existingRefund = await this.db.query(
+      `SELECT r.* FROM refunds r
+       JOIN refund_allocations ra ON ra.refund_id = r.id
+       WHERE ra.sub_order_id = $1 AND r.status = 'PROCESSED' LIMIT 1;`,
+      [subOrderId]
+    );
+    if (existingRefund.rows.length > 0) {
+      this.logger.log(`Sub-order ${subOrderId} already refunded; returning existing record`);
+      return existingRefund.rows[0];
+    }
+
+    let transRes = await this.db.query(
       `SELECT pt.*, p.id as canonical_payment_id
        FROM payment_transactions pt
        JOIN payments p ON p.order_group_id = pt.order_group_id
@@ -144,15 +177,27 @@ export class PaymentService {
     );
 
     if (transRes.rows.length === 0) {
+      transRes = await this.db.query(
+        `SELECT pt.*, p.id as canonical_payment_id
+         FROM sub_orders so
+         JOIN payment_transactions pt ON pt.order_group_id = so.order_group_id
+         JOIN payments p ON p.order_group_id = pt.order_group_id
+         WHERE so.id = $1 AND pt.status IN ('CAPTURED', 'AUTHORIZED')
+         ORDER BY pt.created_at DESC LIMIT 1;`,
+        [subOrderId]
+      );
+    }
+
+    if (transRes.rows.length === 0) {
       this.logger.warn(`No captured payment found for sub_order ${subOrderId}; skipping payment refund`);
       return null;
     }
 
     const payment = transRes.rows[0];
-    const destination = payment.payment_method === 'COD' ? 'WALLET' : 'ORIGINAL_METHOD';
+    const destination = (payment.payment_method === 'COD' || payment.payment_method === 'WALLET') ? 'WALLET' : 'ORIGINAL_METHOD';
     let gatewayRefundId = `rfnd_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`;
 
-    if (payment.payment_method !== 'COD' && payment.gateway_payment_id) {
+    if (destination === 'ORIGINAL_METHOD' && payment.gateway_payment_id) {
       try {
         const rzpRefund = await this.gateway.createRefund({
           paymentId: payment.gateway_payment_id,
@@ -180,6 +225,17 @@ export class PaymentService {
        VALUES ($1, $2, $3);`,
       [refund.id, subOrderId, amountInr]
     );
+
+    if (destination === 'WALLET' && this.walletService) {
+      const refundRef = `REF-${subOrderId.slice(0, 8)}-${refund.id.slice(0, 8)}`;
+      await this.walletService.creditWallet(
+        payment.customer_id,
+        amountInr,
+        `Refund for sub-order ${subOrderId}: ${reason}`,
+        refundRef,
+        false
+      );
+    }
 
     await this.db.query(
       `UPDATE payment_transactions SET status = 'REFUNDED', updated_at = NOW() WHERE id = $1;`,

@@ -38,8 +38,16 @@ export class QuoteParcelDto {
 
   @IsNumber()
   @Min(0.1)
-  @Max(50.0)
+  @Max(1500.0)
   weightKg: number = 1.0;
+
+  @IsOptional()
+  @IsString()
+  vehicleType?: string = 'TWO_WHEELER';
+
+  @IsOptional()
+  @IsBoolean()
+  isFragile?: boolean = false;
 
   @IsOptional()
   @IsNumber()
@@ -110,8 +118,13 @@ export class CreateParcelBookingDto {
   packageQuantity?: number = 1;
   @IsNumber()
   @Min(0.1)
-  @Max(50.0)
+  @Max(1500.0)
   weightKg: number = 1.0;
+
+  @IsOptional()
+  @IsString()
+  vehicleType?: string = 'TWO_WHEELER';
+
   @IsOptional()
   @IsNumber()
   @Min(1)

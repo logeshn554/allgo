@@ -121,24 +121,36 @@ export class ParcelPricingService {
       );
     }
 
-    // 5. Fetch category base fare rules
-    const fareRes = await this.db.query(
-      `SELECT * FROM parcel_fares_config WHERE package_category = $1;`,
-      [packageCategory]
-    );
-
-    if (fareRes.rows.length === 0) {
+    // 5. Vehicle class and category fare rules
+    const vehicleType = (dto.vehicleType || 'TWO_WHEELER').toUpperCase();
+    const maxWeights: Record<string, number> = {
+      TWO_WHEELER: 20,
+      THREE_WHEELER: 500,
+      TATA_ACE: 1000,
+      PICKUP_TRUCK: 1500,
+    };
+    const maxCapacity = maxWeights[vehicleType] || 20;
+    if (dto.weightKg > maxCapacity) {
       throw new BadRequestException(
-        `Pricing configuration is missing for package category: '${packageCategory}'. Server cannot compute authoritative price.`
+        `Weight of ${dto.weightKg} kg exceeds maximum capacity of ${maxCapacity} kg for ${vehicleType}`
       );
     }
 
-    const fareConfig = fareRes.rows[0];
+    const rates: Record<
+      string,
+      { baseFare: number; baseDistance: number; perKm: number; thresholdKg: number; perKg: number }
+    > = {
+      TWO_WHEELER: { baseFare: 40.0, baseDistance: 2.0, perKm: 12.0, thresholdKg: 1.0, perKg: 5.0 },
+      THREE_WHEELER: { baseFare: 150.0, baseDistance: 3.0, perKm: 20.0, thresholdKg: 20.0, perKg: 1.0 },
+      TATA_ACE: { baseFare: 350.0, baseDistance: 3.0, perKm: 28.0, thresholdKg: 100.0, perKg: 0.8 },
+      PICKUP_TRUCK: { baseFare: 550.0, baseDistance: 4.0, perKm: 35.0, thresholdKg: 200.0, perKg: 0.6 },
+    };
 
-    const baseFare = Number(fareConfig.base_fare_inr);
-    const baseDistance = Number(fareConfig.base_distance_km);
-    const perKmRate = Number(fareConfig.per_km_rate_inr);
-    const perKgRate = Number(fareConfig.per_kg_rate_inr);
+    const vRates = (rates[vehicleType] ?? rates['TWO_WHEELER'])!;
+    const baseFare = vRates.baseFare;
+    const baseDistance = vRates.baseDistance;
+    const perKmRate = vRates.perKm;
+    const perKgRate = vRates.perKg;
 
     // Volumetric weight: (L * W * H) / 5000 (IATA standard intra-city courier formula)
     const length = dto.lengthCm || 20.0;
@@ -151,12 +163,14 @@ export class ParcelPricingService {
     const chargeableKm = Math.max(distanceKm - baseDistance, 0);
     const distanceFare = Math.round(chargeableKm * perKmRate * 100) / 100;
 
-    // Weight charge above 1kg
-    const extraWeight = Math.max(chargeableWeightKg - 1.0, 0);
+    // Weight charge above threshold
+    const extraWeight = Math.max(chargeableWeightKg - vRates.thresholdKg, 0);
     const weightFare = Math.round(extraWeight * perKgRate * 100) / 100;
 
+    const fragileSurcharge = dto.isFragile ? 50.0 : 0.0;
+
     // Combined subtotal with service and zone multipliers
-    const rawSubtotal = (baseFare + distanceFare + weightFare) * serviceMultiplier * zoneSurgeMultiplier;
+    const rawSubtotal = (baseFare + distanceFare + weightFare + fragileSurcharge) * serviceMultiplier * zoneSurgeMultiplier;
     const subtotal = Math.round(rawSubtotal * 100) / 100;
 
     const platformFee = 5.0;

@@ -29,14 +29,15 @@ export class WalletService {
     private readonly ledger: LedgerService
   ) {}
 
-  async getOrCreateWallet(userId: string) {
-    let res = await this.db.query(
+  async getOrCreateWallet(userId: string, runnerClient?: any) {
+    const runner = runnerClient || this.db;
+    let res = await runner.query(
       `SELECT * FROM wallets WHERE user_id = $1;`,
       [userId]
     );
 
     if (res.rows.length === 0) {
-      res = await this.db.query(
+      res = await runner.query(
         `INSERT INTO wallets (user_id, balance_inr, promotional_balance_inr, refundable_balance_inr)
          VALUES ($1, 0.00, 0.00, 0.00)
          RETURNING *;`,
@@ -46,7 +47,7 @@ export class WalletService {
 
     const wallet = res.rows[0];
 
-    const ledgerSumRes = await this.db.query(
+    const ledgerSumRes = await runner.query(
       `SELECT 
          COALESCE(SUM(CASE WHEN direction = 'CREDIT' THEN amount_inr ELSE -amount_inr END), 0.00) as ledger_balance
        FROM ledger_entries
@@ -59,7 +60,7 @@ export class WalletService {
 
     if (Math.abs(calculatedBalance - storedBalance) > 0.009) {
       this.logger.warn(`Wallet drift detected for user ${userId}. Stored: ₹${storedBalance}, Ledger: ₹${calculatedBalance}. Reconciling.`);
-      await this.db.query(
+      await runner.query(
         `UPDATE wallets SET balance_inr = $1, updated_at = NOW() WHERE id = $2;`,
         [calculatedBalance, wallet.id]
       );
@@ -113,13 +114,15 @@ export class WalletService {
     amountInr: number,
     reason: string,
     reference?: string,
-    isPromotional = false
+    isPromotional = false,
+    runnerClient?: any
   ) {
     if (amountInr <= 0) {
       throw new BadRequestException('Credit amount must be positive');
     }
 
-    const wallet = await this.getOrCreateWallet(userId);
+    const runner = runnerClient || this.db;
+    const wallet = await this.getOrCreateWallet(userId, runnerClient);
     if (wallet.isLocked) {
       throw new BadRequestException('Wallet is locked. Cannot process credit.');
     }
@@ -148,21 +151,21 @@ export class WalletService {
         },
       ],
       metadata: { userId, isPromotional, reason },
-    });
+    }, runnerClient);
 
     if (isPromotional) {
-      await this.db.query(
+      await runner.query(
         `UPDATE wallets SET promotional_balance_inr = promotional_balance_inr + $1 WHERE id = $2;`,
         [amountInr, wallet.id]
       );
     } else {
-      await this.db.query(
+      await runner.query(
         `UPDATE wallets SET refundable_balance_inr = refundable_balance_inr + $1 WHERE id = $2;`,
         [amountInr, wallet.id]
       );
     }
 
-    return this.getOrCreateWallet(userId);
+    return this.getOrCreateWallet(userId, runnerClient);
   }
 
   async debitWallet(
@@ -170,13 +173,15 @@ export class WalletService {
     amountInr: number,
     reason: string,
     reference?: string,
-    targetAccount: 'GATEWAY_ESCROW' | 'MERCHANT_SETTLEMENT' | 'PARTNER_EARNINGS' = 'GATEWAY_ESCROW'
+    targetAccount: 'GATEWAY_ESCROW' | 'MERCHANT_SETTLEMENT' | 'PARTNER_EARNINGS' = 'GATEWAY_ESCROW',
+    runnerClient?: any
   ) {
     if (amountInr <= 0) {
       throw new BadRequestException('Debit amount must be positive');
     }
 
-    const wallet = await this.getOrCreateWallet(userId);
+    const runner = runnerClient || this.db;
+    const wallet = await this.getOrCreateWallet(userId, runnerClient);
     if (wallet.isLocked) {
       throw new BadRequestException('Wallet is locked. Cannot process debit.');
     }
@@ -208,13 +213,13 @@ export class WalletService {
         },
       ],
       metadata: { userId, reason },
-    });
+    }, runnerClient);
 
     const promoAvailable = wallet.promotionalBalanceInr || 0;
     const promoDeduct = Math.round(Math.min(promoAvailable, amountInr) * 100) / 100;
     const refundableDeduct = Math.round((amountInr - promoDeduct) * 100) / 100;
 
-    await this.db.query(
+    await runner.query(
       `UPDATE wallets 
        SET promotional_balance_inr = GREATEST(0.00, promotional_balance_inr - $1),
            refundable_balance_inr = GREATEST(0.00, refundable_balance_inr - $2),
@@ -223,7 +228,7 @@ export class WalletService {
       [promoDeduct, refundableDeduct, wallet.id]
     );
 
-    return this.getOrCreateWallet(userId);
+    return this.getOrCreateWallet(userId, runnerClient);
   }
 
   async getWalletTransactions(userId: string, limit = 50, offset = 0) {

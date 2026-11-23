@@ -5,6 +5,7 @@ import {
   CoordinatesDto,
   VehicleCategory,
   PackageCategory,
+  ParcelVehicleType,
 } from './dto/mobility.dto.js';
 
 export interface RideFareEstimate {
@@ -189,12 +190,42 @@ export class MobilityFareService {
     };
   }
 
-  async calculateParcelFare(distanceKm: number, category: PackageCategory = 'GENERAL', weightKg = 1.0): Promise<number> {
-    const res = await this.db.query(`SELECT * FROM parcel_fares_config WHERE package_category = $1;`, [category]);
-    const conf = res.rows[0] || { base_fare_inr: 40.0, base_distance_km: 2.0, per_km_rate_inr: 12.0, per_kg_rate_inr: 5.0 };
-    const distCharge = Math.max(distanceKm - Number(conf.base_distance_km), 0) * Number(conf.per_km_rate_inr);
-    const weightCharge = Math.max(weightKg - 1.0, 0) * Number(conf.per_kg_rate_inr);
-    return Math.round((Number(conf.base_fare_inr) + distCharge + weightCharge) * 100) / 100;
+  async calculateParcelFare(
+    distanceKm: number,
+    _category: PackageCategory = 'GENERAL',
+    weightKg = 1.0,
+    vehicleType: ParcelVehicleType = 'TWO_WHEELER',
+    isFragile = false
+  ): Promise<number> {
+    const maxWeights: Record<ParcelVehicleType, number> = {
+      TWO_WHEELER: 20,
+      THREE_WHEELER: 500,
+      TATA_ACE: 1000,
+      PICKUP_TRUCK: 1500,
+    };
+    const maxCapacity = maxWeights[vehicleType] || 20;
+    if (weightKg > maxCapacity) {
+      throw new BadRequestException(
+        `Weight of ${weightKg} kg exceeds maximum capacity of ${maxCapacity} kg for ${vehicleType}`
+      );
+    }
+
+    const rates: Record<
+      ParcelVehicleType,
+      { baseFare: number; baseDistance: number; perKm: number; thresholdKg: number; perKg: number }
+    > = {
+      TWO_WHEELER: { baseFare: 40.0, baseDistance: 2.0, perKm: 12.0, thresholdKg: 1.0, perKg: 5.0 },
+      THREE_WHEELER: { baseFare: 150.0, baseDistance: 3.0, perKm: 20.0, thresholdKg: 20.0, perKg: 1.0 },
+      TATA_ACE: { baseFare: 350.0, baseDistance: 3.0, perKm: 28.0, thresholdKg: 100.0, perKg: 0.8 },
+      PICKUP_TRUCK: { baseFare: 550.0, baseDistance: 4.0, perKm: 35.0, thresholdKg: 200.0, perKg: 0.6 },
+    };
+
+    const cfg = rates[vehicleType] || rates.TWO_WHEELER;
+    const distCharge = Math.max(distanceKm - cfg.baseDistance, 0) * cfg.perKm;
+    const weightCharge = Math.max(weightKg - cfg.thresholdKg, 0) * cfg.perKg;
+    const fragileSurcharge = isFragile ? 50.0 : 0.0;
+
+    return Math.round((cfg.baseFare + distCharge + weightCharge + fragileSurcharge) * 100) / 100;
   }
 
   calculateHireDriverFare(durationHours: 4 | 8 | 12, scheduledStartTime: Date) {

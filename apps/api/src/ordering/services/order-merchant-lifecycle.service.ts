@@ -37,7 +37,7 @@ export class OrderMerchantLifecycleService {
       throw new BadRequestException(`Cannot accept order in status "${order.status}"`);
     }
 
-    await this.inventoryReservation.commitReservation(order.checkout_session_id);
+    await this.inventoryReservation.commitReservation(order.checkout_session_id, order.outlet_id);
 
     const estimatedReadyAt = new Date(Date.now() + prepTimeMinutes * 60 * 1000);
     const updated = await this.orderRepo.updateSubOrderAccepted(subOrderId, prepTimeMinutes, estimatedReadyAt);
@@ -131,7 +131,7 @@ export class OrderMerchantLifecycleService {
     const order = await this.orderRepo.findSubOrderForMerchant(subOrderId, merchantUserId);
     if (!order) throw new ForbiddenException('Unauthorized');
 
-    await this.inventoryReservation.releaseReservation(order.checkout_session_id);
+    await this.inventoryReservation.releaseReservation(order.checkout_session_id, order.outlet_id);
 
     const refund = await this.paymentService.processRefund(
       subOrderId,

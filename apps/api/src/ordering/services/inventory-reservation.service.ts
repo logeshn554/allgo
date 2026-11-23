@@ -64,13 +64,17 @@ export class InventoryReservationService {
   /**
    * Commit reservation on order acceptance / completion
    */
-  async commitReservation(checkoutSessionId: string): Promise<void> {
-    const res = await this.db.query(
-      `SELECT outlet_id, item_id, quantity
-       FROM inventory_reservations
-       WHERE checkout_session_id = $1 AND status = 'RESERVED';`,
-      [checkoutSessionId]
-    );
+  async commitReservation(checkoutSessionId: string, outletId?: string): Promise<void> {
+    const query = outletId
+      ? `SELECT outlet_id, item_id, quantity
+         FROM inventory_reservations
+         WHERE checkout_session_id = $1 AND outlet_id = $2 AND status = 'RESERVED';`
+      : `SELECT outlet_id, item_id, quantity
+         FROM inventory_reservations
+         WHERE checkout_session_id = $1 AND status = 'RESERVED';`;
+    const params = outletId ? [checkoutSessionId, outletId] : [checkoutSessionId];
+
+    const res = await this.db.query(query, params);
 
     for (const r of res.rows) {
       await this.db.query(
@@ -82,24 +86,31 @@ export class InventoryReservationService {
       );
     }
 
-    await this.db.query(
-      `UPDATE inventory_reservations
-       SET status = 'COMMITTED'
-       WHERE checkout_session_id = $1 AND status = 'RESERVED';`,
-      [checkoutSessionId]
-    );
+    const updateQuery = outletId
+      ? `UPDATE inventory_reservations
+         SET status = 'COMMITTED'
+         WHERE checkout_session_id = $1 AND outlet_id = $2 AND status = 'RESERVED';`
+      : `UPDATE inventory_reservations
+         SET status = 'COMMITTED'
+         WHERE checkout_session_id = $1 AND status = 'RESERVED';`;
+
+    await this.db.query(updateQuery, params);
   }
 
   /**
    * Release reservation and restore stock on order cancellation / failure
    */
-  async releaseReservation(checkoutSessionId: string): Promise<void> {
-    const res = await this.db.query(
-      `SELECT outlet_id, item_id, quantity
-       FROM inventory_reservations
-       WHERE checkout_session_id = $1 AND status = 'RESERVED';`,
-      [checkoutSessionId]
-    );
+  async releaseReservation(checkoutSessionId: string, outletId?: string): Promise<void> {
+    const query = outletId
+      ? `SELECT outlet_id, item_id, quantity
+         FROM inventory_reservations
+         WHERE checkout_session_id = $1 AND outlet_id = $2 AND status = 'RESERVED';`
+      : `SELECT outlet_id, item_id, quantity
+         FROM inventory_reservations
+         WHERE checkout_session_id = $1 AND status = 'RESERVED';`;
+    const params = outletId ? [checkoutSessionId, outletId] : [checkoutSessionId];
+
+    const res = await this.db.query(query, params);
 
     for (const r of res.rows) {
       await this.db.query(
@@ -113,11 +124,14 @@ export class InventoryReservationService {
       );
     }
 
-    await this.db.query(
-      `UPDATE inventory_reservations
-       SET status = 'RELEASED'
-       WHERE checkout_session_id = $1 AND status = 'RESERVED';`,
-      [checkoutSessionId]
-    );
+    const updateQuery = outletId
+      ? `UPDATE inventory_reservations
+         SET status = 'RELEASED'
+         WHERE checkout_session_id = $1 AND outlet_id = $2 AND status = 'RESERVED';`
+      : `UPDATE inventory_reservations
+         SET status = 'RELEASED'
+         WHERE checkout_session_id = $1 AND status = 'RESERVED';`;
+
+    await this.db.query(updateQuery, params);
   }
 }
