@@ -41,9 +41,20 @@ export class OrderPlacementService {
       throw new BadRequestException('Cannot place an order with an empty cart');
     }
 
-    const outletId = cart.outlet.id;
     const address = await this.addressService.getSavedAddress(dto.deliveryAddressId, customerId);
-    await this.addressService.validateServiceability(outletId, address.latitude, address.longitude);
+
+    const outletsMap = new Map<string, any[]>();
+    for (const item of cart.items) {
+      const oId = item.outletId || cart.outlet?.id;
+      if (!outletsMap.has(oId)) {
+        outletsMap.set(oId, []);
+      }
+      outletsMap.get(oId)!.push(item);
+    }
+
+    for (const oId of outletsMap.keys()) {
+      await this.addressService.validateServiceability(oId, address.latitude, address.longitude);
+    }
 
     const pricing = await this.pricingService.calculateCheckoutTotals(
       cart.items.map((i: any) => ({
@@ -51,8 +62,9 @@ export class OrderPlacementService {
         variant_id: i.variantId,
         quantity: i.quantity,
         selected_options: i.selectedOptions,
+        outlet_id: i.outletId || cart.outlet?.id,
       })),
-      outletId,
+      cart.outlet?.id,
       { latitude: address.latitude, longitude: address.longitude },
       dto.couponCode,
       customerId
@@ -81,12 +93,14 @@ export class OrderPlacementService {
         expiresAt,
       });
 
-      await this.inventoryReservation.reserveInventory(
-        client,
-        checkoutSessionId,
-        outletId,
-        cart.items.map((i: any) => ({ itemId: i.itemId, quantity: i.quantity }))
-      );
+      for (const [oId, oItems] of outletsMap.entries()) {
+        await this.inventoryReservation.reserveInventory(
+          client,
+          checkoutSessionId,
+          oId,
+          oItems.map((i: any) => ({ itemId: i.itemId, quantity: i.quantity }))
+        );
+      }
 
       const orderGroupNumber = `GRP-${Date.now().toString(36).toUpperCase()}-${crypto.randomInt(100, 999)}`;
       const orderGroupId = await this.orderRepo.insertOrderGroup(client, {
@@ -103,59 +117,108 @@ export class OrderPlacementService {
         deliveryAddressId: dto.deliveryAddressId,
       });
 
-      const subOrderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${crypto.randomInt(100, 999)}`;
       const initialStatus = dto.paymentMethod === 'COD' ? 'PLACED' : 'CART';
-      const merchantCommission = Math.round(pricing.itemsSubtotalInr * 0.15 * 100) / 100;
-      const merchantNetPayout = Math.round((pricing.itemsSubtotalInr - merchantCommission) * 100) / 100;
+      const createdSubOrders: any[] = [];
 
-      const subOrder = await this.orderRepo.insertSubOrder(client, {
-        orderGroupId,
-        outletId,
-        subOrderNumber,
-        status: initialStatus,
-        itemsSubtotalInr: pricing.itemsSubtotalInr,
-        packagingFeeInr: pricing.packagingFeeInr,
-        deliveryFeeInr: pricing.deliveryFeeInr,
-        platformFeeInr: pricing.platformFeeInr,
-        merchantCommission,
-        merchantNetPayout,
-        gstAmountInr: pricing.gstAmountInr,
-        discountAmountInr: pricing.discountAmountInr,
-        finalPayableAmountInr: pricing.finalPayableAmountInr,
-        address,
-        deliveryInstructions: dto.deliveryInstructions || null,
-        customerNotes: dto.customerNotes || null,
-      });
+      for (const [oId, oItems] of outletsMap.entries()) {
+        const outletBreakdown = pricing.outletsBreakdown?.find((ob) => ob.outletId === oId);
+        const subItemsTotal = outletBreakdown
+          ? outletBreakdown.itemsSubtotalInr
+          : oItems.reduce((acc, it) => acc + (it.totalPriceInr || 0), 0);
+        const subPackagingFee = outletBreakdown ? outletBreakdown.packagingFeeInr : 15.0;
+        const subDeliveryFee = outletBreakdown
+          ? outletBreakdown.deliveryFeeInr
+          : Math.round((pricing.deliveryFeeInr / outletsMap.size) * 100) / 100;
+        const subGstAmount = outletBreakdown
+          ? outletBreakdown.gstAmountInr
+          : Math.round(subItemsTotal * 0.05 * 100) / 100;
+        const subMerchantCommission = Math.round(subItemsTotal * 0.15 * 100) / 100;
+        const subMerchantNetPayout = Math.round((subItemsTotal - subMerchantCommission) * 100) / 100;
+        const subDiscount =
+          pricing.discountAmountInr > 0 && pricing.itemsSubtotalInr > 0
+            ? Math.round((subItemsTotal / pricing.itemsSubtotalInr) * pricing.discountAmountInr * 100) / 100
+            : 0;
+        const subPayable = Math.max(0, subItemsTotal + subPackagingFee + subDeliveryFee + subGstAmount - subDiscount);
 
-      const subOrderId = subOrder.id;
+        const subOrderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${crypto.randomInt(100, 999)}`;
+        const verticalType = oItems[0]?.verticalType || 'FOOD';
 
-      for (const item of pricing.itemsBreakdown) {
-        const orderItemId = await this.orderRepo.insertOrderItem(client, {
-          subOrderId,
-          itemId: item.itemId,
-          itemName: item.itemName,
-          unitPriceInr: item.unitPriceInr,
-          quantity: item.quantity,
-          totalPriceInr: item.totalPriceInr,
-          gstAmountInr: Math.round(item.totalPriceInr * 0.05 * 100) / 100,
+        const subOrder = await this.orderRepo.insertSubOrder(client, {
+          orderGroupId,
+          outletId: oId,
+          subOrderNumber,
+          verticalType,
+          status: initialStatus,
+          itemsSubtotalInr: subItemsTotal,
+          packagingFeeInr: subPackagingFee,
+          deliveryFeeInr: subDeliveryFee,
+          platformFeeInr: createdSubOrders.length === 0 ? pricing.platformFeeInr : 0,
+          merchantCommission: subMerchantCommission,
+          merchantNetPayout: subMerchantNetPayout,
+          gstAmountInr: subGstAmount,
+          discountAmountInr: subDiscount,
+          finalPayableAmountInr: subPayable,
+          address,
+          deliveryInstructions: dto.deliveryInstructions || null,
+          customerNotes: dto.customerNotes || null,
         });
 
-        if (item.selectedOptions && item.selectedOptions.length > 0) {
-          const isValidUuid = (val?: string) =>
-            typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+        const subOrderId = subOrder.id;
 
-          for (const opt of item.selectedOptions) {
-            await this.orderRepo.insertCustomization(client, {
-              orderItemId,
-              groupId: isValidUuid(opt.groupId) ? opt.groupId : null,
-              groupName: opt.groupName || 'Options',
-              optionId: isValidUuid(opt.optionId) ? opt.optionId : null,
-              optionName: opt.optionName || 'Option',
-              priceInr: opt.priceInr || 0.0,
-            });
+        for (const item of oItems) {
+          const breakdown = pricing.itemsBreakdown.find((b) => b.itemId === item.itemId);
+          const orderItemId = await this.orderRepo.insertOrderItem(client, {
+            subOrderId,
+            itemId: item.itemId,
+            itemName: item.name || breakdown?.itemName || 'Item',
+            unitPriceInr: breakdown ? breakdown.unitPriceInr : (item.unitPriceInr || 0),
+            quantity: item.quantity,
+            totalPriceInr: breakdown ? breakdown.totalPriceInr : (item.totalPriceInr || 0),
+            gstAmountInr: Math.round((breakdown ? breakdown.totalPriceInr : (item.totalPriceInr || 0)) * 0.05 * 100) / 100,
+          });
+
+          if (item.selectedOptions && item.selectedOptions.length > 0) {
+            const isValidUuid = (val?: string) =>
+              typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+            for (const opt of item.selectedOptions) {
+              await this.orderRepo.insertCustomization(client, {
+                orderItemId,
+                groupId: isValidUuid(opt.groupId) ? opt.groupId : null,
+                groupName: opt.groupName || 'Options',
+                optionId: isValidUuid(opt.optionId) ? opt.optionId : null,
+                optionName: opt.optionName || 'Option',
+                priceInr: opt.priceInr || 0.0,
+              });
+            }
           }
         }
+
+        await this.eventRepo.recordEvent(
+          {
+            orderGroupId,
+            subOrderId,
+            actorId: customerId,
+            eventType: 'ORDER_PLACED',
+            fromStatus: 'CART',
+            toStatus: initialStatus,
+            notes: `Sub-order created via unified checkout for outlet ${oId}`,
+          },
+          client
+        );
+
+        createdSubOrders.push({
+          subOrderId,
+          subOrderNumber,
+          outletId: oId,
+          status: initialStatus,
+          itemCount: oItems.length,
+          payableAmountInr: subPayable,
+        });
       }
+
+      const primarySubOrderId = createdSubOrders[0].subOrderId;
+      const primarySubOrderNumber = createdSubOrders[0].subOrderNumber;
 
       if (pricing.appliedCoupon) {
         const coupon = await this.orderRepo.findCouponByCode(client, pricing.appliedCoupon.code);
@@ -169,36 +232,23 @@ export class OrderPlacementService {
             couponId: coupon.id,
             customerId,
             orderGroupId,
-            subOrderId,
+            subOrderId: primarySubOrderId,
             couponCode: pricing.appliedCoupon.code,
             discountInr: pricing.appliedCoupon.discountInr,
           });
 
           await this.orderRepo.insertDiscountAllocation(client, {
             orderGroupId,
-            subOrderId,
+            subOrderId: primarySubOrderId,
             couponCode: pricing.appliedCoupon.code,
             discountInr: pricing.appliedCoupon.discountInr,
           });
         }
       }
 
-      await this.eventRepo.recordEvent(
-        {
-          orderGroupId,
-          subOrderId,
-          actorId: customerId,
-          eventType: 'ORDER_PLACED',
-          fromStatus: 'CART',
-          toStatus: initialStatus,
-          notes: 'Order created via checkout',
-        },
-        client
-      );
-
       const paymentResult = await this.paymentService.initiatePayment(
         orderGroupId,
-        subOrderId,
+        primarySubOrderId,
         customerId,
         dto.paymentMethod,
         pricing.finalPayableAmountInr,
@@ -210,20 +260,25 @@ export class OrderPlacementService {
 
       if (dto.scheduledFor && this.cloudTasksGateway) {
         const scheduledDate = new Date(dto.scheduledFor);
-        await this.cloudTasksGateway.scheduleTask({
-          taskName: `cloud_task_order_${subOrderId}`,
-          targetType: 'SCHEDULED_ORDER',
-          targetId: subOrderId,
-          scheduledFor: scheduledDate,
-          payload: { orderGroupId, subOrderId, customerId, scheduledFor: scheduledDate.toISOString() },
-        });
+        for (const sub of createdSubOrders) {
+          await this.cloudTasksGateway.scheduleTask({
+            taskName: `cloud_task_order_${sub.subOrderId}`,
+            targetType: 'SCHEDULED_ORDER',
+            targetId: sub.subOrderId,
+            scheduledFor: scheduledDate,
+            payload: { orderGroupId, subOrderId: sub.subOrderId, customerId, scheduledFor: scheduledDate.toISOString() },
+          });
+        }
       }
 
       await client.query('COMMIT;');
 
       return {
-        subOrderId,
-        subOrderNumber,
+        orderGroupId,
+        orderGroupNumber,
+        subOrderId: primarySubOrderId,
+        subOrderNumber: primarySubOrderNumber,
+        subOrders: createdSubOrders,
         status: initialStatus,
         payment: paymentResult,
         pricing,

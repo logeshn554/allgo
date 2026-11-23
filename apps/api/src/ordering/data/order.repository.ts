@@ -41,9 +41,9 @@ export class OrderRepository {
          items_total_inr, packaging_fee_inr, delivery_fee_inr, platform_fee_inr, merchant_commission_inr,
          merchant_net_payout_inr, tax_total_inr, discount_allocated_inr, total_payable_inr, prep_time_minutes,
          delivery_address_snapshot, delivery_instructions, customer_notes)
-       VALUES ($1, $2, $3, 'FOOD', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 20, $14::jsonb, $15, $16)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 20, $15::jsonb, $16, $17)
        RETURNING id, sub_order_number;`,
-      [data.orderGroupId, data.outletId, data.subOrderNumber, data.status, data.itemsSubtotalInr,
+      [data.orderGroupId, data.outletId, data.subOrderNumber, data.verticalType || 'FOOD', data.status, data.itemsSubtotalInr,
        data.packagingFeeInr, data.deliveryFeeInr, data.platformFeeInr, data.merchantCommission,
        data.merchantNetPayout, data.gstAmountInr, data.discountAmountInr, data.finalPayableAmountInr,
        JSON.stringify(data.address), data.deliveryInstructions, data.customerNotes]

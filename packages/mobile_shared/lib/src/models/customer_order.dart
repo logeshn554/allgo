@@ -47,6 +47,9 @@ class CartItemModel {
   final bool isInStock;
   final double unitPriceInr;
   final double totalPriceInr;
+  final String? outletId;
+  final String? outletName;
+  final String? verticalType;
   final List<CartItemOption> selectedOptions;
   final String? specialInstructions;
 
@@ -56,6 +59,9 @@ class CartItemModel {
     required this.id,
     required this.itemId,
     required this.name,
+    this.outletId,
+    this.outletName,
+    this.verticalType,
     this.imageUrl,
     required this.isVeg,
     this.variantId,
@@ -75,6 +81,9 @@ class CartItemModel {
       id: json['id'] as String? ?? '',
       itemId: json['itemId'] as String? ?? json['item_id'] as String? ?? '',
       name: json['name'] as String? ?? '',
+      outletId: json['outletId'] as String? ?? json['outlet_id'] as String?,
+      outletName: json['outletName'] as String? ?? json['outlet_name'] as String?,
+      verticalType: json['verticalType'] as String? ?? json['vertical_type'] as String?,
       imageUrl: json['imageUrl'] as String? ?? json['image_url'] as String?,
       isVeg: json['isVeg'] as bool? ?? json['is_veg'] as bool? ?? false,
       variantId: json['variantId'] as String? ?? json['variant_id'] as String?,
@@ -157,19 +166,65 @@ class CartOutletSummary {
   }
 }
 
+class CartOutletGroup {
+  final String id;
+  final String name;
+  final String status;
+  final String? address;
+  final String verticalType;
+  final double packagingFeeInr;
+  final double deliveryFeeInr;
+  final double subtotalInr;
+  final int totalItemsCount;
+  final List<CartItemModel> items;
+
+  const CartOutletGroup({
+    required this.id,
+    required this.name,
+    required this.status,
+    this.address,
+    this.verticalType = 'FOOD',
+    this.packagingFeeInr = 15.0,
+    this.deliveryFeeInr = 0.0,
+    this.subtotalInr = 0.0,
+    this.totalItemsCount = 0,
+    this.items = const [],
+  });
+
+  factory CartOutletGroup.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List<dynamic>? ?? [];
+    return CartOutletGroup(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      status: json['status'] as String? ?? 'ACTIVE',
+      address: json['address'] as String?,
+      verticalType: json['verticalType'] as String? ?? 'FOOD',
+      packagingFeeInr: (json['packagingFeeInr'] as num?)?.toDouble() ?? 15.0,
+      deliveryFeeInr: (json['deliveryFeeInr'] as num?)?.toDouble() ?? 0.0,
+      subtotalInr: (json['subtotalInr'] as num?)?.toDouble() ?? 0.0,
+      totalItemsCount: (json['totalItemsCount'] as num?)?.toInt() ?? 0,
+      items: rawItems.map((i) => CartItemModel.fromJson(i as Map<String, dynamic>)).toList(),
+    );
+  }
+}
+
 class CartModel {
   final String cartId;
   final CartOutletSummary? outlet;
+  final List<CartOutletGroup> outlets;
   final List<CartItemModel> items;
   final int totalItemsCount;
   final CartPricingModel? pricing;
 
   String? get outletName => outlet?.name;
-  factory CartModel.empty() => const CartModel(cartId: '', items: [], totalItemsCount: 0);
+  bool get hasMultipleOutlets => outlets.length > 1;
+
+  factory CartModel.empty() => const CartModel(cartId: '', items: [], outlets: [], totalItemsCount: 0);
 
   const CartModel({
     required this.cartId,
     this.outlet,
+    this.outlets = const [],
     required this.items,
     required this.totalItemsCount,
     this.pricing,
@@ -177,10 +232,32 @@ class CartModel {
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'] as List<dynamic>? ?? [];
+    final itemsList = rawItems.map((i) => CartItemModel.fromJson(i as Map<String, dynamic>)).toList();
+    final rawOutlets = json['outlets'] as List<dynamic>?;
+    List<CartOutletGroup> outletsList = [];
+
+    if (rawOutlets != null && rawOutlets.isNotEmpty) {
+      outletsList = rawOutlets.map((o) => CartOutletGroup.fromJson(o as Map<String, dynamic>)).toList();
+    } else if (json['outlet'] != null) {
+      final oMap = json['outlet'] as Map<String, dynamic>;
+      outletsList = [
+        CartOutletGroup(
+          id: oMap['id'] as String? ?? '',
+          name: oMap['name'] as String? ?? '',
+          status: oMap['status'] as String? ?? 'ACTIVE',
+          address: oMap['address'] as String?,
+          items: itemsList,
+          totalItemsCount: itemsList.fold(0, (sum, it) => sum + it.quantity),
+          subtotalInr: itemsList.fold(0.0, (sum, it) => sum + it.totalPriceInr),
+        ),
+      ];
+    }
+
     return CartModel(
       cartId: json['cartId'] as String? ?? '',
       outlet: json['outlet'] != null ? CartOutletSummary.fromJson(json['outlet'] as Map<String, dynamic>) : null,
-      items: rawItems.map((i) => CartItemModel.fromJson(i as Map<String, dynamic>)).toList(),
+      outlets: outletsList,
+      items: itemsList,
       totalItemsCount: (json['totalItemsCount'] as num?)?.toInt() ?? 0,
       pricing: json['pricing'] != null ? CartPricingModel.fromJson(json['pricing'] as Map<String, dynamic>) : null,
     );

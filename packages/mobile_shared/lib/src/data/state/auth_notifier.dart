@@ -113,6 +113,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> exchangeFirebaseToken({
+    required String firebaseToken,
+    required String deviceId,
+    String platform = 'ANDROID',
+    String? fcmToken,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    try {
+      final tokens = await apiClient.exchangeFirebaseSession(
+        firebaseToken: firebaseToken,
+        deviceId: deviceId,
+        platform: platform,
+        fcmToken: fcmToken,
+      );
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: tokens.user,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: e.toString().replaceFirst('ApiException: ', ''),
+      );
+      return false;
+    }
+  }
+
   Future<bool> updateProfile({
     String? fullName,
     String? email,

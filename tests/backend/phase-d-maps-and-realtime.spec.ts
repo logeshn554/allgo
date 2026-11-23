@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { ConfigService } from '../../apps/api/dist/config/config.service.js';
 import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
 import { GoogleMapsGateway } from '../../apps/api/dist/common/maps/google-maps.gateway.js';
+import { MapsController } from '../../apps/api/dist/common/maps/maps.controller.js';
 import { PartnerAvailabilityService } from '../../apps/api/dist/delivery/partner-availability.service.js';
 import { DispatchCandidateMatcherService } from '../../apps/api/dist/delivery/dispatch-candidate-matcher.service.js';
 import { CustomerDeliveryController } from '../../apps/api/dist/delivery/controllers/customer-delivery.controller.js';
@@ -66,6 +67,24 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
       assert.ok(predictions.length > 0);
       assert.ok(predictions[0].placeId.length > 0);
       assert.ok(predictions[0].description.includes('Marina Beach'));
+    });
+
+    it('MapsController should expose endpoints for places, geocoding and routes', async () => {
+      const controller = new MapsController(mapsGateway);
+      const places = await controller.searchPlaces('Anna Nagar', '13.08', '80.27');
+      assert.ok(Array.isArray(places));
+      assert.ok(places.length > 0);
+
+      const rev = await controller.reverseGeocode('13.0827', '80.2707');
+      assert.ok(rev.formattedAddress != null);
+
+      const route = await controller.computeRoute({
+        origin: { latitude: 13.0827, longitude: 80.2707 },
+        destination: { latitude: 13.0400, longitude: 80.2500 },
+        travelMode: 'TWO_WHEELER',
+      });
+      assert.ok(route.distanceMeters > 0);
+      assert.ok(route.durationSeconds > 0);
     });
   });
 

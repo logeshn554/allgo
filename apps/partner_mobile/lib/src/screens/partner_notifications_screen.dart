@@ -10,7 +10,6 @@ class PartnerNotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerNotificationsScreenState extends ConsumerState<PartnerNotificationsScreen> {
-  final ApiClient _apiClient = ApiClient();
   bool _isLoading = true;
   List<dynamic> _notifications = [];
 
@@ -23,7 +22,8 @@ class _PartnerNotificationsScreenState extends ConsumerState<PartnerNotification
   Future<void> _load() async {
     setState(() => _isLoading = true);
     try {
-      final res = await _apiClient.getNotifications(role: 'PARTNER');
+      final client = ref.read(apiClientProvider);
+      final res = await client.getNotifications(role: 'PARTNER');
       if (mounted) {
         setState(() {
           _notifications = (res['notifications'] as List<dynamic>?) ?? [];

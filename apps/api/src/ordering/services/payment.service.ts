@@ -38,11 +38,14 @@ export class PaymentService {
   ): Promise<PaymentInitiationResult> {
     const runner = client || this.db;
     const isCod = paymentMethod === 'COD';
-    const gatewayName = isCod ? 'CASH_ON_DELIVERY' : 'RAZORPAY';
+    const isWallet = paymentMethod === 'WALLET';
+    const gatewayName = isCod ? 'CASH_ON_DELIVERY' : (isWallet ? 'ALLGO_WALLET' : 'RAZORPAY');
 
     let gatewayOrderId: string;
     if (isCod) {
       gatewayOrderId = `COD-${Date.now().toString(36).toUpperCase()}`;
+    } else if (isWallet) {
+      gatewayOrderId = `WAL-${Date.now().toString(36).toUpperCase()}`;
     } else {
       const orderRes = await this.gateway.createOrder({
         amountInr,
@@ -53,7 +56,7 @@ export class PaymentService {
       gatewayOrderId = orderRes.id;
     }
 
-    const initialStatus = isCod ? 'AUTHORIZED' : 'PENDING';
+    const initialStatus = (isCod || isWallet) ? 'AUTHORIZED' : 'PENDING';
     const idemKey = idempotencyKey || `idem-${orderGroupId}-${Date.now()}`;
 
     const res = await runner.query(
@@ -81,7 +84,7 @@ export class PaymentService {
       amountInr,
       currency: 'INR',
       status: initialStatus,
-      requiresAction: !isCod,
+      requiresAction: (!isCod && !isWallet),
     };
   }
 

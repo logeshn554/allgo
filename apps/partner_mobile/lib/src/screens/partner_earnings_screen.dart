@@ -10,7 +10,6 @@ class PartnerEarningsScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerEarningsScreenState extends ConsumerState<PartnerEarningsScreen> {
-  final ApiClient _apiClient = ApiClient();
   bool _isLoading = true;
   double _totalEarnings = 0.0;
   double _outstandingCod = 0.0;
@@ -26,8 +25,9 @@ class _PartnerEarningsScreenState extends ConsumerState<PartnerEarningsScreen> {
   Future<void> _loadEarnings() async {
     setState(() => _isLoading = true);
     try {
-      final dash = await _apiClient.getPartnerEarningsDashboard();
-      final settles = await _apiClient.getPartnerSettlements();
+      final client = ref.read(apiClientProvider);
+      final dash = await client.getPartnerEarningsDashboard();
+      final settles = await client.getPartnerSettlements();
       if (mounted) {
         setState(() {
           _totalEarnings = (dash['totalSettledEarningsInr'] as num?)?.toDouble() ?? 0.0;
@@ -83,7 +83,8 @@ class _PartnerEarningsScreenState extends ConsumerState<PartnerEarningsScreen> {
       final amt = double.tryParse(amountController.text) ?? 0.0;
       if (amt > 0 && refController.text.isNotEmpty) {
         try {
-          await _apiClient.submitPartnerCodDeposit(amt, refController.text.trim());
+          final client = ref.read(apiClientProvider);
+          await client.submitPartnerCodDeposit(amt, refController.text.trim());
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('COD deposit submitted for admin reconciliation!')));
             _loadEarnings();

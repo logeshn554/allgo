@@ -36,12 +36,16 @@ export class CartService {
               COALESCE(i.is_active, true) as is_active,
               iv.variant_name as variant_name, iv.additional_price_inr as variant_price_inr,
               o.outlet_name, o.outlet_status, o.address_line1 as outlet_address,
+              COALESCE(o.packaging_fee_inr, 15.00) as outlet_packaging_fee,
+              COALESCE(cat.vertical_type, 'FOOD') as vertical_type,
               COALESCE(inv.stock_quantity, 999) as stock_quantity,
               COALESCE(inv.is_in_stock, true) as is_in_stock,
               oio.custom_price_inr as price_override_inr, oio.is_available as outlet_item_available
        FROM cart_items ci
        JOIN items i ON i.id = ci.item_id
        JOIN outlets o ON o.id = ci.outlet_id
+       LEFT JOIN categories c ON c.id = i.category_id
+       LEFT JOIN catalogs cat ON cat.id = c.catalog_id
        LEFT JOIN item_variants iv ON iv.id = ci.variant_id
        LEFT JOIN inventory inv ON inv.outlet_id = ci.outlet_id AND inv.item_id = ci.item_id
        LEFT JOIN outlet_item_overrides oio ON oio.outlet_id = ci.outlet_id AND oio.item_id = ci.item_id
@@ -54,6 +58,7 @@ export class CartService {
       return {
         cartId,
         outlet: null,
+        outlets: [],
         items: [],
         totalItemsCount: 0,
         pricing: null,
@@ -73,11 +78,34 @@ export class CartService {
       firstItem.outlet_id
     );
 
+    const outletsMap = new Map<string, any>();
+    for (const row of itemsRes.rows) {
+      if (!outletsMap.has(row.outlet_id)) {
+        const outletPricing = pricing?.outletsBreakdown?.find((ob) => ob.outletId === row.outlet_id);
+        outletsMap.set(row.outlet_id, {
+          id: row.outlet_id,
+          name: row.outlet_name,
+          status: row.outlet_status,
+          address: row.outlet_address,
+          verticalType: row.vertical_type || 'FOOD',
+          packagingFeeInr: outletPricing ? outletPricing.packagingFeeInr : Number(row.outlet_packaging_fee || 15.0),
+          deliveryFeeInr: outletPricing ? outletPricing.deliveryFeeInr : 0,
+          items: [],
+          subtotalInr: 0,
+          totalItemsCount: 0,
+        });
+      }
+    }
+
     const mappedItems = itemsRes.rows.map((row) => {
       const breakdown = pricing.itemsBreakdown.find((b) => b.itemId === row.item_id);
-      return {
+      const itemTotal = breakdown ? breakdown.totalPriceInr : Number(row.base_price_inr) * row.quantity;
+      const mapped = {
         id: row.cart_item_id,
         itemId: row.item_id,
+        outletId: row.outlet_id,
+        outletName: row.outlet_name,
+        verticalType: row.vertical_type || 'FOOD',
         name: row.item_name,
         imageUrl: row.image_url,
         isVeg: row.is_veg,
@@ -87,10 +115,19 @@ export class CartService {
         stockQuantity: row.stock_quantity,
         isInStock: row.is_in_stock && row.stock_quantity >= row.quantity,
         unitPriceInr: breakdown ? breakdown.unitPriceInr : Number(row.base_price_inr),
-        totalPriceInr: breakdown ? breakdown.totalPriceInr : Number(row.base_price_inr) * row.quantity,
+        totalPriceInr: itemTotal,
         selectedOptions: row.selected_options || [],
         specialInstructions: row.special_instructions,
       };
+
+      const outletEntry = outletsMap.get(row.outlet_id);
+      if (outletEntry) {
+        outletEntry.items.push(mapped);
+        outletEntry.subtotalInr += itemTotal;
+        outletEntry.totalItemsCount += row.quantity;
+      }
+
+      return mapped;
     });
 
     const totalItemsCount = mappedItems.reduce((acc, it) => acc + it.quantity, 0);
@@ -98,6 +135,7 @@ export class CartService {
     return {
       cartId,
       outlet: outletInfo,
+      outlets: Array.from(outletsMap.values()),
       items: mappedItems,
       totalItemsCount,
       pricing,
@@ -153,32 +191,8 @@ export class CartService {
       }
     }
 
-    const existingCartItemsRes = await this.db.query(
-      `SELECT ci.outlet_id, o.outlet_name
-       FROM cart_items ci
-       JOIN outlets o ON o.id = ci.outlet_id
-       WHERE ci.cart_id = $1 LIMIT 1;`,
-      [cartId]
-    );
-
-    if (existingCartItemsRes.rows.length > 0) {
-      const existingOutletId = existingCartItemsRes.rows[0].outlet_id;
-      const existingOutletName = existingCartItemsRes.rows[0].outlet_name;
-
-      if (existingOutletId !== dto.outletId) {
-        if (!dto.replaceCartIfDifferentOutlet) {
-          throw new ConflictException({
-            code: 'DIFFERENT_OUTLET_CONFLICT',
-            message: `Your cart contains items from "${existingOutletName}". Replace cart with items from "${outlet.outlet_name}"?`,
-            existingOutletId,
-            existingOutletName,
-            newOutletId: dto.outletId,
-            newOutletName: outlet.outlet_name,
-          });
-        }
-
-        await this.db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cartId]);
-      }
+    if (dto.replaceCartIfDifferentOutlet) {
+      await this.db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cartId]);
     }
 
     const selectedOptionsJson = JSON.stringify(dto.selectedOptions || []);

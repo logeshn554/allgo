@@ -10,7 +10,6 @@ class PartnerSupportScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerSupportScreenState extends ConsumerState<PartnerSupportScreen> {
-  final ApiClient _apiClient = ApiClient();
   bool _isLoading = true;
   List<dynamic> _tickets = [];
 
@@ -23,7 +22,8 @@ class _PartnerSupportScreenState extends ConsumerState<PartnerSupportScreen> {
   Future<void> _loadTickets() async {
     setState(() => _isLoading = true);
     try {
-      final data = await _apiClient.getUserSupportTickets(role: 'PARTNER');
+      final client = ref.read(apiClientProvider);
+      final data = await client.getUserSupportTickets(role: 'PARTNER');
       if (mounted) setState(() { _tickets = data; _isLoading = false; });
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
@@ -57,7 +57,8 @@ class _PartnerSupportScreenState extends ConsumerState<PartnerSupportScreen> {
     );
 
     if (created == true && mounted) {
-      await _apiClient.createSupportTicket({
+      final client = ref.read(apiClientProvider);
+      await client.createSupportTicket({
         'category': 'PARTNER_DISPUTE',
         'subject': subCtrl.text.trim(),
         'description': descCtrl.text.trim(),

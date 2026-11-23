@@ -3,6 +3,16 @@ import { PricingRepository } from '../data/pricing.repository.js';
 import { SurgePricingCalculatorService } from './surge-pricing-calculator.service.js';
 import { CouponsService } from './coupons.service.js';
 
+export interface OutletPricingBreakdown {
+  outletId: string;
+  itemsSubtotalInr: number;
+  deliveryFeeInr: number;
+  packagingFeeInr: number;
+  gstAmountInr: number;
+  distanceKm: number;
+  itemCount: number;
+}
+
 export interface CalculatedCartBreakdown {
   itemsSubtotalInr: number;
   deliveryFeeInr: number;
@@ -29,12 +39,14 @@ export interface CalculatedCartBreakdown {
   itemsBreakdown: Array<{
     itemId: string;
     itemName: string;
+    outletId?: string;
     unitPriceInr: number;
     quantity: number;
     totalPriceInr: number;
     optionsTotalInr: number;
     selectedOptions: any[];
   }>;
+  outletsBreakdown?: OutletPricingBreakdown[];
 }
 
 @Injectable()
@@ -47,7 +59,7 @@ export class DeliveryPricingService {
 
   async calculateCheckoutTotals(
     cartItems: any[],
-    outletId: string,
+    outletId?: string,
     customerLocation?: { latitude: number; longitude: number },
     couponCode?: string,
     customerId?: string
@@ -56,86 +68,141 @@ export class DeliveryPricingService {
       throw new BadRequestException('Cannot calculate pricing for an empty cart');
     }
 
-    const outlet = await this.pricingRepo.getOutletLocation(outletId);
-    if (!outlet) {
-      throw new BadRequestException(`Outlet not found`);
+    const rawOutletIds = cartItems
+      .map((ci) => ci.outlet_id || ci.outletId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const uniqueOutletIds = Array.from(new Set(rawOutletIds));
+    if (uniqueOutletIds.length === 0 && outletId) {
+      uniqueOutletIds.push(outletId);
+    }
+    if (uniqueOutletIds.length === 0) {
+      throw new BadRequestException('No outlet associated with cart items');
     }
 
-    let distanceKm = 2.5;
-    if (customerLocation && outlet.lat && outlet.lng) {
-      distanceKm = this.surgeCalculator.calculateDistanceKm(
-        Number(outlet.lat),
-        Number(outlet.lng),
-        Number(customerLocation.latitude),
-        Number(customerLocation.longitude)
+    const primaryOutletId = uniqueOutletIds[0] as string;
+    let totalItemsSubtotalPaisa = 0;
+    let totalDeliveryFeePaisa = 0;
+    let totalPackagingFeePaisa = 0;
+    let totalGstAmountPaisa = 0;
+    let maxDistanceKm = 0;
+    let primaryZoneInfo: any = undefined;
+
+    const allItemsBreakdown: any[] = [];
+    const outletsBreakdown: OutletPricingBreakdown[] = [];
+
+    for (const currOutletId of uniqueOutletIds) {
+      const outlet = await this.pricingRepo.getOutletLocation(currOutletId);
+      if (!outlet) {
+        throw new BadRequestException(`Outlet not found: ${currOutletId}`);
+      }
+
+      let distanceKm = 2.5;
+      if (customerLocation && outlet.lat && outlet.lng) {
+        distanceKm = this.surgeCalculator.calculateDistanceKm(
+          Number(outlet.lat),
+          Number(outlet.lng),
+          Number(customerLocation.latitude),
+          Number(customerLocation.longitude)
+        );
+      }
+      if (distanceKm > maxDistanceKm) {
+        maxDistanceKm = distanceKm;
+      }
+
+      const currOutletItems = cartItems.filter(
+        (ci) => (ci.outlet_id || ci.outletId || outletId) === currOutletId
       );
-    }
 
-    const itemIds = cartItems.map((ci) => ci.item_id);
-    const itemRows = await this.pricingRepo.getItemsWithOverrides(outletId, itemIds);
-    const itemMap = new Map<string, any>();
-    for (const r of itemRows) {
-      itemMap.set(r.id, r);
-    }
-
-    let itemsSubtotalPaisa = 0;
-    const itemsBreakdown: any[] = [];
-
-    for (const ci of cartItems) {
-      const dbItem = itemMap.get(ci.item_id);
-      if (!dbItem) {
-        throw new BadRequestException(`Item ${ci.item_id} is no longer available`);
+      const itemIds = currOutletItems.map((ci) => ci.item_id || ci.itemId);
+      const itemRows = await this.pricingRepo.getItemsWithOverrides(currOutletId, itemIds);
+      const itemMap = new Map<string, any>();
+      for (const r of itemRows) {
+        itemMap.set(r.id, r);
       }
 
-      if (dbItem.is_active === false || dbItem.outlet_available === false) {
-        throw new BadRequestException(`Item "${dbItem.name}" is currently unavailable at this outlet`);
-      }
+      let outletItemsSubtotalPaisa = 0;
 
-      const basePriceInr = Number(dbItem.price_override_inr ?? dbItem.base_price_inr);
-      let unitPricePaisa = this.surgeCalculator.toPaisa(basePriceInr);
-
-      if (ci.variant_id) {
-        const variant = await this.pricingRepo.getItemVariant(ci.variant_id, ci.item_id);
-        if (variant && variant.is_available) {
-          unitPricePaisa += this.surgeCalculator.toPaisa(Number(variant.additional_price_inr));
+      for (const ci of currOutletItems) {
+        const iId = ci.item_id || ci.itemId;
+        const dbItem = itemMap.get(iId);
+        if (!dbItem) {
+          throw new BadRequestException(`Item ${iId} is no longer available`);
         }
-      }
 
-      let optionsTotalPaisa = 0;
-      const selectedOptions: any[] = Array.isArray(ci.selected_options) ? ci.selected_options : [];
-      if (selectedOptions.length > 0) {
-        const optionIds = selectedOptions.map((o: any) => o.optionId).filter(Boolean);
-        if (optionIds.length > 0) {
-          const options = await this.pricingRepo.getItemOptions(optionIds);
-          for (const optRow of options) {
-            optionsTotalPaisa += this.surgeCalculator.toPaisa(Number(optRow.price_inr || 0));
+        if (dbItem.is_active === false || dbItem.outlet_available === false) {
+          throw new BadRequestException(`Item "${dbItem.name}" is currently unavailable at this outlet`);
+        }
+
+        const basePriceInr = Number(dbItem.price_override_inr ?? dbItem.base_price_inr);
+        let unitPricePaisa = this.surgeCalculator.toPaisa(basePriceInr);
+
+        const varId = ci.variant_id || ci.variantId;
+        if (varId) {
+          const variant = await this.pricingRepo.getItemVariant(varId, iId);
+          if (variant && variant.is_available) {
+            unitPricePaisa += this.surgeCalculator.toPaisa(Number(variant.additional_price_inr));
           }
         }
+
+        let optionsTotalPaisa = 0;
+        const selectedOptions: any[] = Array.isArray(ci.selected_options || ci.selectedOptions)
+          ? (ci.selected_options || ci.selectedOptions)
+          : [];
+        if (selectedOptions.length > 0) {
+          const optionIds = selectedOptions.map((o: any) => o.optionId).filter(Boolean);
+          if (optionIds.length > 0) {
+            const options = await this.pricingRepo.getItemOptions(optionIds);
+            for (const optRow of options) {
+              optionsTotalPaisa += this.surgeCalculator.toPaisa(Number(optRow.price_inr || 0));
+            }
+          }
+        }
+
+        const totalItemUnitPricePaisa = unitPricePaisa + optionsTotalPaisa;
+        const totalItemLinePaisa = totalItemUnitPricePaisa * ci.quantity;
+        outletItemsSubtotalPaisa += totalItemLinePaisa;
+
+        allItemsBreakdown.push({
+          itemId: dbItem.id,
+          itemName: dbItem.name,
+          outletId: currOutletId,
+          unitPriceInr: this.surgeCalculator.fromPaisa(totalItemUnitPricePaisa),
+          quantity: ci.quantity,
+          totalPriceInr: this.surgeCalculator.fromPaisa(totalItemLinePaisa),
+          optionsTotalInr: this.surgeCalculator.fromPaisa(optionsTotalPaisa),
+          selectedOptions,
+        });
       }
 
-      const totalItemUnitPricePaisa = unitPricePaisa + optionsTotalPaisa;
-      const totalItemLinePaisa = totalItemUnitPricePaisa * ci.quantity;
-      itemsSubtotalPaisa += totalItemLinePaisa;
+      const { deliveryFeePaisa, deliveryFeeInr, zoneInfo } = await this.surgeCalculator.calculateDeliveryFee(
+        distanceKm,
+        customerLocation
+      );
 
-      itemsBreakdown.push({
-        itemId: dbItem.id,
-        itemName: dbItem.name,
-        unitPriceInr: this.surgeCalculator.fromPaisa(totalItemUnitPricePaisa),
-        quantity: ci.quantity,
-        totalPriceInr: this.surgeCalculator.fromPaisa(totalItemLinePaisa),
-        optionsTotalInr: this.surgeCalculator.fromPaisa(optionsTotalPaisa),
-        selectedOptions,
+      if (!primaryZoneInfo) {
+        primaryZoneInfo = zoneInfo;
+      }
+
+      const packagingFeePaisa = this.surgeCalculator.toPaisa(15.0);
+      const outletGstPaisa = Math.round(outletItemsSubtotalPaisa * 0.05);
+
+      totalItemsSubtotalPaisa += outletItemsSubtotalPaisa;
+      totalDeliveryFeePaisa += deliveryFeePaisa;
+      totalPackagingFeePaisa += packagingFeePaisa;
+      totalGstAmountPaisa += outletGstPaisa;
+
+      outletsBreakdown.push({
+        outletId: currOutletId,
+        itemsSubtotalInr: this.surgeCalculator.fromPaisa(outletItemsSubtotalPaisa),
+        deliveryFeeInr,
+        packagingFeeInr: this.surgeCalculator.fromPaisa(packagingFeePaisa),
+        gstAmountInr: this.surgeCalculator.fromPaisa(outletGstPaisa),
+        distanceKm,
+        itemCount: currOutletItems.reduce((acc, ci) => acc + (ci.quantity || 1), 0),
       });
     }
 
-    const { deliveryFeePaisa, deliveryFeeInr, zoneInfo } = await this.surgeCalculator.calculateDeliveryFee(
-      distanceKm,
-      customerLocation
-    );
-
-    const packagingFeePaisa = this.surgeCalculator.toPaisa(15.0);
     const platformFeePaisa = this.surgeCalculator.toPaisa(5.0);
-    const gstAmountPaisa = Math.round(itemsSubtotalPaisa * 0.05);
 
     let discountPaisa = 0;
     let appliedCouponInfo: { code: string; discountInr: number; title?: string; isAutoApplied?: boolean } | undefined;
@@ -144,8 +211,8 @@ export class DeliveryPricingService {
       const validated = await this.couponsService.validateCoupon(
         couponCode,
         customerId,
-        this.surgeCalculator.fromPaisa(itemsSubtotalPaisa),
-        outletId
+        this.surgeCalculator.fromPaisa(totalItemsSubtotalPaisa),
+        primaryOutletId
       );
       discountPaisa = this.surgeCalculator.toPaisa(validated.discountAmountInr);
       appliedCouponInfo = {
@@ -157,8 +224,8 @@ export class DeliveryPricingService {
     } else {
       const autoCoupon = await this.couponsService.findBestAutoAppliedCoupon(
         customerId,
-        outletId,
-        this.surgeCalculator.fromPaisa(itemsSubtotalPaisa)
+        primaryOutletId,
+        this.surgeCalculator.fromPaisa(totalItemsSubtotalPaisa)
       );
       if (autoCoupon) {
         discountPaisa = this.surgeCalculator.toPaisa(autoCoupon.discountAmountInr);
@@ -173,21 +240,22 @@ export class DeliveryPricingService {
 
     const finalPayablePaisa = Math.max(
       0,
-      itemsSubtotalPaisa + deliveryFeePaisa + packagingFeePaisa + platformFeePaisa + gstAmountPaisa - discountPaisa
+      totalItemsSubtotalPaisa + totalDeliveryFeePaisa + totalPackagingFeePaisa + platformFeePaisa + totalGstAmountPaisa - discountPaisa
     );
 
     return {
-      itemsSubtotalInr: this.surgeCalculator.fromPaisa(itemsSubtotalPaisa),
-      deliveryFeeInr,
-      packagingFeeInr: this.surgeCalculator.fromPaisa(packagingFeePaisa),
+      itemsSubtotalInr: this.surgeCalculator.fromPaisa(totalItemsSubtotalPaisa),
+      deliveryFeeInr: this.surgeCalculator.fromPaisa(totalDeliveryFeePaisa),
+      packagingFeeInr: this.surgeCalculator.fromPaisa(totalPackagingFeePaisa),
       platformFeeInr: this.surgeCalculator.fromPaisa(platformFeePaisa),
-      gstAmountInr: this.surgeCalculator.fromPaisa(gstAmountPaisa),
+      gstAmountInr: this.surgeCalculator.fromPaisa(totalGstAmountPaisa),
       discountAmountInr: this.surgeCalculator.fromPaisa(discountPaisa),
       finalPayableAmountInr: this.surgeCalculator.fromPaisa(finalPayablePaisa),
-      distanceKm,
+      distanceKm: maxDistanceKm,
       appliedCoupon: appliedCouponInfo,
-      zoneInfo,
-      itemsBreakdown,
+      zoneInfo: primaryZoneInfo,
+      itemsBreakdown: allItemsBreakdown,
+      outletsBreakdown,
     };
   }
 }

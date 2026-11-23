@@ -30,12 +30,7 @@ class AuthApi {
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      // Offline / standalone demo fallback: allow OTP entry without network blocker
-      return {
-        'status': 'OTP_SENT',
-        'cooldownSeconds': 60,
-        'message': 'Offline mode: demo OTP 123456 active',
-      };
+      throw ApiException(503, 'Network connection failed while sending OTP. Please check your internet connection.');
     }
   }
 
@@ -50,7 +45,7 @@ class AuthApi {
           'code': code,
           'platform': platform ?? 'ANDROID',
         }),
-      ).timeout(const Duration(seconds: 4));
+      ).timeout(const Duration(seconds: 8));
 
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -66,26 +61,44 @@ class AuthApi {
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      // Offline fallback: verify standard OTP (123456) and generate verified user tokens
-      if (code.trim() != '123456' && code.trim().length != 6) {
-        throw ApiException(400, 'Invalid verification code. Enter 123456 in offline mode.');
+      throw ApiException(503, 'Network connection failed while verifying OTP. Please try again.');
+    }
+  }
+
+  Future<AuthTokens> exchangeFirebaseSession({
+    required String firebaseToken,
+    required String deviceId,
+    String platform = 'ANDROID',
+    String? fcmToken,
+  }) async {
+    try {
+      final url = Uri.parse('${base.base.baseUrl}/v1/auth/session');
+      final response = await base.httpClient.post(
+        url,
+        headers: base.buildHeaders(requiresAuth: false),
+        body: jsonEncode({
+          'firebase_token': firebaseToken,
+          'device_id': deviceId,
+          'platform': platform,
+          if (fcmToken != null) 'fcm_token': fcmToken,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final tokens = AuthTokens.fromJson(data as Map<String, dynamic>);
+        await base.tokenStorage.saveTokens(tokens);
+        return tokens;
+      } else {
+        throw ApiException(
+          response.statusCode,
+          data['message']?.toString() ?? 'Firebase session exchange failed',
+          data['error']?.toString(),
+        );
       }
-      final fallbackTokens = AuthTokens(
-        accessToken: 'offline_token_${DateTime.now().millisecondsSinceEpoch}',
-        refreshToken: 'offline_refresh_${DateTime.now().millisecondsSinceEpoch}',
-        tokenType: 'Bearer',
-        expiresIn: 86400,
-        user: User(
-          id: 'usr_${phone.replaceAll(RegExp(r"\\D"), "")}',
-          phone: phone,
-          fullName: 'Verified User',
-          status: AccountStatus.active,
-          roles: const ['CUSTOMER', 'PARTNER', 'MERCHANT_ADMIN'],
-          defaultLanguage: 'en',
-        ),
-      );
-      await base.tokenStorage.saveTokens(fallbackTokens);
-      return fallbackTokens;
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(503, 'Network error during Firebase session exchange. Please try again.');
     }
   }
 
@@ -148,24 +161,17 @@ class AuthApi {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final data = jsonDecode(response.body);
         return User.fromJson(data as Map<String, dynamic>);
+      } else {
+        final data = jsonDecode(response.body);
+        throw ApiException(
+          response.statusCode,
+          data['message']?.toString() ?? 'Profile update failed',
+        );
       }
-    } catch (_) {
-      // Offline fallback: update local user model
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(503, 'Network error updating profile. Please try again.');
     }
-
-    final me = await getMe().catchError((_) => User(
-      id: 'usr_me',
-      phone: '+919876543210',
-      status: AccountStatus.active,
-      roles: const ['CUSTOMER'],
-      defaultLanguage: defaultLanguage ?? 'en',
-    ));
-    return me.copyWith(
-      fullName: fullName,
-      email: email,
-      avatarUrl: avatarUrl,
-      defaultLanguage: defaultLanguage,
-    );
   }
 
   Future<void> deleteAccount() async {

@@ -3,9 +3,9 @@ import { DatabaseService } from '../../database/database.service.js';
 import { CouponsService } from './coupons.service.js';
 import { PricingRepository } from '../data/pricing.repository.js';
 import { SurgePricingCalculatorService } from './surge-pricing-calculator.service.js';
-import { DeliveryPricingService, CalculatedCartBreakdown } from './delivery-pricing.service.js';
+import { DeliveryPricingService, CalculatedCartBreakdown, OutletPricingBreakdown } from './delivery-pricing.service.js';
 
-export type { CalculatedCartBreakdown };
+export type { CalculatedCartBreakdown, OutletPricingBreakdown };
 
 @Injectable()
 export class PricingService {
@@ -32,7 +32,7 @@ export class PricingService {
 
   async calculateCheckoutTotals(
     cartItems: any[],
-    outletId: string,
+    outletId?: string,
     customerLocation?: { latitude: number; longitude: number },
     couponCode?: string,
     customerId?: string

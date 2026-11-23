@@ -35,8 +35,10 @@ import '../data/api/customer_mobility_api.dart';
 import '../data/api/customer_parcel_api.dart';
 import '../data/api/discovery_api.dart';
 import '../data/api/finance_and_support_api.dart';
+import '../data/api/maps_api.dart';
 
 export '../data/api/base_api.dart' show ApiException;
+export '../data/api/maps_api.dart' show PlacePredictionModel, GeocodeLocationModel, RouteEstimateModel;
 
 class ApiClient {
   final String baseUrl;
@@ -60,6 +62,7 @@ class ApiClient {
   late final CustomerParcelApi customerParcel;
   late final DiscoveryApi discovery;
   late final FinanceAndSupportApi financeSupport;
+  late final MapsApi maps;
 
   factory ApiClient.createDefault({
     String? baseUrl,
@@ -107,6 +110,7 @@ class ApiClient {
     customerParcel = CustomerParcelApi(_baseApi);
     discovery = DiscoveryApi(_baseApi);
     financeSupport = FinanceAndSupportApi(_baseApi);
+    maps = MapsApi(_baseApi);
   }
 
   Map<String, String> _buildHeaders({String? token, bool requiresAuth = true, String? roleContext}) {
@@ -122,8 +126,24 @@ class ApiClient {
     return headers;
   }
 
+  Future<List<PlacePredictionModel>> searchPlaces(String input, {double? lat, double? lng}) => maps.searchPlaces(input, lat: lat, lng: lng);
+  Future<GeocodeLocationModel> reverseGeocode(double lat, double lng) => maps.reverseGeocode(lat, lng);
+  Future<List<GeocodeLocationModel>> geocodeAddress(String address) => maps.geocodeAddress(address);
+  Future<RouteEstimateModel> computeRoute(double origLat, double origLng, double destLat, double destLng, {String travelMode = 'TWO_WHEELER'}) => maps.computeRoute(origLat, origLng, destLat, destLng, travelMode: travelMode);
+
   Future<Map<String, dynamic>> sendOtp(String phone) => auth.sendOtp(phone);
   Future<AuthTokens> verifyOtp(String phone, String code, {String? platform}) => auth.verifyOtp(phone, code, platform: platform);
+  Future<AuthTokens> exchangeFirebaseSession({
+    required String firebaseToken,
+    required String deviceId,
+    String platform = 'ANDROID',
+    String? fcmToken,
+  }) => auth.exchangeFirebaseSession(
+    firebaseToken: firebaseToken,
+    deviceId: deviceId,
+    platform: platform,
+    fcmToken: fcmToken,
+  );
   Future<User> getMe() => auth.getMe();
   Future<User> updateProfile({String? fullName, String? email, String? avatarUrl, String? defaultLanguage}) => auth.updateProfile(fullName: fullName, email: email, avatarUrl: avatarUrl, defaultLanguage: defaultLanguage);
   Future<void> logout() => auth.logout();
