@@ -10,11 +10,13 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
+    const isSsl = this.config.databaseUrl.includes('sslmode=') || this.config.databaseUrl.includes('neon.tech');
     this.pool = new pg.Pool({
       connectionString: this.config.databaseUrl,
       max: 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 3000,
+      connectionTimeoutMillis: 10000,
+      ssl: isSsl ? { rejectUnauthorized: false } : undefined,
     });
 
     this.pool.on('error', (err) => {

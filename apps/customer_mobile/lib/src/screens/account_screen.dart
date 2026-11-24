@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
+import '../components/theme_selection_sheet.dart';
+import '../providers/app_settings_provider.dart';
 import 'welcome_screen.dart';
 import 'wallet_screen.dart';
 import 'payments_and_refunds_screen.dart';
@@ -10,6 +12,13 @@ import 'edit_profile_screen.dart';
 import 'privacy_security_screen.dart';
 import 'saved_addresses_screen.dart';
 import 'favorite_and_recent_stores_screen.dart';
+import 'offers_coupons_screen.dart';
+import 'refer_earn_screen.dart';
+import 'help_faq_screen.dart';
+import 'app_settings_screen.dart';
+import 'legal/terms_screen.dart';
+import 'legal/privacy_policy_screen.dart';
+import 'legal/about_screen.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -50,6 +59,14 @@ class AccountScreen extends ConsumerWidget {
     }
   }
 
+  String _getThemeSubtitle(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light: return 'Light Mode';
+      case ThemeMode.dark: return 'Dark Mode';
+      case ThemeMode.system: return 'System Default';
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
@@ -78,7 +95,7 @@ class AccountScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: AllGoColors.primaryLight.withOpacity(0.3),
+                      backgroundColor: AllGoColors.primaryLight.withValues(alpha: 0.3),
                       child: Text(
                         (user?.fullName != null && user!.fullName!.isNotEmpty)
                             ? user.fullName![0].toUpperCase()
@@ -98,7 +115,7 @@ class AccountScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AllGoColors.success.withOpacity(0.12),
+                              color: AllGoColors.success.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -150,15 +167,45 @@ class AccountScreen extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const PaymentsAndRefundsScreen()),
               ),
             ),
+            _buildOptionTile(
+              icon: Icons.local_offer_outlined,
+              title: 'Offers & Coupons',
+              subtitle: 'Exclusive discounts on food, groceries, and rides',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const OffersCouponsScreen()),
+              ),
+            ),
+            _buildOptionTile(
+              icon: Icons.card_giftcard_outlined,
+              title: 'Refer & Earn',
+              subtitle: 'Earn ₹100 wallet credit for every friend invited',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReferEarnScreen()),
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Settings Options
             _buildSectionHeader('Preferences'),
             _buildOptionTile(
+              icon: Icons.settings_outlined,
+              title: 'App Settings',
+              subtitle: 'Notification toggles and storage cache cleanup',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
+              ),
+            ),
+            _buildOptionTile(
               icon: Icons.language,
               title: 'App Language',
               subtitle: _getLanguageSubtitle(user?.defaultLanguage),
               onTap: () => LanguageSelectionSheet.show(context),
+            ),
+            _buildOptionTile(
+              icon: Icons.brightness_6_outlined,
+              title: 'App Theme',
+              subtitle: _getThemeSubtitle(ref.watch(themeModeProvider)),
+              onTap: () => ThemeSelectionSheet.show(context),
             ),
             _buildOptionTile(
               icon: Icons.notifications_none,
@@ -171,6 +218,14 @@ class AccountScreen extends ConsumerWidget {
             const SizedBox(height: 16),
 
             _buildSectionHeader('Account & Security'),
+            _buildOptionTile(
+              icon: Icons.quiz_outlined,
+              title: 'Help Centre & FAQ',
+              subtitle: 'Common questions, payment guides, and cancellations',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const HelpFaqScreen()),
+              ),
+            ),
             _buildOptionTile(
               icon: Icons.shield_outlined,
               title: 'Privacy & Security',
@@ -187,6 +242,30 @@ class AccountScreen extends ConsumerWidget {
                 MaterialPageRoute(builder: (_) => const CustomerSupportScreen()),
               ),
             ),
+            _buildOptionTile(
+              icon: Icons.description_outlined,
+              title: 'Terms of Service',
+              subtitle: 'Platform marketplace rules and service terms',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TermsScreen()),
+              ),
+            ),
+            _buildOptionTile(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              subtitle: 'DPDP compliance and personal data rights',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+              ),
+            ),
+            _buildOptionTile(
+              icon: Icons.info_outline,
+              title: 'About AllGo',
+              subtitle: 'Version details, company info and licenses',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              ),
+            ),
             const SizedBox(height: 32),
 
             // Logout Button
@@ -199,7 +278,7 @@ class AccountScreen extends ConsumerWidget {
             const SizedBox(height: 20),
             Center(
               child: Text(
-                'AllGo Super App v0.1.0 (Phase 1 Local)',
+                'AllGo Super App v2.4.0 (Production Ready)',
                 style: AllGoTypography.caption,
               ),
             ),

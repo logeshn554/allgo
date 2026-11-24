@@ -12,9 +12,11 @@ export async function runMigrations(): Promise<{ success: boolean; applied: stri
   console.log('--- AllGo Migration Runner ---');
   console.log(`Connecting to: ${DATABASE_URL.replace(/:[^:@]*@/, ':****@')}`);
 
+  const isSsl = DATABASE_URL.includes('sslmode=') || DATABASE_URL.includes('neon.tech');
   const client = new pg.Client({
     connectionString: DATABASE_URL,
-    connectionTimeoutMillis: 3000,
+    connectionTimeoutMillis: 15000,
+    ssl: isSsl ? { rejectUnauthorized: false } : undefined,
   });
 
   try {
