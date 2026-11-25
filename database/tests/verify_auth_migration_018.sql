@@ -81,13 +81,11 @@ JOIN roles r ON r.id = ur.role_id AND r.name IN ('MERCHANT', 'MERCHANT_ADMIN')
 LEFT JOIN merchants m ON m.owner_id = u.id
 WHERE m.id IS NULL OR m.status NOT IN ('APPROVED', 'LIVE');
 
--- 8. New migration structures. Before allowlist population, this must be empty.
-SELECT COUNT(*) AS admin_identity_allowlist_rows
-FROM admin_identity_allowlist;
-
--- 9. Role grant audit table must remain append-only at the application layer.
-SELECT COUNT(*) AS role_grant_audit_rows
-FROM auth_role_grant_audit;
+-- 8. Migration structure presence. Before migration 018 both values are NULL;
+--    after migration 018 both should resolve to their respective relations.
+SELECT
+  to_regclass('public.admin_identity_allowlist') AS admin_identity_allowlist_table,
+  to_regclass('public.auth_role_grant_audit') AS auth_role_grant_audit_table;
  THEN phone
            WHEN phone ~ '^91[6-9][0-9]{9}$' THEN '+' || phone
            WHEN phone ~ '^[6-9][0-9]{9}$' THEN '+91' || phone
