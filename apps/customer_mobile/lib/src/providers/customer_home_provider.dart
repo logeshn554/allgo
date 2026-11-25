@@ -252,6 +252,26 @@ class CustomerHomeNotifier extends StateNotifier<CustomerHomeState> {
     }
   }
 
+  Future<void> searchCatalogAndOutlets(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      await loadDiscovery();
+      return;
+    }
+    try {
+      final res = await _client.discovery.searchDiscovery(
+        query: trimmed,
+        latitude: state.currentLatitude,
+        longitude: state.currentLongitude,
+      );
+      if (res.outlets.isNotEmpty) {
+        state = state.copyWith(outlets: res.outlets, isOffline: false);
+      }
+    } catch (_) {
+      await loadDiscovery();
+    }
+  }
+
   void setLocation(double lat, double lng, String label) {
     state = state.copyWith(
       currentLatitude: lat,

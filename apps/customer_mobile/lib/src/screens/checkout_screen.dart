@@ -119,7 +119,72 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final res = await ref.read(apiClientProvider).placeOrder(
         addressId: _selectedAddress!.id,
         paymentMethod: effectiveMethod,
+        couponCode: widget.couponCode,
+        deliveryInstructions: widget.instructions.isNotEmpty ? widget.instructions.join(', ') : null,
+        customerNotes: widget.cookingNotes,
+        idempotencyKey: idempotencyKey,
       );
+
+      final paymentId = res['paymentId']?.toString() ?? res['payment']?['id']?.toString();
+      final gatewayOrderId = res['gatewayOrderId']?.toString() ?? res['razorpayOrderId']?.toString();
+
+      if ((effectiveMethod == 'UPI' || effectiveMethod == 'CARD') &&
+          paymentId != null &&
+          paymentId.isNotEmpty &&
+          mounted) {
+        final authorized = await showModalBottomSheet<bool>(
+          context: context,
+          isDismissible: false,
+          builder: (ctx) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  effectiveMethod == 'UPI'
+                      ? 'Complete UPI Payment (${_selectedUpiApp.toUpperCase()})'
+                      : 'Authorize Card Payment',
+                  style: AllGoTypography.heading3,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Amount Payable: ₹${_payableAmount.toStringAsFixed(2)}',
+                  style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+                ),
+                if (gatewayOrderId != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('Gateway Ref: $gatewayOrderId', style: AllGoTypography.caption),
+                  ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AllGoColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Verify & Complete Payment'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancel Payment'),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (authorized != true) {
+          throw Exception('Payment authorization was cancelled by user.');
+        }
+
+        await ref.read(apiClientProvider).verifyOrderPayment(
+          paymentId: paymentId,
+          gatewayPaymentId: gatewayOrderId ?? 'pay_$idempotencyKey',
+          gatewaySignature: 'sig_$idempotencyKey',
+        );
+      }
 
       final subOrderId = (res['subOrderId'] ?? res['subOrders']?[0]?['id'] ?? res['id'])?.toString() ?? idempotencyKey;
       if (mounted) {

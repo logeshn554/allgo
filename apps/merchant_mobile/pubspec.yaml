@@ -20,6 +20,7 @@ dependencies:
   firebase_analytics: ^11.0.0
   firebase_remote_config: ^5.0.0
   firebase_performance: ^0.10.0
+  image_picker: ^1.1.2
   allgo_mobile_shared:
     path: ../../packages/mobile_shared
 

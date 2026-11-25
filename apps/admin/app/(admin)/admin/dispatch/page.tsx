@@ -5,6 +5,7 @@ import { DispatchJobsTable } from '@/components/dispatch/DispatchJobsTable';
 import { DispatchModals } from '@/components/dispatch/DispatchModals';
 import { DispatchPartnersTable } from '@/components/dispatch/DispatchPartnersTable';
 import { DispatchStatsCards } from '@/components/dispatch/DispatchStatsCards';
+import { LiveFleetRadarPanel } from '@/components/dispatch/LiveFleetRadarPanel';
 import { type DispatchJob, adminApi } from '@/lib/api-client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
@@ -18,7 +19,7 @@ export default function DispatchPage() {
   const [totalJobs, setTotalJobs] = useState<number>(0);
   const [onlinePartners, setOnlinePartners] = useState<any[]>([]);
   const [exceptions, setExceptions] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'jobs' | 'partners' | 'exceptions'>('jobs');
+  const [activeTab, setActiveTab] = useState<'jobs' | 'partners' | 'radar' | 'exceptions'>('jobs');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +173,7 @@ export default function DispatchPage() {
         <TabsList variant="line">
           <TabsTrigger value="jobs">Delivery Jobs ({totalJobs})</TabsTrigger>
           <TabsTrigger value="partners">Online Fleet ({onlinePartners.length})</TabsTrigger>
+          <TabsTrigger value="radar">Live Fleet Radar</TabsTrigger>
           <TabsTrigger value="exceptions">Exceptions Queue ({exceptions.length})</TabsTrigger>
         </TabsList>
 
@@ -193,6 +195,10 @@ export default function DispatchPage() {
 
         <TabsContent value="partners">
           <DispatchPartnersTable onlinePartners={onlinePartners} />
+        </TabsContent>
+
+        <TabsContent value="radar">
+          <LiveFleetRadarPanel onlinePartners={onlinePartners} jobs={jobs} />
         </TabsContent>
 
         <TabsContent value="exceptions">

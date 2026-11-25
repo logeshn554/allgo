@@ -107,25 +107,46 @@ class CustomerOrdersTab extends StatelessWidget {
     return parts.join(', ');
   }
 
+  static const Set<String> _activeStatuses = {
+    'PLACED',
+    'CONFIRMED',
+    'MERCHANT_ACCEPTED',
+    'ACCEPTED',
+    'PREPARING',
+    'READY_FOR_PICKUP',
+    'DISPATCHING',
+    'DRIVER_ASSIGNED',
+    'PICKED_UP',
+    'IN_TRANSIT',
+    'OUT_FOR_DELIVERY',
+  };
+
   @override
   Widget build(BuildContext context) {
     final filtered = activeFilter == 'ALL'
         ? orders
-        : orders.where((o) => o.status == activeFilter).toList();
+        : activeFilter == 'ACTIVE'
+            ? orders.where((o) => _activeStatuses.contains(o.status)).toList()
+            : orders.where((o) => o.status == activeFilter).toList();
 
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           color: Theme.of(context).cardColor,
-          child: Row(
-            children: [
-              _buildFilterChip('All Orders', 'ALL'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Active', 'PLACED'),
-              const SizedBox(width: 8),
-              _buildFilterChip('Delivered', 'DELIVERED'),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip('All Orders', 'ALL'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Active', 'ACTIVE'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Delivered', 'DELIVERED'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Cancelled', 'CANCELLED'),
+              ],
+            ),
           ),
         ),
         Expanded(

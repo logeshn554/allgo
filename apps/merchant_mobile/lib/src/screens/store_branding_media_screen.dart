@@ -1,15 +1,21 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 class StoreBrandingMediaScreen extends ConsumerStatefulWidget {
   final String outletId;
   final String outletName;
+  final String? initialLogoUrl;
+  final String? initialCoverUrl;
 
   const StoreBrandingMediaScreen({
     super.key,
     required this.outletId,
     required this.outletName,
+    this.initialLogoUrl,
+    this.initialCoverUrl,
   });
 
   @override
@@ -17,17 +23,88 @@ class StoreBrandingMediaScreen extends ConsumerStatefulWidget {
 }
 
 class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScreen> {
-  final _logoUrlCtrl = TextEditingController(text: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200');
-  final _coverUrlCtrl = TextEditingController(text: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800');
+  final ImagePicker _picker = ImagePicker();
+  late final TextEditingController _logoUrlCtrl;
+  late final TextEditingController _coverUrlCtrl;
 
+  Uint8List? _logoPreviewBytes;
+  Uint8List? _coverPreviewBytes;
+  bool _isUploadingLogo = false;
+  bool _isUploadingCover = false;
   bool _isSaving = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _logoUrlCtrl = TextEditingController(text: widget.initialLogoUrl ?? '');
+    _coverUrlCtrl = TextEditingController(text: widget.initialCoverUrl ?? '');
+  }
 
   @override
   void dispose() {
     _logoUrlCtrl.dispose();
     _coverUrlCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadImage({required bool isLogo}) async {
+    setState(() {
+      if (isLogo) {
+        _isUploadingLogo = true;
+      } else {
+        _isUploadingCover = true;
+      }
+      _errorMessage = null;
+    });
+
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: isLogo ? 600 : 1600,
+      );
+      if (file == null) {
+        setState(() {
+          _isUploadingLogo = false;
+          _isUploadingCover = false;
+        });
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Selected image is empty');
+
+      final client = ref.read(apiClientProvider);
+      final ticket = await client.createUploadTicket(
+        isLogo ? 'OUTLET_LOGO' : 'OUTLET_COVER',
+        'image/jpeg',
+        bytes.lengthInBytes,
+      );
+      final ticketId = ticket['ticketId']?.toString() ?? ticket['id']?.toString() ?? '';
+      final storageKey = ticket['storageKey']?.toString() ?? ticket['storage_key']?.toString() ?? '';
+      final publicUrl = ticket['publicUrl']?.toString() ?? ticket['url']?.toString() ?? storageKey;
+      await client.uploadDocumentBinary(ticketId, bytes);
+
+      if (!mounted) return;
+      setState(() {
+        if (isLogo) {
+          _logoPreviewBytes = bytes;
+          if (publicUrl.isNotEmpty) _logoUrlCtrl.text = publicUrl;
+        } else {
+          _coverPreviewBytes = bytes;
+          if (publicUrl.isNotEmpty) _coverUrlCtrl.text = publicUrl;
+        }
+      });
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = 'Image upload failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingLogo = false;
+          _isUploadingCover = false;
+        });
+      }
+    }
   }
 
   Future<void> _handleSave() async {
@@ -41,8 +118,8 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
       await client.updateOutletStatus(
         widget.outletId,
         null,
-        logoUrl: _logoUrlCtrl.text.trim(),
-        coverPhotoUrl: _coverUrlCtrl.text.trim(),
+        logoUrl: _logoUrlCtrl.text.trim().isEmpty ? null : _logoUrlCtrl.text.trim(),
+        coverPhotoUrl: _coverUrlCtrl.text.trim().isEmpty ? null : _coverUrlCtrl.text.trim(),
       );
 
       if (mounted) {
@@ -64,19 +141,14 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
     }
   }
 
-  void _choosePresetLogo(String url) {
-    setState(() => _logoUrlCtrl.text = url);
-  }
-
-  void _choosePresetCover(String url) {
-    setState(() => _coverUrlCtrl.text = url);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final coverHasNetwork = _coverUrlCtrl.text.trim().startsWith('http');
+    final logoHasNetwork = _logoUrlCtrl.text.trim().startsWith('http');
+
     return Scaffold(
       backgroundColor: AllGoColors.background,
-      appBar: AllGoAppBar(title: 'Store Logo & Cover Photo'),
+      appBar: const AllGoAppBar(title: 'Store Logo & Cover Photo'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -92,20 +164,18 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
                 ),
                 child: Text('Error: $_errorMessage', style: const TextStyle(color: Colors.red)),
               ),
-
-            // Live Storefront Banner Preview
             Text('Storefront Preview', style: AllGoTypography.heading3),
             const SizedBox(height: 8),
             Container(
               height: 160,
               decoration: BoxDecoration(
-                color: Colors.grey.shade200,
+                color: AllGoColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
-                image: DecorationImage(
-                  image: NetworkImage(_coverUrlCtrl.text),
-                  fit: BoxFit.cover,
-                  onError: (_, __) {},
-                ),
+                image: _coverPreviewBytes != null
+                    ? DecorationImage(image: MemoryImage(_coverPreviewBytes!), fit: BoxFit.cover)
+                    : coverHasNetwork
+                        ? DecorationImage(image: NetworkImage(_coverUrlCtrl.text.trim()), fit: BoxFit.cover)
+                        : null,
               ),
               child: Stack(
                 children: [
@@ -113,7 +183,7 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       gradient: LinearGradient(
-                        colors: [Colors.black.withOpacity(0.6), Colors.transparent],
+                        colors: [Colors.black.withValues(alpha: 0.65), Colors.transparent],
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
                       ),
@@ -127,7 +197,14 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: Colors.white,
-                          backgroundImage: NetworkImage(_logoUrlCtrl.text),
+                          backgroundImage: _logoPreviewBytes != null
+                              ? MemoryImage(_logoPreviewBytes!)
+                              : logoHasNetwork
+                                  ? NetworkImage(_logoUrlCtrl.text.trim()) as ImageProvider
+                                  : null,
+                          child: (_logoPreviewBytes == null && !logoHasNetwork)
+                              ? const Icon(Icons.storefront, color: AllGoColors.primary)
+                              : null,
                         ),
                         const SizedBox(width: 12),
                         Column(
@@ -146,78 +223,46 @@ class _StoreBrandingMediaScreenState extends ConsumerState<StoreBrandingMediaScr
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Logo URL Input & Presets
-            Text('Store Logo (Square 1:1)', style: AllGoTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('Used in store icons, cart line items, and notifications', style: AllGoTypography.caption),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isUploadingLogo ? null : () => _pickAndUploadImage(isLogo: true),
+                    icon: _isUploadingLogo
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.upload_outlined),
+                    label: const Text('Upload Logo'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isUploadingCover ? null : () => _pickAndUploadImage(isLogo: false),
+                    icon: _isUploadingCover
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.photo_size_select_actual_outlined),
+                    label: const Text('Upload Cover'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             AllGoTextField(
-              label: 'Logo Image URL',
+              label: 'Logo Asset Key / URL',
+              hint: 'Uploaded key or https://...',
               controller: _logoUrlCtrl,
-              onChanged: (_) => setState(() {}),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ActionChip(
-                  avatar: const Icon(Icons.restaurant, size: 14),
-                  label: const Text('Restaurant Logo'),
-                  onPressed: () => _choosePresetLogo('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.shopping_basket, size: 14),
-                  label: const Text('Grocery Store Logo'),
-                  onPressed: () => _choosePresetLogo('https://images.unsplash.com/photo-1542838132-92c53300491e?w=200'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.local_cafe, size: 14),
-                  label: const Text('Bakery / Cafe'),
-                  onPressed: () => _choosePresetLogo('https://images.unsplash.com/photo-1509440159596-0249088772ff?w=200'),
-                ),
-              ],
+            const SizedBox(height: 12),
+            AllGoTextField(
+              label: 'Cover Asset Key / URL',
+              hint: 'Uploaded key or https://...',
+              controller: _coverUrlCtrl,
             ),
             const SizedBox(height: 24),
-
-            // Cover Photo Input & Presets
-            Text('Cover Photo Banner (Wide 16:9)', style: AllGoTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('Featured at top of store catalog page for customer browsing', style: AllGoTypography.caption),
-            const SizedBox(height: 8),
-            AllGoTextField(
-              label: 'Cover Banner URL',
-              controller: _coverUrlCtrl,
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ActionChip(
-                  avatar: const Icon(Icons.photo, size: 14),
-                  label: const Text('Dining Ambience'),
-                  onPressed: () => _choosePresetCover('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.store, size: 14),
-                  label: const Text('Fresh Supermarket'),
-                  onPressed: () => _choosePresetCover('https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800'),
-                ),
-                ActionChip(
-                  avatar: const Icon(Icons.lunch_dining, size: 14),
-                  label: const Text('Fast Food Spread'),
-                  onPressed: () => _choosePresetCover('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
             AllGoButton(
-              label: 'Save Store Media & Banner',
+              label: 'Save Branding Media',
               isLoading: _isSaving,
-              icon: Icons.check,
               onPressed: _handleSave,
             ),
           ],

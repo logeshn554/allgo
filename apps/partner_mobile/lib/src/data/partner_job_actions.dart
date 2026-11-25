@@ -177,4 +177,39 @@ class PartnerJobActions {
       onError('Complete trip failed: $e');
     }
   }
+
+  Future<void> arrivedHireDriver(String bookingId) async {
+    try {
+      await client.driverArrivedHireBooking(bookingId);
+      onSuccess();
+    } catch (e) {
+      onError('Chauffeur arrival failed: $e');
+    }
+  }
+
+  Future<void> startHireDuty(String bookingId, String startOtp, double startOdometerKm) async {
+    try {
+      await client.driverStartHireDuty(
+        bookingId: bookingId,
+        startOtp: startOtp,
+        startOdometerKm: startOdometerKm,
+      );
+      onSuccess();
+    } catch (e) {
+      onError('Start duty failed: $e');
+    }
+  }
+
+  Future<void> endHireDuty(String bookingId, String endOtp, double endOdometerKm) async {
+    try {
+      await client.driverEndHireDuty(
+        bookingId: bookingId,
+        endOtp: endOtp,
+        endOdometerKm: endOdometerKm,
+      );
+      onSuccess();
+    } catch (e) {
+      onError('End duty failed: $e');
+    }
+  }
 }

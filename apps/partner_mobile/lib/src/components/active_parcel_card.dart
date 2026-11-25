@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
+import '../utils/partner_navigation_helper.dart';
 
 class ActiveParcelCard extends StatelessWidget {
   final ParcelModel activeParcel;
@@ -73,7 +74,45 @@ class ActiveParcelCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Recipient / Dropoff', style: AllGoTypography.caption.copyWith(color: AllGoColors.textSecondary)),
           Text(activeParcel.dropoffAddress, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.navigation_outlined, size: 18),
+                  label: Text(
+                    (activeParcel.status == 'COURIER_ASSIGNED' || activeParcel.status == 'ARRIVED_PICKUP')
+                        ? 'Navigate to Sender'
+                        : 'Navigate to Drop',
+                  ),
+                  onPressed: () {
+                    final toPickup = activeParcel.status == 'COURIER_ASSIGNED' || activeParcel.status == 'ARRIVED_PICKUP';
+                    final loc = toPickup ? activeParcel.pickupLocation : activeParcel.dropLocation;
+                    final addr = toPickup ? activeParcel.pickupAddress : activeParcel.dropoffAddress;
+                    PartnerNavigationHelper.openDirections(
+                      context: context,
+                      latitude: loc.latitude,
+                      longitude: loc.longitude,
+                      addressFallback: addr,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.phone_outlined, size: 18),
+                label: const Text('Call'),
+                onPressed: () {
+                  final toPickup = activeParcel.status == 'COURIER_ASSIGNED' || activeParcel.status == 'ARRIVED_PICKUP';
+                  PartnerNavigationHelper.callPhone(
+                    context,
+                    toPickup ? activeParcel.senderPhone : activeParcel.recipientPhone,
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           if (activeParcel.status == 'COURIER_ASSIGNED')
             AllGoButton(
               label: 'Confirm Arrived at Sender Pickup',

@@ -284,4 +284,19 @@ class MerchantCatalogApi {
     }
   }
 
+  Future<Map<String, dynamic>> uploadBulkMenuCsv(String outletId, String csvContent) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/merchants/outlets/$outletId/catalog/bulk-csv');
+    final response = await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'MERCHANT'),
+      body: jsonEncode({'csvContent': csvContent}),
+    );
+    final res = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return res as Map<String, dynamic>;
+    }
+    throw ApiException(response.statusCode, res['message']?.toString() ?? 'Failed to import CSV menu');
+  }
+
 }

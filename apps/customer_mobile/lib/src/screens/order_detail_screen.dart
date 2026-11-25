@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import '../common/friendly_error.dart';
 import '../components/order_detail_safety_and_partner_card.dart';
@@ -131,13 +132,35 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
-  void _downloadInvoice() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tax Invoice for #${_order?.subOrderNumber} downloaded successfully.'),
-        backgroundColor: AllGoColors.success,
-      ),
-    );
+  Future<void> _downloadInvoice() async {
+    final order = _order;
+    if (order == null) return;
+    try {
+      final res = await ref.read(apiClientProvider).getOrderInvoice(order.id);
+      final signedUrl = res['signedUrl']?.toString();
+      if (signedUrl != null && signedUrl.isNotEmpty) {
+        final uri = Uri.parse(signedUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('GST Invoice ${res['invoiceNumber'] ?? ''} generated (${res['storageKey'] ?? 'ready'}).'),
+            backgroundColor: AllGoColors.success,
+          ),
+        );
+      }
+    } catch (e, st) {
+      final f = FriendlyError.from(e, st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(f.message), backgroundColor: AllGoColors.error),
+        );
+      }
+    }
   }
 
   @override

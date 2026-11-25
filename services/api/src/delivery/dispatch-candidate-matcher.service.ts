@@ -27,7 +27,7 @@ export class DispatchCandidateMatcherService {
   ): Promise<{ selectedPartnerId: string | null; attemptsCount: number }> {
     let candidatePartnerIds: string[] = [];
 
-    // 1. Uber H3 Geospatial Partitioning Lookup (Res 8 / Res 9 k-ring sets in Redis)
+    // 1. H3 Geospatial Partitioning Lookup (Res 8 / Res 9 k-ring sets in Redis)
     try {
       const centerHex = latLngToH3Index(Number(pickupLat), Number(pickupLon), 8);
       const kRingHexes = getH3KRing(centerHex, 1);

@@ -187,6 +187,7 @@ class ApiClient {
   Future<List<OptionGroup>> getProductOptionGroups(String productId) => merchantCatalog.getProductOptionGroups(productId);
   Future<OptionItem> createProductOption(String groupId, Map<String, dynamic> data) => merchantCatalog.createProductOption(groupId, data);
   Future<void> setOutletProductOverride(String outletId, String productId, Map<String, dynamic> data,) => merchantCatalog.setOutletProductOverride(outletId, productId, data);
+  Future<Map<String, dynamic>> uploadBulkMenuCsv(String outletId, String csvContent) => merchantCatalog.uploadBulkMenuCsv(outletId, csvContent);
   Future<MerchantDashboardData> getMerchantDashboard() => merchantOrders.getMerchantDashboard();
   Future<void> updateOutletStatus(
     String outletId,
@@ -215,6 +216,28 @@ class ApiClient {
   Future<Map<String, dynamic>> merchantMarkPreparing(String subOrderId) => merchantOrders.merchantMarkPreparing(subOrderId);
   Future<Map<String, dynamic>> merchantMarkReady(String subOrderId) => merchantOrders.merchantMarkReady(subOrderId);
   Future<Map<String, dynamic>> merchantRejectOrder(String subOrderId, String reason) => merchantOrders.merchantRejectOrder(subOrderId, reason);
+  Future<Map<String, dynamic>> proposeSubstitution({
+    required String subOrderId,
+    required String orderItemId,
+    required String originalItemName,
+    required double originalPriceInr,
+    required String actionType,
+    String? substitutedItemId,
+    String? substitutedItemName,
+    double? substitutedPriceInr,
+    int timeoutSeconds = 120,
+  }) =>
+      merchantOrders.proposeSubstitution(
+        subOrderId: subOrderId,
+        orderItemId: orderItemId,
+        originalItemName: originalItemName,
+        originalPriceInr: originalPriceInr,
+        actionType: actionType,
+        substitutedItemId: substitutedItemId,
+        substitutedItemName: substitutedItemName,
+        substitutedPriceInr: substitutedPriceInr,
+        timeoutSeconds: timeoutSeconds,
+      );
   Future<void> partnerGoOnline(double latitude, double longitude) => partnerDelivery.partnerGoOnline(latitude, longitude);
   Future<void> partnerGoOffline() => partnerDelivery.partnerGoOffline();
   Future<void> partnerHeartbeat(double latitude, double longitude) => partnerDelivery.partnerHeartbeat(latitude, longitude);
@@ -296,6 +319,19 @@ class ApiClient {
   Future<List<DeliveryJobModel>> getCustomerActiveDeliveries() => customerOrdering.getCustomerActiveDeliveries();
   Future<DeliveryJobModel> getCustomerDeliveryTracking(String jobId) => customerOrdering.getCustomerDeliveryTracking(jobId);
   Future<Map<String, dynamic>> syncMissedDeliveryEvents(String jobId, {String? since}) => customerOrdering.syncMissedDeliveryEvents(jobId, since: since);
+  Future<Map<String, dynamic>> verifyOrderPayment({
+    required String paymentId,
+    required String gatewayPaymentId,
+    required String gatewaySignature,
+  }) =>
+      customerOrdering.verifyOrderPayment(
+        paymentId: paymentId,
+        gatewayPaymentId: gatewayPaymentId,
+        gatewaySignature: gatewaySignature,
+      );
+  Future<Map<String, dynamic>> getOrderInvoice(String subOrderId) => customerOrdering.getOrderInvoice(subOrderId);
+  Future<Map<String, dynamic>> respondToSubstitution({required String substitutionId, required String decision}) =>
+      customerOrdering.respondToSubstitution(substitutionId: substitutionId, decision: decision);
   Future<CartModel> getCart() => customerOrdering.getCart();
   Future<CartModel> updateCartItemQuantity(String cartItemId, int quantity) => customerOrdering.updateCartItemQuantity(cartItemId, quantity);
   Future<CartModel> removeCartItem(String cartItemId) => customerOrdering.removeCartItem(cartItemId);

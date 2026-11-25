@@ -3,9 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'operating_hours_screen.dart';
 import 'merchant_profile_screen.dart';
+import 'merchant_product_editor_screen.dart';
+import 'merchant_csv_import_screen.dart';
 import '../components/merchant_live_orders_tab.dart';
 import '../components/merchant_menu_catalog_tab.dart';
 import '../components/merchant_financials_tab.dart';
+import '../components/merchant_incoming_order_alert_modal.dart';
+import '../components/propose_substitution_modal.dart';
 
 class MerchantDashboardShell extends ConsumerStatefulWidget {
   const MerchantDashboardShell({super.key});
@@ -28,11 +32,29 @@ class _MerchantDashboardShellState extends ConsumerState<MerchantDashboardShell>
   Map<String, dynamic>? _earningsData;
   bool _isOpen = true;
   int _defaultPrepMinutes = 15;
+  final Set<String> _alertedOrderIds = {};
+  RealtimeSocketService? _socket;
 
   @override
   void initState() {
     super.initState();
     _loadAllDashboardData();
+    _initRealtimeSocket();
+  }
+
+  Future<void> _initRealtimeSocket() async {
+    final socket = ref.read(realtimeSocketServiceProvider);
+    _socket = socket;
+    await socket.connect();
+    socket.on('order:new', (_) => _loadAllDashboardData());
+    socket.on('job:status_changed', (_) => _loadAllDashboardData());
+  }
+
+  @override
+  void dispose() {
+    _socket?.off('order:new');
+    _socket?.off('job:status_changed');
+    super.dispose();
   }
 
   Future<void> _loadAllDashboardData() async {
@@ -42,22 +64,51 @@ class _MerchantDashboardShellState extends ConsumerState<MerchantDashboardShell>
       final data = await client.getMerchantDashboard().catchError((_) => MerchantDashboardData.empty());
       final orders = await client.getMerchantOrders().catchError((_) => <MerchantOrder>[]);
       final products = await client.getMerchantProducts().catchError((_) => <ProductItem>[]);
+      final overview = await client.getMerchantFinancialOverview().catchError((_) => <String, dynamic>{});
       final earnings = await client.getMerchantEarnings().catchError((_) => <String, dynamic>{});
+      final mergedFinancials = <String, dynamic>{...earnings, ...overview};
 
       if (mounted) {
         setState(() {
           _dashboardData = data;
           _orders = orders;
           _products = products;
-          _earningsData = earnings;
+          _earningsData = mergedFinancials;
           _isOpen = data.outletIsOpen;
           _defaultPrepMinutes = data.defaultPrepTimeMinutes;
           _isLoading = false;
         });
+        _checkForNewOrderAlert(orders);
       }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _checkForNewOrderAlert(List<MerchantOrder> orders) {
+    final newOrder = orders.cast<MerchantOrder?>().firstWhere(
+          (o) =>
+              o != null &&
+              (o.status == 'PLACED' || o.status == 'CREATED' || o.status == 'PAID') &&
+              !_alertedOrderIds.contains(o.id),
+          orElse: () => null,
+        );
+    if (newOrder == null || !mounted) return;
+    _alertedOrderIds.add(newOrder.id);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => MerchantIncomingOrderAlertModal(
+        orderId: newOrder.id,
+        orderNumber: newOrder.subOrderNumber,
+        customerName: 'AllGo Customer',
+        totalAmountPaise: (newOrder.itemsTotalInr * 100).round(),
+        itemSummaries: newOrder.items.map((i) => '${i.quantity}x ${i.itemName}').toList(),
+        onAccept: () => _handleAcceptOrder(newOrder),
+        onReject: (_) => _handleRejectOrder(newOrder),
+      ),
+    );
   }
 
   Future<void> _handleToggleOutlet(bool val) async {
@@ -123,54 +174,141 @@ class _MerchantDashboardShellState extends ConsumerState<MerchantDashboardShell>
     }
   }
 
-  void _showAddProductModal() {
-    final nameCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    bool isVeg = true;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setMState) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, top: 20, left: 20, right: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Add New Catalog Product', style: AllGoTypography.heading3),
-              const SizedBox(height: 16),
-              AllGoTextField(label: 'Item Name', controller: nameCtrl),
-              const SizedBox(height: 12),
-              AllGoTextField(label: 'Base Price (₹)', controller: priceCtrl, keyboardType: TextInputType.number),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                value: isVeg,
-                title: Text(isVeg ? 'Vegetarian' : 'Non-Vegetarian'),
-                activeColor: Colors.green,
-                onChanged: (v) => setMState(() => isVeg = v),
-              ),
-              const SizedBox(height: 16),
-              AllGoButton(
-                label: 'Save Product',
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  final client = ref.read(apiClientProvider);
-                  await client.createMerchantProduct({
-                    'name': nameCtrl.text.trim(),
-                    'basePriceInr': double.tryParse(priceCtrl.text) ?? 100.0,
-                    'isVeg': isVeg,
-                    'stockQuantity': 50,
-                  });
-                  _loadAllDashboardData();
-                },
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+  Future<void> _openProductEditor([ProductItem? product]) async {
+    final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => MerchantProductEditorScreen(
+          outletId: outletId,
+          existingProduct: product,
         ),
       ),
     );
+    if (changed == true) _loadAllDashboardData();
+  }
+
+  Future<void> _openCsvImport() async {
+    final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => MerchantCsvImportScreen(outletId: outletId)),
+    );
+    _loadAllDashboardData();
+  }
+
+  Future<void> _handleVerifyHandoverOtp(MerchantOrder order) async {
+    final otpCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Courier Handover PIN • #${order.subOrderNumber}'),
+        content: TextField(
+          controller: otpCtrl,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          decoration: const InputDecoration(
+            labelText: 'Enter Courier Handover PIN',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Verify Handover')),
+        ],
+      ),
+    );
+    if (confirmed == true && otpCtrl.text.trim().length >= 4) {
+      try {
+        final client = ref.read(apiClientProvider);
+        final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+        final jobs = await client.getMerchantDeliveryJobs(outletId).catchError((_) => <DeliveryJobModel>[]);
+        final matchingJobId = jobs.isNotEmpty ? jobs.first.id : order.id;
+        await client.merchantVerifyHandoverOtp(matchingJobId, otpCtrl.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Courier handover PIN verified!'), backgroundColor: AllGoColors.success),
+          );
+          _loadAllDashboardData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Handover verification failed: $e')));
+        }
+      }
+    }
+    otpCtrl.dispose();
+  }
+
+  Future<void> _handleExtendPrepTime(MerchantOrder order, int extraMinutes) async {
+    try {
+      final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+      final nextPrep = _defaultPrepMinutes + extraMinutes;
+      await ref.read(apiClientProvider).updateOutletStatus(outletId, _isOpen, defaultPrepTimeMinutes: nextPrep);
+      if (mounted) {
+        setState(() => _defaultPrepMinutes = nextPrep);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Prep time extended by +${extraMinutes}m ($nextPrep mins total)')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to extend prep time: $e')));
+      }
+    }
+  }
+
+  Future<void> _handleAddCategory() async {
+    final nameCtrl = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Menu Category'),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: 'Category Name (e.g. Biryanis, Beverages)', border: OutlineInputBorder()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+        ],
+      ),
+    );
+    if (created == true && nameCtrl.text.trim().isNotEmpty) {
+      try {
+        final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+        await ref.read(apiClientProvider).createOutletCategory(outletId, {'name': nameCtrl.text.trim()});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Category "${nameCtrl.text.trim()}" created!'), backgroundColor: AllGoColors.success),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to create category: $e')));
+        }
+      }
+    }
+    nameCtrl.dispose();
+  }
+
+  Future<void> _handleTimedPause(ProductItem product) async {
+    try {
+      final outletId = _dashboardData?.outletId ?? 'outlet-primary';
+      final resumeAt = DateTime.now().add(const Duration(hours: 2)).toIso8601String();
+      await ref.read(apiClientProvider).setOutletProductOverride(outletId, product.id, {
+        'isAvailable': false,
+        'pausedUntil': resumeAt,
+      });
+      await _handleToggleProductStock(product, false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${product.name} paused for 2 hours')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Pause failed: $e')));
+      }
+    }
   }
 
   Widget _buildOverviewScreen() {
@@ -237,6 +375,17 @@ class _MerchantDashboardShellState extends ConsumerState<MerchantDashboardShell>
                   onAccept: _handleAcceptOrder,
                   onReject: _handleRejectOrder,
                   onUpdateStatus: _handleUpdateOrderStatus,
+                  onVerifyHandoverOtp: _handleVerifyHandoverOtp,
+                  onExtendPrepTime: _handleExtendPrepTime,
+                  onProposeSubstitution: (order, item) {
+                    ProposeSubstitutionModal.show(
+                      context,
+                      subOrderId: order.id,
+                      orderItem: item,
+                      catalogProducts: _products,
+                      onSubmitted: _loadAllDashboardData,
+                    );
+                  },
                 )
               : _currentTabIndex == 2
                   ? MerchantMenuCatalogTab(
@@ -244,7 +393,11 @@ class _MerchantDashboardShellState extends ConsumerState<MerchantDashboardShell>
                       isLoading: _isLoading,
                       onRefresh: _loadAllDashboardData,
                       onToggleStock: _handleToggleProductStock,
-                      onAddProduct: _showAddProductModal,
+                      onAddProduct: () => _openProductEditor(),
+                      onEditProduct: (p) => _openProductEditor(p),
+                      onBulkCsvImport: _openCsvImport,
+                      onAddCategory: _handleAddCategory,
+                      onTimedPause: _handleTimedPause,
                     )
                   : _currentTabIndex == 3
                       ? MerchantFinancialsTab(

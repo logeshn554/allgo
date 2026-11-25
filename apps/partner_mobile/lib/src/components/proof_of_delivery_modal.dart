@@ -1,7 +1,7 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 class ProofOfDeliveryModal extends ConsumerStatefulWidget {
@@ -22,7 +22,9 @@ class ProofOfDeliveryModal extends ConsumerStatefulWidget {
 
 class _ProofOfDeliveryModalState extends ConsumerState<ProofOfDeliveryModal> {
   final _otpController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
   bool _isPhotoCaptured = false;
+  Uint8List? _previewBytes;
   String? _uploadedStorageKey;
   bool _isSubmitting = false;
   bool _isUploadingPhoto = false;
@@ -41,14 +43,27 @@ class _ProofOfDeliveryModalState extends ConsumerState<ProofOfDeliveryModal> {
     });
 
     try {
-      // 1. Capture camera frame (JPEG bytes)
-      final header = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46];
-      final timestampStr = 'POD_CAPTURE_${widget.jobId}_${DateTime.now().toIso8601String()}';
-      final body = utf8.encode(timestampStr);
-      final eof = [0xFF, 0xD9];
-      final photoBytes = Uint8List.fromList([...header, ...body, ...eof]);
+      final XFile? photo = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 75,
+        maxWidth: 1600,
+      );
 
-      // 2. Obtain real storage upload ticket from Storage API
+      if (photo == null) {
+        if (mounted) {
+          setState(() {
+            _isUploadingPhoto = false;
+            _errorMessage = 'Camera capture was cancelled. Please capture doorstep photo proof.';
+          });
+        }
+        return;
+      }
+
+      final photoBytes = await photo.readAsBytes();
+      if (photoBytes.isEmpty) {
+        throw Exception('Captured photo was empty');
+      }
+
       final client = ref.read(apiClientProvider);
       final ticket = await client.createUploadTicket(
         'PROOF_OF_DELIVERY',
@@ -59,12 +74,12 @@ class _ProofOfDeliveryModalState extends ConsumerState<ProofOfDeliveryModal> {
       final ticketId = ticket['ticketId']?.toString() ?? ticket['id']?.toString() ?? '';
       final storageKey = ticket['storageKey']?.toString() ?? ticket['storage_key']?.toString() ?? '';
 
-      // 3. Upload binary photo stream to storage
       await client.uploadDocumentBinary(ticketId, photoBytes);
 
       if (mounted) {
         setState(() {
           _isPhotoCaptured = true;
+          _previewBytes = photoBytes;
           _uploadedStorageKey = storageKey.isNotEmpty ? storageKey : 'pod/${widget.jobId}.jpg';
           _isUploadingPhoto = false;
         });
@@ -157,12 +172,23 @@ class _ProofOfDeliveryModalState extends ConsumerState<ProofOfDeliveryModal> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              _isPhotoCaptured ? Icons.check_circle : Icons.camera_alt_outlined,
-                              size: 36,
-                              color: _isPhotoCaptured ? Colors.green : Colors.grey.shade600,
-                            ),
-                            const SizedBox(height: 8),
+                            if (_previewBytes != null)
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.memory(
+                                  _previewBytes!,
+                                  height: 64,
+                                  width: 96,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            else
+                              Icon(
+                                _isPhotoCaptured ? Icons.check_circle : Icons.camera_alt_outlined,
+                                size: 36,
+                                color: _isPhotoCaptured ? Colors.green : Colors.grey.shade600,
+                              ),
+                            const SizedBox(height: 6),
                             Text(
                               _isPhotoCaptured ? 'Delivery Photo Uploaded to Storage' : 'Tap Camera to Capture Doorstep Photo',
                               style: TextStyle(

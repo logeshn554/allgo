@@ -224,6 +224,61 @@ class CustomerOrderingApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to sync missed events');
   }
 
+  Future<Map<String, dynamic>> verifyOrderPayment({
+    required String paymentId,
+    required String gatewayPaymentId,
+    required String gatewaySignature,
+  }) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/payments/verify');
+    final response = await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+      body: jsonEncode({
+        'paymentId': paymentId,
+        'gatewayPaymentId': gatewayPaymentId,
+        'gatewaySignature': gatewaySignature,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data as Map<String, dynamic>;
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Payment verification failed');
+  }
+
+  Future<Map<String, dynamic>> getOrderInvoice(String subOrderId) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/orders/$subOrderId/invoice');
+    final response = await base.httpClient.get(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data as Map<String, dynamic>;
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to load GST invoice');
+  }
+
+  Future<Map<String, dynamic>> respondToSubstitution({
+    required String substitutionId,
+    required String decision,
+  }) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/orders/substitutions/$substitutionId/decision');
+    final response = await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'CUSTOMER'),
+      body: jsonEncode({'decision': decision}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data as Map<String, dynamic>;
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to submit substitution decision');
+  }
+
   Future<List<CustomerAddressModel>> listCustomerAddresses() => addresses.listCustomerAddresses();
   Future<CustomerAddressModel> createCustomerAddress(CustomerAddressModel address) => addresses.createCustomerAddress(address);
   Future<CustomerAddressModel> updateCustomerAddress(String addressId, CustomerAddressModel address) => addresses.updateCustomerAddress(addressId, address);

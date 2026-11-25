@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
-class RateReviewScreen extends StatefulWidget {
+class RateReviewScreen extends ConsumerStatefulWidget {
   final String orderId;
   final String outletName;
   final String? partnerName;
@@ -14,10 +15,10 @@ class RateReviewScreen extends StatefulWidget {
   });
 
   @override
-  State<RateReviewScreen> createState() => _RateReviewScreenState();
+  ConsumerState<RateReviewScreen> createState() => _RateReviewScreenState();
 }
 
-class _RateReviewScreenState extends State<RateReviewScreen> {
+class _RateReviewScreenState extends ConsumerState<RateReviewScreen> {
   int _foodRating = 5;
   int _deliveryRating = 5;
   final Set<String> _selectedTags = {};
@@ -58,16 +59,40 @@ class _RateReviewScreenState extends State<RateReviewScreen> {
 
   Future<void> _submitFeedback() async {
     setState(() => _isSubmitting = true);
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulating submission
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Thank you! Your feedback has been recorded.'),
-        backgroundColor: AllGoColors.success,
-      ),
-    );
-    Navigator.pop(context);
+    try {
+      final client = ref.read(apiClientProvider);
+      await Future.wait([
+        client.submitRating({
+          'targetType': 'ORDER_OUTLET',
+          'targetId': widget.orderId,
+          'score': _foodRating,
+          'tags': _selectedTags.toList(),
+          if (_commentCtrl.text.trim().isNotEmpty) 'comment': _commentCtrl.text.trim(),
+        }),
+        client.submitRating({
+          'targetType': 'ORDER_PARTNER',
+          'targetId': widget.orderId,
+          'score': _deliveryRating,
+          'tags': _selectedTags.toList(),
+        }),
+      ]);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thank you! Your feedback has been recorded.'),
+          backgroundColor: AllGoColors.success,
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit rating: $e'), backgroundColor: AllGoColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override

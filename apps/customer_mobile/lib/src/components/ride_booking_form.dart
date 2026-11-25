@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 class RideBookingForm extends StatelessWidget {
   final TextEditingController pickupCtrl;
   final TextEditingController destCtrl;
+  final TextEditingController promoCtrl;
+  final double pickupLat;
+  final double pickupLng;
+  final double destLat;
+  final double destLng;
   final String selectedCategory;
+  final String selectedPaymentMethod;
   final ValueChanged<String> onSelectCategory;
-  final Map<String, dynamic>? estimateData;
+  final ValueChanged<String> onSelectPaymentMethod;
+  final List<RideFareEstimateModel> fareEstimates;
+  final List<PlacePredictionModel> predictions;
+  final bool searchingPickup;
+  final List<CustomerAddressModel> savedAddresses;
   final bool isEstimating;
   final bool isBooking;
+  final ValueChanged<String> onPickupChanged;
+  final ValueChanged<String> onDestChanged;
+  final ValueChanged<PlacePredictionModel> onSelectPrediction;
+  final ValueChanged<CustomerAddressModel> onUseSavedDestination;
   final VoidCallback onGetEstimate;
   final VoidCallback onConfirmRide;
   final VoidCallback? onPickPickupOnMap;
@@ -18,19 +33,47 @@ class RideBookingForm extends StatelessWidget {
     super.key,
     required this.pickupCtrl,
     required this.destCtrl,
+    required this.promoCtrl,
+    required this.pickupLat,
+    required this.pickupLng,
+    required this.destLat,
+    required this.destLng,
     required this.selectedCategory,
+    required this.selectedPaymentMethod,
     required this.onSelectCategory,
-    required this.estimateData,
+    required this.onSelectPaymentMethod,
+    required this.fareEstimates,
+    required this.predictions,
+    required this.searchingPickup,
+    required this.savedAddresses,
     required this.isEstimating,
     required this.isBooking,
+    required this.onPickupChanged,
+    required this.onDestChanged,
+    required this.onSelectPrediction,
+    required this.onUseSavedDestination,
     required this.onGetEstimate,
     required this.onConfirmRide,
     this.onPickPickupOnMap,
     this.onPickDestOnMap,
   });
 
-  Widget _buildCategoryTile(String title, String subtitle, String category, IconData icon, String? fare) {
+  RideFareEstimateModel? _estimateFor(String category) {
+    for (final est in fareEstimates) {
+      if (est.vehicleCategory.toUpperCase() == category.toUpperCase()) return est;
+    }
+    return null;
+  }
+
+  Widget _buildCategoryTile(
+    String title,
+    String subtitle,
+    String category,
+    IconData icon,
+  ) {
     final isSelected = selectedCategory == category;
+    final estimate = _estimateFor(category);
+
     return GestureDetector(
       onTap: () => onSelectCategory(category),
       child: Container(
@@ -39,7 +82,10 @@ class RideBookingForm extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? AllGoColors.primary.withValues(alpha: 0.08) : AllGoColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? AllGoColors.primary : AllGoColors.divider, width: isSelected ? 1.5 : 1),
+          border: Border.all(
+            color: isSelected ? AllGoColors.primary : AllGoColors.divider,
+            width: isSelected ? 1.5 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -50,14 +96,19 @@ class RideBookingForm extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
-                  Text(subtitle, style: AllGoTypography.caption),
+                  Text(
+                    estimate != null
+                        ? '$subtitle • ~${estimate.estimatedDurationMinutes} mins (${estimate.estimatedDistanceKm.toStringAsFixed(1)} km)'
+                        : subtitle,
+                    style: AllGoTypography.caption,
+                  ),
                 ],
               ),
             ),
-            if (fare != null)
+            if (estimate != null)
               Text(
-                fare,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AllGoColors.primary),
+                '₹${estimate.totalFareInr.toStringAsFixed(0)}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AllGoColors.primary),
               ),
           ],
         ),
@@ -67,89 +118,212 @@ class RideBookingForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final quoteTotal = estimateData?['totalFareInr'] ?? estimateData?['fareInr'];
+    final selectedEstimate = _estimateFor(selectedCategory) ?? (fareEstimates.isNotEmpty ? fareEstimates.first : null);
+
+    final markers = <Marker>{
+      Marker(
+        markerId: const MarkerId('pickup'),
+        position: LatLng(pickupLat, pickupLng),
+        infoWindow: const InfoWindow(title: 'Pickup'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      ),
+      if (destCtrl.text.trim().isNotEmpty)
+        Marker(
+          markerId: const MarkerId('dropoff'),
+          position: LatLng(destLat, destLng),
+          infoWindow: const InfoWindow(title: 'Dropoff'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+    };
+
+    final polylines = <Polyline>{
+      if (destCtrl.text.trim().isNotEmpty)
+        Polyline(
+          polylineId: const PolylineId('route'),
+          color: AllGoColors.primary,
+          width: 4,
+          points: [LatLng(pickupLat, pickupLng), LatLng(destLat, destLng)],
+        ),
+    };
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: SizedBox(
+            height: 190,
+            child: GoogleMap(
+              initialCameraPosition: CameraPosition(
+                target: LatLng(pickupLat, pickupLng),
+                zoom: 13.5,
+              ),
+              markers: markers,
+              polylines: polylines,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
                   children: [
                     Expanded(
-                      child: AllGoTextField(
-                        label: 'Pickup Location',
+                      child: TextField(
                         controller: pickupCtrl,
-                        prefixIcon: const Icon(Icons.my_location, color: Colors.green),
+                        onChanged: onPickupChanged,
+                        decoration: const InputDecoration(
+                          labelText: 'Pickup Location',
+                          prefixIcon: Icon(Icons.my_location, color: Colors.green),
+                          isDense: true,
+                        ),
                       ),
                     ),
                     if (onPickPickupOnMap != null)
                       IconButton(
-                        icon: const Icon(Icons.map, color: AllGoColors.primary),
-                        tooltip: 'Pin on Google Map',
+                        icon: const Icon(Icons.map_outlined, color: AllGoColors.primary),
+                        tooltip: 'Pin pickup on map',
                         onPressed: onPickPickupOnMap,
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: AllGoTextField(
-                        label: 'Destination',
+                      child: TextField(
                         controller: destCtrl,
-                        prefixIcon: const Icon(Icons.location_on, color: Colors.red),
+                        onChanged: onDestChanged,
+                        decoration: const InputDecoration(
+                          labelText: 'Where to? (Dropoff)',
+                          prefixIcon: Icon(Icons.location_on, color: Colors.red),
+                          isDense: true,
+                        ),
                       ),
                     ),
                     if (onPickDestOnMap != null)
                       IconButton(
-                        icon: const Icon(Icons.map, color: AllGoColors.primary),
-                        tooltip: 'Pin on Google Map',
+                        icon: const Icon(Icons.map_outlined, color: AllGoColors.primary),
+                        tooltip: 'Pin destination on map',
                         onPressed: onPickDestOnMap,
                       ),
                   ],
                 ),
+                if (predictions.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AllGoColors.divider),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: predictions.take(4).map((p) {
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            searchingPickup ? Icons.my_location : Icons.place_outlined,
+                            size: 18,
+                          ),
+                          title: Text(p.mainText, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                          subtitle: Text(p.secondaryText, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+                          onTap: () => onSelectPrediction(p),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+                if (savedAddresses.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 34,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: savedAddresses.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (ctx, i) {
+                        final addr = savedAddresses[i];
+                        return ActionChip(
+                          avatar: const Icon(Icons.bookmark_outline, size: 14),
+                          label: Text(addr.label, style: const TextStyle(fontSize: 11)),
+                          onPressed: () => onUseSavedDestination(addr),
+                        );
+                      },
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
-                AllGoButton(label: 'Get Fare Estimate', isLoading: isEstimating, onPressed: onGetEstimate),
+                AllGoButton(
+                  label: 'Compare Ride Fares',
+                  isLoading: isEstimating,
+                  onPressed: onGetEstimate,
+                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
-        Text('Choose Ride Option', style: AllGoTypography.heading3.copyWith(fontSize: 16)),
-        const SizedBox(height: 12),
-        _buildCategoryTile('Bike Taxi', 'Fastest for single rider in traffic', 'BIKE', Icons.two_wheeler, quoteTotal != null && selectedCategory == 'BIKE' ? '₹$quoteTotal' : null),
-        _buildCategoryTile('Auto Rickshaw', 'Affordable doorstep 3-wheeler', 'AUTO', Icons.electric_rickshaw, quoteTotal != null && selectedCategory == 'AUTO' ? '₹$quoteTotal' : null),
-        _buildCategoryTile('Economy Cab', 'AC Mini & Hatchback', 'CAB_ECONOMY', Icons.directions_car, quoteTotal != null && selectedCategory == 'CAB_ECONOMY' ? '₹$quoteTotal' : null),
-        _buildCategoryTile('Premium Cab', 'Comfort Sedan & SUV', 'CAB_PREMIUM', Icons.local_taxi, quoteTotal != null && selectedCategory == 'CAB_PREMIUM' ? '₹$quoteTotal' : null),
-        if (estimateData != null) ...[
-          const SizedBox(height: 16),
+        Text('Choose AllGo Ride', style: AllGoTypography.heading3.copyWith(fontSize: 16)),
+        const SizedBox(height: 10),
+        _buildCategoryTile('AllGo Bike', 'Fastest through traffic (1 rider)', 'BIKE', Icons.two_wheeler),
+        _buildCategoryTile('AllGo Auto', 'Affordable doorstep 3-wheeler', 'AUTO', Icons.electric_rickshaw),
+        _buildCategoryTile('Economy Cab', 'AC Mini & Hatchback', 'CAB_ECONOMY', Icons.directions_car),
+        _buildCategoryTile('Premium Cab', 'Comfort Sedan & SUV', 'CAB_PREMIUM', Icons.local_taxi),
+        if (selectedEstimate != null) ...[
+          const SizedBox(height: 12),
           Card(
             color: Colors.green.shade50,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Estimated Fare:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       Text(
-                        '₹${estimateData!['totalFareInr'] ?? estimateData!['fareInr'] ?? "---"}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
+                        '${selectedEstimate.vehicleCategory.replaceAll('_', ' ')} Fare',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Text(
+                        '₹${selectedEstimate.totalFareInr.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.green),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (estimateData!['distanceKm'] != null)
-                    Text('Estimated Distance: ${estimateData!['distanceKm']} km | Duration: ${estimateData!['durationMinutes'] ?? 15} mins', style: const TextStyle(fontSize: 12)),
-                  const SizedBox(height: 14),
+                  Text(
+                    'Base ₹${selectedEstimate.baseFareInr.toStringAsFixed(0)} + Distance ₹${selectedEstimate.distanceFareInr.toStringAsFixed(0)} + Taxes ₹${selectedEstimate.gstInr.toStringAsFixed(0)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    children: ['CASH', 'UPI', 'WALLET'].map((method) {
+                      return ChoiceChip(
+                        label: Text(method, style: const TextStyle(fontSize: 11)),
+                        selected: selectedPaymentMethod == method,
+                        onSelected: (_) => onSelectPaymentMethod(method),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: promoCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Promo Code (Optional)',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   AllGoButton(
-                    label: 'Book Now (${selectedCategory.replaceAll('_', ' ')})',
+                    label: 'Confirm & Book ${selectedCategory.replaceAll('_', ' ')}',
                     icon: Icons.check,
                     isLoading: isBooking,
                     onPressed: onConfirmRide,

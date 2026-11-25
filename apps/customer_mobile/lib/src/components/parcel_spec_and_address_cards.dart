@@ -68,7 +68,7 @@ class ParcelSpecAndAddressCards extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Vehicle Category Selector (Porter-style)
+        // Vehicle Category Selector (AllGo Parcel)
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),

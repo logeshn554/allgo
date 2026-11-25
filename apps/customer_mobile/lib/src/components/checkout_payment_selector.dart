@@ -19,7 +19,7 @@ class CheckoutPaymentSelector extends StatefulWidget {
     required this.onSelectMethod,
     this.useWalletBalance = false,
     this.onToggleWallet,
-    this.walletBalance = 250.0,
+    this.walletBalance = 0.0,
     this.selectedUpiApp = 'gpay',
     this.onSelectUpiApp,
   });

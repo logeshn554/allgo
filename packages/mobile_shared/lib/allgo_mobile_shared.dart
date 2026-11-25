@@ -38,6 +38,7 @@ export 'src/state/multi_vertical_cart_state.dart';
 
 // Notifications & Push
 export 'src/notifications/push_notification_handler.dart';
+export 'src/realtime/realtime_socket_service.dart';
 
 // Reusable UI Widgets
 export 'src/widgets/allgo_button.dart';

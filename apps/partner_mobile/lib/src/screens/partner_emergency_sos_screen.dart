@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 class PartnerEmergencySosScreen extends ConsumerStatefulWidget {
@@ -10,12 +12,22 @@ class PartnerEmergencySosScreen extends ConsumerStatefulWidget {
 }
 
 class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosScreen> {
-  final _nameCtrl = TextEditingController(text: 'Suresh Kumar');
-  final _phoneCtrl = TextEditingController(text: '+919876543219');
-  final _relationCtrl = TextEditingController(text: 'Brother / Spouse');
+  final _nameCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _relationCtrl = TextEditingController();
 
   bool _isSosTriggered = false;
+  bool _isBroadcasting = false;
   bool _isSaving = false;
+  String? _incidentId;
+  double? _lastLat;
+  double? _lastLng;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedContact();
+  }
 
   @override
   void dispose() {
@@ -23,6 +35,89 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
     _phoneCtrl.dispose();
     _relationCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedContact() async {
+    try {
+      final profile = await ref.read(apiClientProvider).getPartnerProfile();
+      final partner = profile['partner'] as Map<String, dynamic>? ?? profile;
+      if (!mounted) return;
+      setState(() {
+        _nameCtrl.text = (partner['emergencyContactName'] ?? partner['emergency_contact_name'] ?? '').toString();
+        _phoneCtrl.text = (partner['emergencyContactPhone'] ?? partner['emergency_contact_phone'] ?? '').toString();
+        _relationCtrl.text = (partner['emergencyContactRelation'] ?? partner['emergency_contact_relation'] ?? '').toString();
+      });
+    } catch (_) {
+      // Leave empty if not configured yet
+    }
+  }
+
+  Future<void> _broadcastSos() async {
+    setState(() => _isBroadcasting = true);
+    try {
+      double lat = 0.0;
+      double lng = 0.0;
+      try {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 6),
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (_) {}
+
+      final client = ref.read(apiClientProvider);
+      final activeRide = await client.getPartnerActiveRide().catchError((_) => null);
+      if (activeRide != null) {
+        await client.triggerRideSos(
+          activeRide.id,
+          latitude: lat,
+          longitude: lng,
+          reason: 'Partner triggered Emergency SOS',
+        );
+      }
+
+      final ticket = await client.createSupportTicket({
+        'subject': 'EMERGENCY SOS ALERT — Partner Safety Dispatch',
+        'category': 'SAFETY_SOS',
+        'priority': 'CRITICAL',
+        'description':
+            'Partner triggered SOS at GPS ($lat, $lng). Emergency Contact: ${_nameCtrl.text.trim()} (${_phoneCtrl.text.trim()}).',
+      }, role: 'PARTNER');
+
+      if (!mounted) return;
+      setState(() {
+        _isSosTriggered = true;
+        _isBroadcasting = false;
+        _lastLat = lat;
+        _lastLng = lng;
+        _incidentId = ticket['id']?.toString() ?? ticket['ticketNumber']?.toString();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('EMERGENCY SOS BROADCAST SENT. Safety Response Team notified.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isBroadcasting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('SOS broadcast failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _dialNumber(String number) async {
+    final uri = Uri(scheme: 'tel', path: number);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to launch dialer for $number')),
+      );
+    }
   }
 
   void _triggerSosAlert() {
@@ -37,7 +132,7 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
           ],
         ),
         content: const Text(
-          'This will immediately transmit your high-accuracy GPS coordinates, active trip telemetry, and dispatch details to 112 National Emergency and AllGo 24x7 Safety Response Team.',
+          'This will immediately transmit your live GPS coordinates, active trip details, and a critical alert to the AllGo 24x7 Safety Response Team.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -45,14 +140,7 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               Navigator.pop(ctx);
-              setState(() => _isSosTriggered = true);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('EMERGENCY SOS BROADCAST ACTIVE. Help is on the way.'),
-                  backgroundColor: Colors.red,
-                  duration: Duration(seconds: 5),
-                ),
-              );
+              _broadcastSos();
             },
             child: const Text('BROADCAST SOS NOW', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
@@ -61,19 +149,41 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
     );
   }
 
-  void _saveEmergencyContacts() {
+  Future<void> _saveEmergencyContacts() async {
+    final name = _nameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
+    final relation = _relationCtrl.text.trim();
+    if (name.isEmpty || phone.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid contact name and 10+ digit phone number.')),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
+    try {
+      await ref.read(apiClientProvider).registerPartner({
+        'emergencyContactName': name,
+        'emergencyContactPhone': phone,
+        'emergencyContactRelation': relation,
+      });
       if (mounted) {
-        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Emergency contacts updated successfully'),
+            content: Text('Emergency contacts saved to your partner profile'),
             backgroundColor: AllGoColors.success,
           ),
         );
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save emergency contact: $e'), backgroundColor: AllGoColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -85,7 +195,6 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            // SOS Trigger Button Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -99,63 +208,99 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
               child: Column(
                 children: [
                   Icon(
-                    _isSosTriggered ? Icons.emergency : Icons.warning_amber_rounded,
+                    _isSosTriggered ? Icons.notifications_active : Icons.emergency,
                     color: Colors.red,
-                    size: 56,
+                    size: 48,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _isSosTriggered ? 'SOS BROADCAST ACTIVE' : 'Emergency SOS Button',
-                    style: AllGoTypography.heading3.copyWith(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    _isSosTriggered ? 'SOS SIGNAL ACTIVE' : '24x7 Safety Response',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     _isSosTriggered
-                      ? 'Live location transmitted to AllGo Safety Center and police helpline 112.'
-                      : 'Pressing this triggers an instantaneous alert to your emergency contact and AllGo 24x7 control room.',
+                        ? 'Incident ${_incidentId ?? 'logged'} transmitted at (${_lastLat?.toStringAsFixed(4) ?? '--'}, ${_lastLng?.toStringAsFixed(4) ?? '--'}).'
+                        : 'Tap below only during a real road emergency, accident, or personal safety threat.',
                     textAlign: TextAlign.center,
-                    style: AllGoTypography.caption,
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _isBroadcasting ? null : _triggerSosAlert,
+                      icon: _isBroadcasting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.sos, color: Colors.white),
+                      label: Text(
+                        _isBroadcasting
+                            ? 'SENDING SOS TELEMETRY...'
+                            : _isSosTriggered
+                                ? 'RE-BROADCAST SOS'
+                                : 'TRIGGER EMERGENCY SOS',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    icon: const Icon(Icons.sos, size: 24),
-                    label: Text(
-                      _isSosTriggered ? 'SOS BROADCASTING...' : 'TRIGGER EMERGENCY SOS',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
-                    onPressed: _triggerSosAlert,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _dialNumber('112'),
+                          icon: const Icon(Icons.call, color: Colors.red, size: 18),
+                          label: const Text('Call 112', style: TextStyle(color: Colors.red)),
+                        ),
+                      ),
+                      if (_phoneCtrl.text.trim().isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _dialNumber(_phoneCtrl.text.trim()),
+                            icon: const Icon(Icons.person_pin_circle, size: 18),
+                            label: const Text('Call Contact'),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            // Emergency Contact configuration form
-            Text('Primary Emergency Contact', style: AllGoTypography.heading3),
-            const SizedBox(height: 8),
-            Text('This person will receive an automated SOS SMS with your live location link.', style: AllGoTypography.caption),
+            Text('Trusted Emergency Contact', style: AllGoTypography.heading3),
+            const SizedBox(height: 4),
+            Text(
+              'Receives immediate escalation details if SOS is triggered.',
+              style: AllGoTypography.caption,
+            ),
             const SizedBox(height: 16),
             AllGoTextField(
-              label: 'Contact Name',
+              label: 'Contact Full Name',
+              hint: 'Enter trusted contact name',
               controller: _nameCtrl,
             ),
             const SizedBox(height: 12),
             AllGoTextField(
-              label: 'Mobile Phone (+91)',
+              label: 'Contact Mobile Number',
+              hint: 'e.g. +919876543210',
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 12),
             AllGoTextField(
               label: 'Relationship',
+              hint: 'e.g. Spouse, Parent, Sibling',
               controller: _relationCtrl,
             ),
             const SizedBox(height: 20),
@@ -166,7 +311,6 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
               onPressed: _saveEmergencyContacts,
             ),
             const SizedBox(height: 24),
-            // Official Helplines Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -185,7 +329,12 @@ class _PartnerEmergencySosScreenState extends ConsumerState<PartnerEmergencySosS
                     ],
                   ),
                   SizedBox(height: 8),
-                  Text('• Police & Emergency Response Support System (ERSS): 112\n• AllGo Partner Safety Helpline: 1800-419-ALLGO (24x7)\n• Ambulance / Medical: 108', style: TextStyle(fontSize: 12, height: 1.5)),
+                  Text(
+                    '• Police & Emergency Response Support System (ERSS): 112\n'
+                    '• Ambulance / Medical: 108\n'
+                    '• Highway Assistance: 1033',
+                    style: TextStyle(fontSize: 12, height: 1.5),
+                  ),
                 ],
               ),
             ),

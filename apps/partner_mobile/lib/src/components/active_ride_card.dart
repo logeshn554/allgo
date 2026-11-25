@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
+import '../utils/partner_navigation_helper.dart';
 
 class ActiveRideCard extends StatelessWidget {
   final RideModel activeRide;
@@ -65,7 +66,23 @@ class ActiveRideCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Passenger Destination', style: AllGoTypography.caption.copyWith(color: AllGoColors.textSecondary)),
           Text(activeRide.destinationAddress, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.navigation_outlined, size: 18),
+            label: Text(
+              (activeRide.status == 'DRIVER_ASSIGNED' || activeRide.status == 'ARRIVED_PICKUP')
+                  ? 'Navigate to Pickup'
+                  : 'Navigate to Dropoff',
+            ),
+            onPressed: () {
+              final toPickup = activeRide.status == 'DRIVER_ASSIGNED' || activeRide.status == 'ARRIVED_PICKUP';
+              PartnerNavigationHelper.openDirections(
+                context: context,
+                addressFallback: toPickup ? activeRide.pickupAddress : activeRide.destinationAddress,
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           if (activeRide.status == 'DRIVER_ASSIGNED')
             AllGoButton(
               label: 'Confirm Arrived at Passenger Pickup',

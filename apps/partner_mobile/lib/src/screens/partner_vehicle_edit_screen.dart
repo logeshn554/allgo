@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import '../components/partner_upload_button.dart';
 
@@ -12,6 +13,7 @@ class PartnerVehicleEditScreen extends ConsumerStatefulWidget {
 
 class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ImagePicker _picker = ImagePicker();
   late String _selectedType;
   late final TextEditingController _makeModelController;
   late final TextEditingController _regNumberController;
@@ -27,8 +29,12 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
     super.initState();
     final v = widget.initialVehicle;
     _selectedType = v?['vehicleType'] as String? ?? v?['vehicle_type'] as String? ?? 'MOTORCYCLE';
-    _makeModelController = TextEditingController(text: v?['makeModel'] as String? ?? 'TVS Apache 160');
-    _regNumberController = TextEditingController(text: v?['registrationNumber'] as String? ?? 'TN 09 AB 1234');
+    _makeModelController = TextEditingController(
+      text: v?['makeModel'] as String? ?? v?['make_model'] as String? ?? '',
+    );
+    _regNumberController = TextEditingController(
+      text: v?['registrationNumber'] as String? ?? v?['registration_number'] as String? ?? '',
+    );
   }
 
   @override
@@ -39,17 +45,50 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
   }
 
   Future<void> _handleDocUpload(String docType) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Capture with Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
     setState(() {
       if (docType == 'VEHICLE_RC') _isUploadingRc = true;
       if (docType == 'VEHICLE_INSURANCE') _isUploadingInsurance = true;
       _errorMessage = null;
     });
     try {
+      final XFile? file = await _picker.pickImage(source: source, imageQuality: 80, maxWidth: 1800);
+      if (file == null) {
+        setState(() => _errorMessage = 'Document selection cancelled.');
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Selected file is empty');
+
       final client = ref.read(apiClientProvider);
-      final ticket = await client.createUploadTicket(docType, 'application/pdf', 2048576);
-      final ticketId = ticket['ticketId'] as String;
-      await client.uploadDocumentBinary(ticketId, [0x25, 0x50, 0x44, 0x2D, 0x31, 0x2E, 0x34]);
-      await client.submitPartnerDocument(docType, ticketId, documentNumber: _regNumberController.text.trim().toUpperCase());
+      final ticket = await client.createUploadTicket(docType, 'image/jpeg', bytes.lengthInBytes);
+      final ticketId = ticket['ticketId']?.toString() ?? ticket['id']?.toString() ?? '';
+      await client.uploadDocumentBinary(ticketId, bytes);
+      await client.submitPartnerDocument(
+        docType,
+        ticketId,
+        documentNumber: _regNumberController.text.trim().toUpperCase(),
+      );
       setState(() {
         if (docType == 'VEHICLE_RC') _rcUploaded = true;
         if (docType == 'VEHICLE_INSURANCE') _insuranceUploaded = true;
@@ -57,13 +96,21 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
     } catch (e) {
       setState(() => _errorMessage = 'Upload failed: $e');
     } finally {
-      if (mounted) setState(() { _isUploadingRc = false; _isUploadingInsurance = false; });
+      if (mounted) {
+        setState(() {
+          _isUploadingRc = false;
+          _isUploadingInsurance = false;
+        });
+      }
     }
   }
 
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _isSaving = true; _errorMessage = null; });
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
     try {
       final client = ref.read(apiClientProvider);
       await client.registerPartner({
@@ -100,7 +147,11 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
                 if (_errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AllGoColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AllGoColors.error)),
+                    decoration: BoxDecoration(
+                      color: AllGoColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AllGoColors.error),
+                    ),
                     child: Text(_errorMessage!, style: const TextStyle(color: AllGoColors.error, fontSize: 13)),
                   ),
                   const SizedBox(height: 16),
@@ -109,7 +160,11 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(color: AllGoColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: AllGoColors.divider)),
+                  decoration: BoxDecoration(
+                    color: AllGoColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AllGoColors.divider),
+                  ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedType,
@@ -120,21 +175,23 @@ class _PartnerVehicleEditScreenState extends ConsumerState<PartnerVehicleEditScr
                         DropdownMenuItem(value: 'CAB_SEDAN', child: Text('Cab Sedan')),
                         DropdownMenuItem(value: 'BICYCLE', child: Text('Bicycle')),
                       ],
-                      onChanged: (val) { if (val != null) setState(() => _selectedType = val); },
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedType = val);
+                      },
                     ),
                   ),
                 ),
                 const SizedBox(height: 14),
                 AllGoTextField(
                   label: 'Registration Plate Number',
-                  hint: 'e.g. TN 09 AB 1234',
+                  hint: 'Enter vehicle registration plate',
                   controller: _regNumberController,
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Registration plate is required' : null,
                 ),
                 const SizedBox(height: 14),
                 AllGoTextField(
                   label: 'Vehicle Make & Model',
-                  hint: 'e.g. TVS Apache 160',
+                  hint: 'Enter vehicle make & model',
                   controller: _makeModelController,
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Make & model is required' : null,
                 ),

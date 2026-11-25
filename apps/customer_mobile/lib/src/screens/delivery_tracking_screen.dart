@@ -6,6 +6,7 @@ import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../components/live_trip_tracking_bottom_sheet.dart';
+import '../components/substitution_decision_sheet.dart';
 import 'chat_with_driver_screen.dart';
 
 class DeliveryTrackingScreen extends ConsumerStatefulWidget {
@@ -26,8 +27,14 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
   bool _isLoading = true;
   DeliveryJobModel? _job;
   Timer? _pollingTimer;
-  int _backoffSeconds = 3;
+  int _backoffSeconds = 5;
   bool _isReconnecting = false;
+
+  RealtimeSocketService? _socketService;
+  StreamSubscription<Map<String, dynamic>>? _locSub;
+  StreamSubscription<Map<String, dynamic>>? _statusSub;
+  StreamSubscription<Map<String, dynamic>>? _subProposalSub;
+  StreamSubscription<bool>? _connSub;
 
   double? _driverLat;
   double? _driverLng;
@@ -39,13 +46,75 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadJob();
-    _startPolling();
+    _initRealtimeSocket();
+    _startFallbackPolling();
+  }
+
+  Future<void> _initRealtimeSocket() async {
+    final client = ref.read(apiClientProvider);
+    final service = RealtimeSocketService(
+      baseUrl: client.baseUrl,
+      tokenStorage: client.tokenStorage,
+    );
+    _socketService = service;
+
+    _connSub = service.onConnectionChanged.listen((connected) {
+      if (!mounted) return;
+      setState(() => _isReconnecting = !connected);
+      if (connected) {
+        service.subscribeJob(widget.jobId);
+        _syncTracking();
+      }
+    });
+
+    _locSub = service.onLocationUpdate.listen((payload) {
+      if (!mounted) return;
+      final lat = (payload['latitude'] as num?)?.toDouble();
+      final lng = (payload['longitude'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        setState(() {
+          _driverLat = lat;
+          _driverLng = lng;
+          _heading = (payload['heading'] as num?)?.toDouble() ?? _heading;
+          _speedMps = (payload['speedMps'] as num?)?.toDouble() ?? _speedMps;
+        });
+        _snapCameraToDriver();
+      }
+    });
+
+    _statusSub = service.onStatusChanged.listen((_) {
+      if (mounted) _loadJob();
+    });
+
+    _subProposalSub = service.onSubstitutionProposed.listen((payload) {
+      if (!mounted) return;
+      final subId = payload['substitutionId']?.toString() ?? payload['id']?.toString();
+      if (subId == null || subId.isEmpty) return;
+      SubstitutionDecisionSheet.show(
+        context,
+        substitutionId: subId,
+        originalItemName: payload['originalItemName']?.toString() ?? 'Item',
+        originalPriceInr: (payload['originalPriceInr'] as num?)?.toDouble() ?? 0.0,
+        actionType: payload['actionType']?.toString() ?? 'SUBSTITUTE',
+        substitutedItemName: payload['substitutedItemName']?.toString(),
+        substitutedPriceInr: (payload['substitutedPriceInr'] as num?)?.toDouble(),
+        onResolved: _loadJob,
+      );
+    });
+
+    await service.connect();
+    service.subscribeJob(widget.jobId);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pollingTimer?.cancel();
+    _locSub?.cancel();
+    _statusSub?.cancel();
+    _subProposalSub?.cancel();
+    _connSub?.cancel();
+    _socketService?.dispose();
     _mapController?.dispose();
     super.dispose();
   }
@@ -55,18 +124,21 @@ class _DeliveryTrackingScreenState extends ConsumerState<DeliveryTrackingScreen>
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _pollingTimer?.cancel();
     } else if (state == AppLifecycleState.resumed) {
-      _backoffSeconds = 3;
-      _startPolling();
+      _backoffSeconds = 5;
+      _socketService?.connect().then((_) => _socketService?.subscribeJob(widget.jobId));
+      _startFallbackPolling();
       _loadJob();
     }
   }
 
-  void _startPolling() {
+  void _startFallbackPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = Timer(Duration(seconds: _backoffSeconds), () async {
       if (mounted) {
-        await _syncTracking();
-        _startPolling();
+        if (!(_socketService?.isConnected ?? false)) {
+          await _syncTracking();
+        }
+        _startFallbackPolling();
       }
     });
   }

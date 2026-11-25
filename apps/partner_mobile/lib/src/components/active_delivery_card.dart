@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
+import '../utils/partner_navigation_helper.dart';
 
 class ActiveDeliveryCard extends StatelessWidget {
   final DeliveryJobModel activeJob;
@@ -69,7 +70,64 @@ class ActiveDeliveryCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Dropoff Details', style: AllGoTypography.caption.copyWith(color: AllGoColors.textSecondary)),
           Text(activeJob.destinationAddress, style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AllGoColors.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AllGoColors.divider),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Vertical: ${activeJob.verticalType}',
+                  style: AllGoTypography.caption.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  'Courier Fee: ₹${activeJob.courierFeeInr.toStringAsFixed(0)}',
+                  style: AllGoTypography.caption.copyWith(
+                    color: AllGoColors.success,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.navigation_outlined, size: 18),
+                  label: Text(
+                    (activeJob.status == 'ASSIGNED' || activeJob.status == 'ARRIVED_PICKUP')
+                        ? 'Navigate to Store'
+                        : 'Navigate to Drop',
+                  ),
+                  onPressed: () {
+                    final toPickup = activeJob.status == 'ASSIGNED' || activeJob.status == 'ARRIVED_PICKUP';
+                    final targetLoc = toPickup ? activeJob.pickupLocation : activeJob.dropoffLocation;
+                    final targetAddr = toPickup ? activeJob.pickupAddress : activeJob.destinationAddress;
+                    PartnerNavigationHelper.openDirections(
+                      context: context,
+                      latitude: targetLoc?.latitude,
+                      longitude: targetLoc?.longitude,
+                      addressFallback: targetAddr,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.phone_outlined, size: 18),
+                label: const Text('Call'),
+                onPressed: () => PartnerNavigationHelper.callPhone(context, activeJob.assignedPartner?.phone),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           if (activeJob.status == 'ASSIGNED')
             AllGoButton(
               label: 'Arrived at Store / Pickup',

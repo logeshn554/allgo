@@ -6,15 +6,18 @@ import 'home_horizontal_store_row.dart';
 import 'home_offers_strip.dart';
 import 'unified_active_bookings_tray.dart';
 import '../screens/cart_screen.dart';
+import '../screens/food_home_screen.dart';
 import '../screens/hire_driver_screen.dart';
 import '../screens/outlet_catalog_screen.dart';
 import '../screens/parcel_send_screen.dart';
+import '../screens/quick_mart_screen.dart';
 import '../screens/ride_booking_screen.dart';
 
 class CustomerHomeTab extends StatefulWidget {
   final User? user;
   final List<DeliveryJobModel> activeDeliveries;
   final List<UnifiedActiveBookingItem> unifiedBookings;
+  final List<DiscoveryOutlet> outlets;
   final String currentAddressLabel;
   final double currentLatitude;
   final double currentLongitude;
@@ -28,6 +31,7 @@ class CustomerHomeTab extends StatefulWidget {
     required this.user,
     required this.activeDeliveries,
     required this.unifiedBookings,
+    required this.outlets,
     required this.currentAddressLabel,
     required this.currentLatitude,
     required this.currentLongitude,
@@ -103,39 +107,7 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Generate dummy recommended outlets for visual discovery if empty
-    final mockOutlets = [
-      DiscoveryOutlet(
-        id: 'out-1',
-        merchantId: 'm-1',
-        outletName: 'A2B - Adyar Ananda Bhavan',
-        businessName: 'A2B Veg',
-        outletStatus: 'ACTIVE',
-        isOpen: true,
-        merchantType: 'FOOD',
-        distanceKm: 1.8,
-      ),
-      DiscoveryOutlet(
-        id: 'out-2',
-        merchantId: 'm-2',
-        outletName: 'BlinkGrocery Super Mart',
-        businessName: 'BlinkGrocery',
-        outletStatus: 'ACTIVE',
-        isOpen: true,
-        merchantType: 'GROCERY',
-        distanceKm: 1.2,
-      ),
-      DiscoveryOutlet(
-        id: 'out-3',
-        merchantId: 'm-3',
-        outletName: 'Dindigul Thalappakatti',
-        businessName: 'Thalappakatti Biryani',
-        outletStatus: 'ACTIVE',
-        isOpen: true,
-        merchantType: 'FOOD',
-        distanceKm: 2.5,
-      ),
-    ];
+    final recommendedOutlets = widget.outlets;
 
     return RefreshIndicator(
       onRefresh: () async => widget.onRefresh(),
@@ -240,7 +212,9 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
                 'Restaurants & Kitchens',
                 Icons.restaurant,
                 Colors.orange,
-                onTap: () => widget.onNavigateTab(1),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const FoodHomeScreen()),
+                ),
               ),
               _buildServiceCard(
                 context,
@@ -248,12 +222,14 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
                 'Delivered in 15 mins',
                 Icons.shopping_basket,
                 Colors.green,
-                onTap: () => widget.onNavigateTab(1),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const QuickMartScreen()),
+                ),
               ),
               _buildServiceCard(
                 context,
                 'City Parcel',
-                'Porter-style cargo',
+                'Instant local courier',
                 Icons.local_shipping,
                 Colors.deepPurple,
                 onTap: () => Navigator.of(context).push(
@@ -293,23 +269,24 @@ class _CustomerHomeTabState extends State<CustomerHomeTab> {
           const SizedBox(height: 18),
 
           // Recommended For You Horizontal Row
-          HomeHorizontalStoreRow(
-            title: 'Recommended For You',
-            subtitle: 'Curated outlets delivering in your area',
-            outlets: mockOutlets,
-            onOutletTap: (out) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => OutletCatalogScreen(
-                    outletId: out.outletId,
-                    outletName: out.outletName,
-                    categoryName: out.verticalType,
+          if (recommendedOutlets.isNotEmpty)
+            HomeHorizontalStoreRow(
+              title: 'Recommended For You',
+              subtitle: 'Curated outlets delivering in your area',
+              outlets: recommendedOutlets,
+              onOutletTap: (out) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => OutletCatalogScreen(
+                      outletId: out.outletId,
+                      outletName: out.outletName,
+                      categoryName: out.verticalType,
+                    ),
                   ),
-                ),
-              );
-            },
-            onViewAll: () => widget.onNavigateTab(1),
-          ),
+                );
+              },
+              onViewAll: () => widget.onNavigateTab(1),
+            ),
           const SizedBox(height: 16),
         ],
       ),

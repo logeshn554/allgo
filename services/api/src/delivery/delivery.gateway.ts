@@ -165,6 +165,26 @@ export class DeliveryGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  @SubscribeMessage('order:chat_message')
+  handleOrderChatMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { orderId?: string; senderRole?: string; text?: string; sentAt?: string },
+  ) {
+    if (!data?.orderId || !data.text?.trim()) return;
+    const payload = {
+      id: `chat-${Date.now()}`,
+      orderId: data.orderId,
+      senderRole: data.senderRole || 'CUSTOMER',
+      senderUserId: client.data?.userId,
+      text: data.text.trim(),
+      sentAt: data.sentAt || new Date().toISOString(),
+    };
+    this.server
+      .to(`order:${data.orderId}`)
+      .to(`job:${data.orderId}`)
+      .emit('order:chat_message', payload);
+  }
+
   // ==========================================
   // Public Notification Emitters
   // ==========================================

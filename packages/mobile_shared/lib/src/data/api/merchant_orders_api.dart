@@ -237,4 +237,38 @@ class MerchantOrdersApi {
     throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to reject order');
   }
 
+  Future<Map<String, dynamic>> proposeSubstitution({
+    required String subOrderId,
+    required String orderItemId,
+    required String originalItemName,
+    required double originalPriceInr,
+    required String actionType,
+    String? substitutedItemId,
+    String? substitutedItemName,
+    double? substitutedPriceInr,
+    int timeoutSeconds = 120,
+  }) async {
+    final token = await base.tokenStorage.getAccessToken();
+    final url = Uri.parse('${base.base.baseUrl}/v1/orders/sub-orders/$subOrderId/substitutions');
+    final response = await base.httpClient.post(
+      url,
+      headers: base.buildHeaders(token: token, roleContext: 'MERCHANT'),
+      body: jsonEncode({
+        'orderItemId': orderItemId,
+        'originalItemName': originalItemName,
+        'originalPriceInr': originalPriceInr,
+        'actionType': actionType,
+        if (substitutedItemId != null) 'substitutedItemId': substitutedItemId,
+        if (substitutedItemName != null) 'substitutedItemName': substitutedItemName,
+        if (substitutedPriceInr != null) 'substitutedPriceInr': substitutedPriceInr,
+        'timeoutSeconds': timeoutSeconds,
+      }),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return data as Map<String, dynamic>;
+    }
+    throw ApiException(response.statusCode, data['message']?.toString() ?? 'Failed to propose substitution');
+  }
+
 }

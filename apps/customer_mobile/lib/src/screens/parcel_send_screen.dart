@@ -316,7 +316,7 @@ class _ParcelSendScreenState extends ConsumerState<ParcelSendScreen> with Single
                         ),
                         const SizedBox(height: 16),
                         AllGoButton(
-                          label: 'Confirm & Dispatch Porter',
+                          label: 'Confirm & Dispatch Parcel',
                           isLoading: _isBooking,
                           onPressed: _handleBookParcel,
                         ),

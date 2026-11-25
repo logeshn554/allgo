@@ -1,5 +1,5 @@
 /**
- * Uber H3 Geospatial Partitioning Utility
+ * H3 Geospatial Partitioning Utility
  *
  * Implements Resolution 8 (~460m edge) and Resolution 9 (~174m edge) spatial indexing
  * and k-ring (hexagonal neighbor ring) partitioning for O(1) Redis set lookups (`geo:drivers:<h3Index>`).

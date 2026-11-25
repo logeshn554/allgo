@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
 import '../components/partner_duty_header.dart';
@@ -23,6 +24,15 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   String _activeMode = 'ALL_JOBS';
   String? _activeVerticalLock;
 
+  double? _currentLat;
+  double? _currentLng;
+  double _currentHeading = 0.0;
+  double _currentSpeedMps = 0.0;
+  double _currentAccuracy = 10.0;
+
+  int _completedTripsToday = 0;
+  double _todayEarningsInr = 0.0;
+
   DeliveryJobModel? _activeJob;
   List<DeliveryOfferModel> _activeOffers = [];
   ParcelModel? _activeParcel;
@@ -34,6 +44,8 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   Timer? _heartbeatTimer;
   Timer? _locationPingTimer;
   Timer? _offersTimer;
+  StreamSubscription<Position>? _positionSub;
+  RealtimeSocketService? _socket;
   late PartnerJobActions _actions;
 
   @override
@@ -45,8 +57,24 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
       onSuccess: () => _pollAll(),
     );
     _initContinuityMode();
+    _initRealtimeSocket();
     _pollAll();
     _startTimers();
+  }
+
+  Future<void> _initRealtimeSocket() async {
+    final socket = ref.read(realtimeSocketServiceProvider);
+    _socket = socket;
+    await socket.connect();
+    socket.on('delivery:offer', (_) {
+      if (mounted) _pollAll();
+    });
+    socket.on('job:status_changed', (_) {
+      if (mounted) _pollAll();
+    });
+    socket.on('job:exception', (_) {
+      if (mounted) _pollAll();
+    });
   }
 
   @override
@@ -54,24 +82,90 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
     _heartbeatTimer?.cancel();
     _locationPingTimer?.cancel();
     _offersTimer?.cancel();
+    _positionSub?.cancel();
+    _socket?.off('delivery:offer');
+    _socket?.off('job:status_changed');
+    _socket?.off('job:exception');
     super.dispose();
+  }
+
+  Future<Position?> _ensureGpsPosition() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enable device Location / GPS services to go online.')),
+        );
+      }
+      return null;
+    }
+
+    var perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Location permission is required for live dispatch and tracking.'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: Geolocator.openAppSettings,
+            ),
+          ),
+        );
+      }
+      return null;
+    }
+
+    final pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+      timeLimit: const Duration(seconds: 8),
+    );
+    _updateLocalPosition(pos);
+    return pos;
+  }
+
+  void _updateLocalPosition(Position pos) {
+    _currentLat = pos.latitude;
+    _currentLng = pos.longitude;
+    _currentHeading = pos.heading;
+    _currentSpeedMps = pos.speed;
+    _currentAccuracy = pos.accuracy;
+  }
+
+  void _startPositionStream() {
+    _positionSub?.cancel();
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((pos) {
+      _updateLocalPosition(pos);
+    }, onError: (_) {});
+  }
+
+  void _stopPositionStream() {
+    _positionSub?.cancel();
+    _positionSub = null;
   }
 
   void _startTimers() {
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (_isOnline) {
-        ref.read(apiClientProvider).partnerHeartbeat(13.0827, 80.2707).catchError((_) {});
+      if (_isOnline && _currentLat != null && _currentLng != null) {
+        ref.read(apiClientProvider).partnerHeartbeat(_currentLat!, _currentLng!).catchError((_) {});
       }
     });
-    // Battery-efficient 4-second foreground location telemetry stream
     _locationPingTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (_isOnline) {
+      if (_isOnline && _currentLat != null && _currentLng != null) {
         ref.read(apiClientProvider).partnerUpdateLocation({
-          'latitude': 13.0827,
-          'longitude': 80.2707,
-          'heading': 45.0,
-          'speedMps': 8.5,
-          'accuracyMeters': 5.0,
+          'latitude': _currentLat,
+          'longitude': _currentLng,
+          'heading': _currentHeading,
+          'speedMps': _currentSpeedMps,
+          'accuracyMeters': _currentAccuracy,
           'recordedAt': DateTime.now().toIso8601String(),
         }).catchError((_) {});
       }
@@ -83,12 +177,17 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
 
   Future<void> _initContinuityMode() async {
     try {
-      final res = await ref.read(apiClientProvider).getPartnerContinuityMode();
-      if (mounted && res['mode'] != null) {
+      final mode = await ref.read(apiClientProvider).getPartnerContinuityMode();
+      if (mounted) {
         setState(() {
-          _activeMode = res['mode'] as String;
-          _activeVerticalLock = res['activeVerticalLock'] as String?;
+          _activeMode = mode.preferredMode;
+          _activeVerticalLock = mode.activeVerticalLock;
+          _isOnline = mode.isOnline;
         });
+        if (mode.isOnline) {
+          final pos = await _ensureGpsPosition();
+          if (pos != null) _startPositionStream();
+        }
       }
     } catch (_) {}
   }
@@ -101,6 +200,7 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
       final parcel = await client.getPartnerActiveParcel().catchError((_) => null);
       final ride = await client.getPartnerActiveRide().catchError((_) => null);
       final hire = await client.getPartnerActiveHireDriver().catchError((_) => null);
+      final earningsDash = await client.getPartnerEarningsDashboard().catchError((_) => <String, dynamic>{});
 
       List<DeliveryOfferModel> offers = [];
       List<ParcelOffer> pOffers = [];
@@ -121,6 +221,12 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
           _activeOffers = offers;
           _activeParcelOffers = pOffers;
           _activeRideOffers = rOffers;
+          _completedTripsToday = (earningsDash['todayCompletedTrips'] as num?)?.toInt() ??
+              (earningsDash['completedTrips'] as num?)?.toInt() ??
+              _completedTripsToday;
+          _todayEarningsInr = (earningsDash['todayEarningsInr'] as num?)?.toDouble() ??
+              (earningsDash['totalSettledEarningsInr'] as num?)?.toDouble() ??
+              _todayEarningsInr;
         });
       }
     } catch (_) {}
@@ -131,14 +237,20 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
     final client = ref.read(apiClientProvider);
     try {
       if (val) {
-        await client.partnerGoOnline(13.0827, 80.2707);
+        final pos = await _ensureGpsPosition();
+        if (pos == null) return;
+        await client.partnerGoOnline(pos.latitude, pos.longitude);
+        _startPositionStream();
       } else {
         await client.partnerGoOffline();
+        _stopPositionStream();
       }
       setState(() => _isOnline = val);
       _pollAll();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isActionBusy = false);
     }
@@ -147,11 +259,13 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
   Future<void> _changeMode(String modeKey) async {
     setState(() => _isActionBusy = true);
     try {
-      await ref.read(apiClientProvider).updatePartnerContinuityMode(modeKey);
+      await ref.read(apiClientProvider).updatePartnerContinuityMode(modeKey, isOnline: _isOnline);
       setState(() => _activeMode = modeKey);
       _pollAll();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mode switch failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Mode switch failed: $e')));
+      }
     } finally {
       if (mounted) setState(() => _isActionBusy = false);
     }
@@ -166,15 +280,84 @@ class _PartnerHomePageState extends ConsumerState<PartnerHomePage> {
       activeOffers: _activeOffers,
       activeParcelOffers: _activeParcelOffers,
       activeRideOffers: _activeRideOffers,
+      completedJobsCount: _completedTripsToday,
+      totalEarnings: _todayEarningsInr,
       isActionBusy: _isActionBusy,
+      currentLat: _currentLat,
+      currentLng: _currentLng,
       actions: _actions,
       onRefresh: _pollAll,
       onReportException: clientReportException,
     );
   }
 
-  void clientReportException(String jobId) {
-    ref.read(apiClientProvider).partnerReportException(jobId, 'CUSTOMER_UNREACHABLE', 'Waiting at gate').then((_) => _pollAll());
+  Future<void> clientReportException(String jobId) async {
+    String selectedReason = 'CUSTOMER_UNREACHABLE';
+    final notesCtrl = TextEditingController();
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Report Delivery Exception', style: AllGoTypography.heading3),
+              const SizedBox(height: 12),
+              for (final reason in [
+                ('CUSTOMER_UNREACHABLE', 'Customer Unreachable'),
+                ('MERCHANT_DELAY', 'Merchant / Store Delay'),
+                ('WRONG_ADDRESS', 'Incorrect Drop Address'),
+                ('VEHICLE_BREAKDOWN', 'Vehicle / Flat Tyre Issue'),
+              ])
+                RadioListTile<String>(
+                  value: reason.$1,
+                  groupValue: selectedReason,
+                  title: Text(reason.$2),
+                  onChanged: (v) => setSheetState(() => selectedReason = v ?? selectedReason),
+                ),
+              TextField(
+                controller: notesCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Additional Notes',
+                  hintText: 'Describe the issue for dispatch support',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              AllGoButton(
+                label: 'Submit Exception Report',
+                onPressed: () => Navigator.pop(ctx, true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        await ref.read(apiClientProvider).partnerReportException(
+              jobId,
+              selectedReason,
+              notesCtrl.text.trim().isEmpty ? 'Reported by partner' : notesCtrl.text.trim(),
+            );
+        _pollAll();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to report exception: $e')));
+        }
+      }
+    }
+    notesCtrl.dispose();
   }
 
   @override

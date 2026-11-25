@@ -1,70 +1,84 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 
-class OffersCouponsScreen extends StatefulWidget {
+class OffersCouponsScreen extends ConsumerStatefulWidget {
   const OffersCouponsScreen({super.key});
 
   @override
-  State<OffersCouponsScreen> createState() => _OffersCouponsScreenState();
+  ConsumerState<OffersCouponsScreen> createState() => _OffersCouponsScreenState();
 }
 
-class _OffersCouponsScreenState extends State<OffersCouponsScreen> with SingleTickerProviderStateMixin {
+class _OffersCouponsScreenState extends ConsumerState<OffersCouponsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  static const List<_CouponItem> coupons = [
-    _CouponItem(
-      code: 'WELCOME50',
-      category: 'Food',
-      discount: '50% OFF up to ₹100',
-      description: 'Get 50% discount on your first order across any restaurant outlet.',
-      minOrder: 'Min order ₹199',
-      validTill: 'Valid till 31 Dec 2026',
-    ),
-    _CouponItem(
-      code: 'FEAST100',
-      category: 'Food',
-      discount: 'Flat ₹100 OFF',
-      description: 'Enjoy delicious meals with a flat ₹100 savings on party & family orders.',
-      minOrder: 'Min order ₹499',
-      validTill: 'Valid till 30 Nov 2026',
-    ),
-    _CouponItem(
-      code: 'FREESHIP',
-      category: 'Groceries',
-      discount: 'Free Delivery',
-      description: 'Zero delivery charges on daily household essentials and fresh dairy items.',
-      minOrder: 'Min order ₹149',
-      validTill: 'Valid till 15 Dec 2026',
-    ),
-    _CouponItem(
-      code: 'PARCEL25',
-      category: 'Rides',
-      discount: '25% OFF Couriers',
-      description: 'Save 25% on intra-city parcel bookings and bike courier shipments.',
-      minOrder: 'No minimum',
-      validTill: 'Valid till 31 Dec 2026',
-    ),
-    _CouponItem(
-      code: 'RIDEFAST',
-      category: 'Rides',
-      discount: 'Flat ₹40 OFF',
-      description: 'Special commuter discount on instant cab and auto ride bookings.',
-      minOrder: 'Min trip ₹100',
-      validTill: 'Valid till 28 Nov 2026',
-    ),
-  ];
+  bool _isLoading = true;
+  String? _error;
+  List<_CouponItem> _coupons = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _loadPromotions();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPromotions() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final raw = await ref.read(apiClientProvider).listEligiblePromotions();
+      final parsed = raw.map((e) {
+        final m = e as Map<String, dynamic>;
+        final code = (m['code'] ?? m['promoCode'] ?? 'ALLGO').toString();
+        final vertical = (m['verticalType'] ?? m['vertical_type'] ?? m['category'] ?? 'ALL').toString().toUpperCase();
+        String category = 'Food';
+        if (vertical.contains('GROCERY') || vertical.contains('MART')) {
+          category = 'Groceries';
+        } else if (vertical.contains('RIDE') || vertical.contains('PARCEL') || vertical.contains('MOBILITY')) {
+          category = 'Rides';
+        }
+        final pct = m['discountPercent'] ?? m['discount_percent'];
+        final flat = m['discountValueInr'] ?? m['discount_amount_inr'] ?? m['maxDiscountInr'];
+        final discountLabel = pct != null
+            ? '$pct% OFF${flat != null ? ' up to ₹$flat' : ''}'
+            : flat != null
+                ? 'Flat ₹$flat OFF'
+                : (m['title']?.toString() ?? 'Special Offer');
+        final minOrder = m['minOrderInr'] ?? m['min_order_inr'] ?? m['minOrderAmountInr'];
+        final validTo = m['validTo'] ?? m['valid_to'] ?? m['expiresAt'];
+
+        return _CouponItem(
+          code: code,
+          category: category,
+          discount: discountLabel,
+          description: (m['description'] ?? 'Apply this promo code during checkout to claim your discount.').toString(),
+          minOrder: minOrder != null ? 'Min order ₹$minOrder' : 'No minimum order',
+          validTill: validTo != null ? 'Valid till ${validTo.toString().split('T').first}' : 'Limited time offer',
+        );
+      }).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _coupons = parsed;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Unable to load promotions: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   void _copyCouponCode(String code) {
@@ -99,91 +113,115 @@ class _OffersCouponsScreenState extends State<OffersCouponsScreen> with SingleTi
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCouponList(coupons),
-          _buildCouponList(coupons.where((c) => c.category == 'Food').toList()),
-          _buildCouponList(coupons.where((c) => c.category == 'Groceries').toList()),
-          _buildCouponList(coupons.where((c) => c.category == 'Rides').toList()),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      ElevatedButton(onPressed: _loadPromotions, child: const Text('Retry')),
+                    ],
+                  ),
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildCouponList(_coupons),
+                    _buildCouponList(_coupons.where((c) => c.category == 'Food').toList()),
+                    _buildCouponList(_coupons.where((c) => c.category == 'Groceries').toList()),
+                    _buildCouponList(_coupons.where((c) => c.category == 'Rides').toList()),
+                  ],
+                ),
     );
   }
 
   Widget _buildCouponList(List<_CouponItem> list) {
     if (list.isEmpty) {
-      return const Center(child: Text('No active coupons in this category'));
+      return RefreshIndicator(
+        onRefresh: _loadPromotions,
+        child: ListView(
+          children: const [
+            SizedBox(height: 120),
+            Center(child: Text('No active coupons available right now')),
+          ],
+        ),
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final item = list[index];
-        final theme = Theme.of(context);
+    return RefreshIndicator(
+      onRefresh: _loadPromotions,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final item = list[index];
+          final theme = Theme.of(context);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.6)),
-          ),
-          elevation: 0,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AllGoColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        item.code,
-                        style: const TextStyle(
-                          color: AllGoColors.primary,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                          fontSize: 15,
+          return Card(
+            margin: const EdgeInsets.only(bottom: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: theme.dividerColor.withValues(alpha: 0.6)),
+            ),
+            elevation: 0,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AllGoColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          item.code,
+                          style: const TextStyle(
+                            color: AllGoColors.primary,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                    ),
-                    TextButton.icon(
-                      icon: const Icon(Icons.copy, size: 16),
-                      label: const Text('COPY', style: TextStyle(fontWeight: FontWeight.bold)),
-                      onPressed: () => _copyCouponCode(item.code),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  item.discount,
-                  style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.description,
-                  style: AllGoTypography.bodyMedium.copyWith(color: AllGoColors.textSecondary, height: 1.4),
-                ),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(item.minOrder, style: AllGoTypography.caption),
-                    Text(item.validTill, style: AllGoTypography.caption.copyWith(color: AllGoColors.textTertiary)),
-                  ],
-                ),
-              ],
+                      TextButton.icon(
+                        icon: const Icon(Icons.copy, size: 16),
+                        label: const Text('COPY', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () => _copyCouponCode(item.code),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    item.discount,
+                    style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    item.description,
+                    style: AllGoTypography.bodyMedium.copyWith(color: AllGoColors.textSecondary, height: 1.4),
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(item.minOrder, style: AllGoTypography.caption),
+                      Text(item.validTill, style: AllGoTypography.caption.copyWith(color: AllGoColors.textTertiary)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

@@ -16,6 +16,7 @@ import {
   SidebarSeparator,
 } from '@allgo/ui';
 import {
+  Activity01Icon,
   ArrowRight01Icon,
   Car01Icon,
   Coins01Icon,
@@ -52,8 +53,10 @@ const navGroups: NavGroup[] = [
     label: 'Overview & Logistics',
     items: [
       { title: 'Dashboard', url: '/admin/dashboard', icon: DashboardSquare01Icon },
+      { title: 'Analytics & Funnel', url: '/admin/analytics', icon: Activity01Icon },
       { title: 'Multi-Vertical Orders', url: '/admin/orders', icon: ArrowRight01Icon },
       { title: 'Dispatch Operations', url: '/admin/dispatch', icon: DeliveryTruck01Icon },
+      { title: 'Promos & Campaigns', url: '/admin/promos', icon: StarIcon },
     ],
   },
   {

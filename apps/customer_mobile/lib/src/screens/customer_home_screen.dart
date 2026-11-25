@@ -168,6 +168,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       user: user,
                       activeDeliveries: homeState.activeDeliveries,
                       unifiedBookings: _enrichBookings(homeState.unifiedBookings),
+                      outlets: homeState.outlets,
                       currentAddressLabel: homeState.currentAddressLabel,
                       currentLatitude: homeState.currentLatitude,
                       currentLongitude: homeState.currentLongitude,
@@ -181,7 +182,7 @@ class _CustomerHomePageState extends ConsumerState<CustomerHomePage> {
                       outlets: homeState.outlets,
                       categories: homeState.categories,
                       isLoading: homeState.isLoading,
-                      onSearch: (_) => homeNotifier.loadDiscovery(),
+                      onSearch: (q) => homeNotifier.searchCatalogAndOutlets(q),
                       onOutletSelected: _onOutletSelected,
                     ),
                     CustomerOrdersTab(

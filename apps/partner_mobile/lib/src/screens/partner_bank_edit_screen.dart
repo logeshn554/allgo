@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import '../components/partner_upload_button.dart';
 
@@ -6,7 +7,15 @@ class PartnerBankEditScreen extends ConsumerStatefulWidget {
   final String? initialAccountMasked;
   final String? initialIfsc;
   final String? initialHolderName;
-  const PartnerBankEditScreen({super.key, this.initialAccountMasked, this.initialIfsc, this.initialHolderName});
+  final bool isVerified;
+
+  const PartnerBankEditScreen({
+    super.key,
+    this.initialAccountMasked,
+    this.initialIfsc,
+    this.initialHolderName,
+    this.isVerified = false,
+  });
 
   @override
   ConsumerState<PartnerBankEditScreen> createState() => _PartnerBankEditScreenState();
@@ -14,6 +23,7 @@ class PartnerBankEditScreen extends ConsumerStatefulWidget {
 
 class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
   final _formKey = GlobalKey<FormState>();
+  final ImagePicker _picker = ImagePicker();
   late final TextEditingController _accountController;
   late final TextEditingController _confirmAccountController;
   late final TextEditingController _ifscController;
@@ -21,8 +31,6 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
   bool _isUploadingProof = false;
   bool _proofUploaded = false;
   bool _isSaving = false;
-  bool _isVerifyingPennyDrop = false;
-  bool _isPennyDropVerified = true;
   String? _errorMessage;
 
   @override
@@ -30,8 +38,8 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
     super.initState();
     _accountController = TextEditingController();
     _confirmAccountController = TextEditingController();
-    _ifscController = TextEditingController(text: widget.initialIfsc ?? 'HDFC0001234');
-    _holderController = TextEditingController(text: widget.initialHolderName ?? 'Fleet Partner');
+    _ifscController = TextEditingController(text: widget.initialIfsc ?? '');
+    _holderController = TextEditingController(text: widget.initialHolderName ?? '');
   }
 
   @override
@@ -44,12 +52,44 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
   }
 
   Future<void> _handleUploadProof(String docType) async {
-    setState(() { _isUploadingProof = true; _errorMessage = null; });
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Capture Passbook / Cheque'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    setState(() {
+      _isUploadingProof = true;
+      _errorMessage = null;
+    });
     try {
+      final XFile? file = await _picker.pickImage(source: source, imageQuality: 80, maxWidth: 1800);
+      if (file == null) {
+        setState(() => _errorMessage = 'Proof upload cancelled.');
+        return;
+      }
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) throw Exception('Selected file is empty');
+
       final client = ref.read(apiClientProvider);
-      final ticket = await client.createUploadTicket(docType, 'application/pdf', 2048576);
-      final ticketId = ticket['ticketId'] as String;
-      await client.uploadDocumentBinary(ticketId, [0x25, 0x50, 0x44, 0x2D, 0x31, 0x2E, 0x34]);
+      final ticket = await client.createUploadTicket(docType, 'image/jpeg', bytes.lengthInBytes);
+      final ticketId = ticket['ticketId']?.toString() ?? ticket['id']?.toString() ?? '';
+      await client.uploadDocumentBinary(ticketId, bytes);
       await client.submitPartnerDocument(docType, ticketId);
       setState(() => _proofUploaded = true);
     } catch (e) {
@@ -59,31 +99,24 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
     }
   }
 
-  Future<void> _triggerPennyDrop() async {
-    if (_accountController.text.isNotEmpty && _accountController.text != _confirmAccountController.text) {
-      setState(() => _errorMessage = 'Account numbers do not match');
-      return;
-    }
-    setState(() { _isVerifyingPennyDrop = true; _errorMessage = null; });
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      setState(() { _isVerifyingPennyDrop = false; _isPennyDropVerified = true; });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Penny-drop verified! ₹1.00 transferred.'), backgroundColor: AllGoColors.success),
-      );
-    }
-  }
-
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_accountController.text.isNotEmpty && _accountController.text != _confirmAccountController.text) {
+    final acc = _accountController.text.trim();
+    if (acc.isEmpty || acc.length < 6) {
+      setState(() => _errorMessage = 'Please enter a valid bank account number');
+      return;
+    }
+    if (acc != _confirmAccountController.text.trim()) {
       setState(() => _errorMessage = 'Bank account numbers do not match');
       return;
     }
-    setState(() { _isSaving = true; _errorMessage = null; });
+
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
     try {
       final client = ref.read(apiClientProvider);
-      final acc = _accountController.text.trim().isNotEmpty ? _accountController.text.trim() : '50100401234567';
       await client.registerPartner({
         'bankAccountNumber': acc,
         'bankIfsc': _ifscController.text.trim().toUpperCase(),
@@ -91,7 +124,10 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bank details saved successfully!'), backgroundColor: AllGoColors.success),
+          const SnackBar(
+            content: Text('Bank details submitted for settlement verification!'),
+            backgroundColor: AllGoColors.success,
+          ),
         );
         Navigator.of(context).pop(true);
       }
@@ -104,6 +140,7 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final verified = widget.isVerified;
     return Scaffold(
       backgroundColor: AllGoColors.background,
       appBar: const AllGoAppBar(title: 'Bank Account & Payouts'),
@@ -118,7 +155,11 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
                 if (_errorMessage != null) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AllGoColors.error.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: AllGoColors.error)),
+                    decoration: BoxDecoration(
+                      color: AllGoColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AllGoColors.error),
+                    ),
                     child: Text(_errorMessage!, style: const TextStyle(color: AllGoColors.error, fontSize: 13)),
                   ),
                   const SizedBox(height: 14),
@@ -126,17 +167,23 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: (_isPennyDropVerified ? AllGoColors.success : AllGoColors.warning).withValues(alpha: 0.08),
+                    color: (verified ? AllGoColors.success : AllGoColors.warning).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _isPennyDropVerified ? AllGoColors.success : AllGoColors.warning),
+                    border: Border.all(color: verified ? AllGoColors.success : AllGoColors.warning),
                   ),
                   child: Row(
                     children: [
-                      Icon(_isPennyDropVerified ? Icons.verified : Icons.pending_outlined, color: _isPennyDropVerified ? AllGoColors.success : AllGoColors.warning, size: 24),
+                      Icon(
+                        verified ? Icons.verified : Icons.pending_outlined,
+                        color: verified ? AllGoColors.success : AllGoColors.warning,
+                        size: 24,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          _isPennyDropVerified ? 'Penny-Drop Verified (NPCI Validated)' : 'Verification Required via ₹1.00 Test Deposit',
+                          verified
+                              ? 'Bank Account Verified for Settlements'
+                              : 'Submit bank details & cancelled cheque for verification',
                           style: AllGoTypography.caption.copyWith(fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -144,21 +191,40 @@ class _PartnerBankEditScreenState extends ConsumerState<PartnerBankEditScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                AllGoTextField(label: 'Account Holder Name', hint: 'Name as registered in bank', controller: _holderController, validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
+                AllGoTextField(
+                  label: 'Account Holder Name',
+                  hint: 'Name as registered in bank',
+                  controller: _holderController,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
                 const SizedBox(height: 12),
-                AllGoTextField(label: 'Bank IFSC Code', hint: 'e.g. HDFC0001234', controller: _ifscController, validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
+                AllGoTextField(
+                  label: 'Bank IFSC Code',
+                  hint: '11-character IFSC code',
+                  controller: _ifscController,
+                  validator: (v) => (v == null || v.trim().length < 8) ? 'Enter valid IFSC' : null,
+                ),
                 const SizedBox(height: 12),
-                AllGoTextField(label: 'New Bank Account Number', hint: widget.initialAccountMasked ?? '•••• •••• 4012', controller: _accountController, keyboardType: TextInputType.number),
+                AllGoTextField(
+                  label: 'New Bank Account Number',
+                  hint: widget.initialAccountMasked ?? 'Enter bank account number',
+                  controller: _accountController,
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 12),
-                AllGoTextField(label: 'Confirm New Bank Account Number', hint: 'Re-enter bank account number', controller: _confirmAccountController, keyboardType: TextInputType.number),
+                AllGoTextField(
+                  label: 'Confirm New Bank Account Number',
+                  hint: 'Re-enter bank account number',
+                  controller: _confirmAccountController,
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 16),
-                PartnerUploadButton(label: 'Bank Passbook / Cheque Proof', docType: 'BANK_PROOF', isUploaded: _proofUploaded, isLoading: _isUploadingProof, onUpload: _handleUploadProof),
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  onPressed: _isVerifyingPennyDrop ? null : _triggerPennyDrop,
-                  icon: _isVerifyingPennyDrop ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.bolt, size: 20),
-                  label: const Text('Run Penny-Drop Instant Verification'),
-                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10), side: const BorderSide(color: AllGoColors.secondary)),
+                PartnerUploadButton(
+                  label: 'Bank Passbook / Cheque Proof',
+                  docType: 'BANK_PROOF',
+                  isUploaded: _proofUploaded,
+                  isLoading: _isUploadingProof,
+                  onUpload: _handleUploadProof,
                 ),
                 const SizedBox(height: 20),
                 AllGoButton(label: 'Save & Update Bank Account', isLoading: _isSaving, onPressed: _handleSave),

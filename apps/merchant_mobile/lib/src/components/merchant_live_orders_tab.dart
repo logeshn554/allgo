@@ -10,6 +10,9 @@ class MerchantLiveOrdersTab extends StatelessWidget {
   final void Function(MerchantOrder order) onAccept;
   final void Function(MerchantOrder order) onReject;
   final void Function(MerchantOrder order, String nextStatus) onUpdateStatus;
+  final void Function(MerchantOrder order, MerchantOrderItem item)? onProposeSubstitution;
+  final void Function(MerchantOrder order)? onVerifyHandoverOtp;
+  final void Function(MerchantOrder order, int extraMinutes)? onExtendPrepTime;
 
   const MerchantLiveOrdersTab({
     super.key,
@@ -21,7 +24,37 @@ class MerchantLiveOrdersTab extends StatelessWidget {
     required this.onAccept,
     required this.onReject,
     required this.onUpdateStatus,
+    this.onProposeSubstitution,
+    this.onVerifyHandoverOtp,
+    this.onExtendPrepTime,
   });
+
+  void _showKotDialog(BuildContext context, MerchantOrder order) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('KOT Slip • #${order.subOrderNumber}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Vertical: ${order.verticalType}'),
+            Text('Status: ${order.status}'),
+            const Divider(),
+            ...order.items.map((item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('${item.quantity} x ${item.itemName}'),
+                )),
+            const Divider(),
+            Text('Items Total: ₹${order.itemsTotalInr.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
 
   List<MerchantOrder> get filteredOrders {
     switch (selectedOrderTab) {
@@ -114,11 +147,43 @@ class MerchantLiveOrdersTab extends StatelessWidget {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text('#${order.subOrderNumber}', style: AllGoTypography.heading3.copyWith(fontSize: 16)),
-                                      Text('₹${order.itemsTotalInr.toStringAsFixed(0)}', style: AllGoTypography.heading3.copyWith(color: AllGoColors.success)),
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.print_outlined, size: 18),
+                                            tooltip: 'View KOT Slip',
+                                            onPressed: () => _showKotDialog(context, order),
+                                          ),
+                                          Text('₹${order.itemsTotalInr.toStringAsFixed(0)}', style: AllGoTypography.heading3.copyWith(color: AllGoColors.success)),
+                                        ],
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Text('Status: ${order.status}', style: AllGoTypography.caption.copyWith(fontWeight: FontWeight.bold)),
+                                  Text('Status: ${order.status} • ${order.verticalType}', style: AllGoTypography.caption.copyWith(fontWeight: FontWeight.bold)),
+                                  if (order.items.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    const Divider(height: 1),
+                                    const SizedBox(height: 6),
+                                    ...order.items.map((item) => Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 3),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '${item.quantity}x ${item.itemName} (₹${item.totalPriceInr.toStringAsFixed(0)})',
+                                                  style: AllGoTypography.bodyMedium,
+                                                ),
+                                              ),
+                                              if ((selectedOrderTab == 0 || selectedOrderTab == 1) && onProposeSubstitution != null)
+                                                TextButton(
+                                                  onPressed: () => onProposeSubstitution!(order, item),
+                                                  child: const Text('Substitute', style: TextStyle(fontSize: 11)),
+                                                ),
+                                            ],
+                                          ),
+                                        )),
+                                  ],
                                   const SizedBox(height: 12),
                                   if (selectedOrderTab == 0)
                                     Row(
@@ -141,14 +206,43 @@ class MerchantLiveOrdersTab extends StatelessWidget {
                                       ],
                                     )
                                   else if (selectedOrderTab == 1)
-                                    AllGoButton(
-                                      label: 'Mark as Food Ready',
-                                      onPressed: () => onUpdateStatus(order, 'READY_FOR_PICKUP'),
+                                    Row(
+                                      children: [
+                                        if (onExtendPrepTime != null) ...[
+                                          OutlinedButton(
+                                            onPressed: () => onExtendPrepTime!(order, 10),
+                                            child: const Text('+10m Prep'),
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        Expanded(
+                                          child: AllGoButton(
+                                            label: 'Mark as Food Ready',
+                                            onPressed: () => onUpdateStatus(order, 'READY_FOR_PICKUP'),
+                                          ),
+                                        ),
+                                      ],
                                     )
                                   else if (selectedOrderTab == 2)
-                                    AllGoButton(
-                                      label: 'Handover to Delivery Partner',
-                                      onPressed: () => onUpdateStatus(order, 'DISPATCHED'),
+                                    Row(
+                                      children: [
+                                        if (onVerifyHandoverOtp != null) ...[
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              icon: const Icon(Icons.pin, size: 18),
+                                              label: const Text('Verify Handover PIN'),
+                                              onPressed: () => onVerifyHandoverOtp!(order),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        Expanded(
+                                          child: AllGoButton(
+                                            label: 'Handover to Partner',
+                                            onPressed: () => onUpdateStatus(order, 'DISPATCHED'),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                 ],
                               ),

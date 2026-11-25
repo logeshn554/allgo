@@ -16,9 +16,10 @@ class MerchantFinancialsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
-    final gross = (earningsData?['gross_sales'] ?? 14250.0).toDouble();
-    final commission = (earningsData?['commission_amount'] ?? (gross * 0.15)).toDouble();
-    final net = gross - commission;
+    final gross = ((earningsData?['totalGrossSalesInr'] ?? earningsData?['gross_sales'] ?? 0) as num).toDouble();
+    final commission = ((earningsData?['totalCommissionInr'] ?? earningsData?['commission_amount'] ?? 0) as num).toDouble();
+    final netSettled = ((earningsData?['netSettledInr'] ?? (gross - commission)) as num).toDouble();
+    final settlementCount = ((earningsData?['settlementCount'] ?? 0) as num).toInt();
 
     return RefreshIndicator(
       onRefresh: () async => onRefresh(),
@@ -38,11 +39,14 @@ class MerchantFinancialsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total Net Earnings', style: AllGoTypography.caption.copyWith(color: Colors.white70)),
+                Text('Total Net Settled Earnings', style: AllGoTypography.caption.copyWith(color: Colors.white70)),
                 const SizedBox(height: 8),
-                Text('₹${net.toStringAsFixed(2)}', style: AllGoTypography.heading1.copyWith(color: Colors.white)),
+                Text('₹${netSettled.toStringAsFixed(2)}', style: AllGoTypography.heading1.copyWith(color: Colors.white)),
                 const SizedBox(height: 8),
-                const Text('Net payout after 15% platform fee deduction', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                Text(
+                  '$settlementCount settlement cycles processed from live ledger',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -55,7 +59,7 @@ class MerchantFinancialsTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Gross Delivered Food', style: AllGoTypography.bodyMedium),
+                      Text('Gross Delivered Sales', style: AllGoTypography.bodyMedium),
                       Text('₹${gross.toStringAsFixed(2)}', style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
                     ],
                   ),
@@ -63,8 +67,11 @@ class MerchantFinancialsTab extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Platform Commission (15%)', style: AllGoTypography.bodyMedium),
-                      Text('-₹${commission.toStringAsFixed(2)}', style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AllGoColors.error)),
+                      Text('Platform Commission', style: AllGoTypography.bodyMedium),
+                      Text(
+                        '-₹${commission.toStringAsFixed(2)}',
+                        style: AllGoTypography.bodyMedium.copyWith(fontWeight: FontWeight.bold, color: AllGoColors.error),
+                      ),
                     ],
                   ),
                 ],

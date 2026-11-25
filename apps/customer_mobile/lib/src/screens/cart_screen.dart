@@ -28,9 +28,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   double _couponDiscount = 0.0;
   double _deliveryTip = 0.0;
   Set<String> _instructions = {};
+  bool _noCutlery = false;
   final TextEditingController _cookingNotesCtrl = TextEditingController();
   bool _isScheduled = false;
   String _selectedSlot = 'NOW';
+  static const double _freeDeliveryThresholdInr = 199.0;
 
   @override
   void initState() {
@@ -144,6 +146,42 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Free-delivery threshold progress bar
+          Builder(
+            builder: (ctx) {
+              final itemsSubtotal = _pricing?.itemsSubtotalInr ?? 0.0;
+              final remaining = (_freeDeliveryThresholdInr - itemsSubtotal).clamp(0.0, _freeDeliveryThresholdInr);
+              final progress = (itemsSubtotal / _freeDeliveryThresholdInr).clamp(0.0, 1.0);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: remaining <= 0 ? Colors.green.shade50 : AllGoColors.primary.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: remaining <= 0 ? Colors.green.shade300 : AllGoColors.primary.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      remaining <= 0
+                          ? 'Unlocked FREE Delivery on this order!'
+                          : 'Add ₹${remaining.toStringAsFixed(0)} more to unlock FREE delivery',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
           // Items section
           Text('Items from ${_cart!.outletName ?? "Store"}', style: AllGoTypography.heading3.copyWith(fontSize: 15)),
           const SizedBox(height: 12),
@@ -181,6 +219,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
           const SizedBox(height: 14),
 
+          // No-Cutlery Eco Toggle
+          SwitchListTile(
+            value: _noCutlery,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Don\'t send cutlery & napkins', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: const Text('Help reduce single-use plastic', style: TextStyle(fontSize: 11)),
+            onChanged: (v) => setState(() => _noCutlery = v),
+          ),
+          const SizedBox(height: 6),
+
           // Instructions & Notes
           DeliveryInstructionsSelector(
             selectedInstructions: _instructions,
@@ -211,7 +259,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       couponCode: _appliedCoupon,
                       discountAmount: _couponDiscount,
                       deliveryTip: _deliveryTip,
-                      instructions: _instructions.toList(),
+                      instructions: [
+                        ..._instructions,
+                        if (_noCutlery) 'NO_CUTLERY',
+                      ],
                       cookingNotes: _cookingNotesCtrl.text.trim(),
                       deliverySlot: _selectedSlot,
                     ),

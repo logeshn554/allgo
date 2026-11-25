@@ -38,6 +38,11 @@ class _CustomerExploreTabState extends State<CustomerExploreTab> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void _onSearchChanged(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -46,7 +51,7 @@ class _CustomerExploreTabState extends State<CustomerExploreTab> {
   }
 
   List<DiscoveryOutlet> get _filteredOutlets {
-    var list = widget.outlets;
+    var list = List<DiscoveryOutlet>.from(widget.outlets);
     final query = widget.searchController.text.trim().toLowerCase();
     if (query.isNotEmpty) {
       list = list.where((o) =>
@@ -183,7 +188,7 @@ class _CustomerExploreTabState extends State<CustomerExploreTab> {
                               child: Row(
                                 children: [
                                   AppNetworkImage(
-                                    imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200',
+                                    imageUrl: '',
                                     width: 72,
                                     height: 72,
                                     borderRadius: BorderRadius.circular(10),
