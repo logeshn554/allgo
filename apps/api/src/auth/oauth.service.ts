@@ -249,6 +249,12 @@ export class OAuthService {
       if (!user && profile.email && profile.emailVerified && settings.autoLinkVerifiedAccounts && provider.autoLink) {
         const emailOwner = await this.authManagerRepo.findUserByEmail(profile.email);
         if (emailOwner) {
+          if (!emailOwner.phoneVerified) {
+            return buildErrorRedirect(
+              'Verify your AllGo phone number with OTP before linking an external sign-in provider.',
+              true,
+            );
+          }
           await this.authManagerRepo.linkIdentity({
             userId: emailOwner.id,
             provider: provider.slug,
