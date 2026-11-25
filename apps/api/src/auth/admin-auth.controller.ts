@@ -143,7 +143,7 @@ export class AdminAuthController {
 
   @Post('users')
   @ApiOperation({ summary: 'Link an email identity to an existing phone-verified user (Admin)' })
-  async createUser(@Body() body: any) {
+  async linkUserIdentity(@Body() body: any) {
     const email = body?.email ? String(body.email).trim().toLowerCase() : null;
     const phone = body?.phone ? String(body.phone).trim() : null;
     if (!phone || !/^\+91[6-9]\d{9}$/.test(phone)) {
