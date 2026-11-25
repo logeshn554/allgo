@@ -90,7 +90,7 @@ export class EmailAuthService {
     return crypto.timingSafeEqual(derived, expected);
   }
 
-  async registerWithEmail(input: {
+  async registerWithEmail(_input: {
     email: string;
     password: string;
     fullName?: string;
@@ -99,42 +99,9 @@ export class EmailAuthService {
     ipAddress?: string;
     userAgent?: string;
   }): Promise<AuthTokens> {
-    const settings = await this.authManagerRepo.getSettings();
-    if (!settings.emailPasswordEnabled) {
-      throw new ForbiddenException('Email & password authentication is currently disabled.');
-    }
-    if (!settings.allowSelfSignup) {
-      throw new ForbiddenException('Self-registration is disabled by administrator.');
-    }
-
     throw new ForbiddenException(
       'New accounts must complete verified phone OTP registration. Sign in with your verified phone first, then link an email address.',
     );
-
-    const email = this.normalizeEmail(input.email);
-    const existing = await this.authManagerRepo.findUserByEmail(email);
-    if (existing) {
-      throw new BadRequestException('An account with this email already exists.');
-    }
-
-    const passwordHash = await this.hashPassword(input.password);
-    const user = await this.authManagerRepo.createUserWithIdentity({
-      email,
-      fullName: input.fullName?.trim() || null,
-      passwordHash,
-      emailVerified: false,
-      provider: 'email',
-      providerAccountId: email,
-      loginMethod: 'EMAIL_PASSWORD',
-    });
-
-    return this.issueTokensForUser(user, {
-      deviceId: input.deviceId,
-      platform: input.platform,
-      ipAddress: input.ipAddress,
-      userAgent: input.userAgent,
-      loginMethod: 'EMAIL_PASSWORD',
-    });
   }
 
   async lookupIdentifier(identifierRaw: string): Promise<IdentifierLookupResult> {
