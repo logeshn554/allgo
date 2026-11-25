@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { AdminShell } from '@/components/AdminShell';
 
-const SERVER_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const SERVER_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://allgo-api.onrender.com';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
