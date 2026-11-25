@@ -107,6 +107,10 @@ export class EmailAuthService {
       throw new ForbiddenException('Self-registration is disabled by administrator.');
     }
 
+    throw new ForbiddenException(
+      'New accounts must complete verified phone OTP registration. Sign in with your verified phone first, then link an email address.',
+    );
+
     const email = this.normalizeEmail(input.email);
     const existing = await this.authManagerRepo.findUserByEmail(email);
     if (existing) {
@@ -391,16 +395,9 @@ export class EmailAuthService {
 
     let user = await this.authManagerRepo.findUserByEmail(email);
     if (!user) {
-      if (!settings.allowSelfSignup) {
-        throw new ForbiddenException('Self-registration is disabled by administrator.');
-      }
-      user = await this.authManagerRepo.createUserWithIdentity({
-        email,
-        emailVerified: true,
-        provider: 'email',
-        providerAccountId: email,
-        loginMethod: 'EMAIL_OTP',
-      });
+      throw new ForbiddenException(
+        'Email OTP can only verify an email linked to an existing phone-verified AllGo account.',
+      );
     } else {
       await this.authManagerRepo.linkIdentity({
         userId: user.id,
