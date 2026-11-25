@@ -37,33 +37,31 @@ class _OffersCouponsScreenState extends ConsumerState<OffersCouponsScreen>
     });
     try {
       final raw = await ref.read(apiClientProvider).listEligiblePromotions();
-      final parsed = raw.map((e) {
-        final m = e as Map<String, dynamic>;
-        final code = (m['code'] ?? m['promoCode'] ?? 'ALLGO').toString();
-        final vertical = (m['verticalType'] ?? m['vertical_type'] ?? m['category'] ?? 'ALL').toString().toUpperCase();
+      final parsed = raw.map((p) {
+        final upper = '${p.code} ${p.title}'.toUpperCase();
         String category = 'Food';
-        if (vertical.contains('GROCERY') || vertical.contains('MART')) {
+        if (upper.contains('GROCERY') || upper.contains('MART') || upper.contains('SHIP')) {
           category = 'Groceries';
-        } else if (vertical.contains('RIDE') || vertical.contains('PARCEL') || vertical.contains('MOBILITY')) {
+        } else if (upper.contains('RIDE') || upper.contains('PARCEL') || upper.contains('CAB')) {
           category = 'Rides';
         }
-        final pct = m['discountPercent'] ?? m['discount_percent'];
-        final flat = m['discountValueInr'] ?? m['discount_amount_inr'] ?? m['maxDiscountInr'];
+        final pct = p.discountPercentage;
+        final flat = p.flatDiscountInr ?? p.maxDiscountInr;
         final discountLabel = pct != null
-            ? '$pct% OFF${flat != null ? ' up to ₹$flat' : ''}'
+            ? '${pct.toStringAsFixed(0)}% OFF${flat != null ? ' up to ₹${flat.toStringAsFixed(0)}' : ''}'
             : flat != null
-                ? 'Flat ₹$flat OFF'
-                : (m['title']?.toString() ?? 'Special Offer');
-        final minOrder = m['minOrderInr'] ?? m['min_order_inr'] ?? m['minOrderAmountInr'];
-        final validTo = m['validTo'] ?? m['valid_to'] ?? m['expiresAt'];
+                ? 'Flat ₹${flat.toStringAsFixed(0)} OFF'
+                : p.title;
 
         return _CouponItem(
-          code: code,
+          code: p.code,
           category: category,
           discount: discountLabel,
-          description: (m['description'] ?? 'Apply this promo code during checkout to claim your discount.').toString(),
-          minOrder: minOrder != null ? 'Min order ₹$minOrder' : 'No minimum order',
-          validTill: validTo != null ? 'Valid till ${validTo.toString().split('T').first}' : 'Limited time offer',
+          description: p.reason.isNotEmpty ? p.reason : p.title,
+          minOrder: p.minOrderAmountInr > 0
+              ? 'Min order ₹${p.minOrderAmountInr.toStringAsFixed(0)}'
+              : 'No minimum order',
+          validTill: p.isEligible ? 'Eligible now' : 'Check cart criteria',
         );
       }).toList();
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'package:allgo_customer_mobile/src/screens/help_faq_screen.dart';
 import 'package:allgo_customer_mobile/src/screens/offers_coupons_screen.dart';
 import 'package:allgo_customer_mobile/src/screens/refer_earn_screen.dart';
@@ -25,13 +26,19 @@ void main() {
 
     testWidgets('OffersCouponsScreen renders categories, coupon card, and copy action', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: OffersCouponsScreen(),
+        ProviderScope(
+          overrides: [
+            apiClientProvider.overrideWithValue(_FakeOffersApiClient()),
+          ],
+          child: const MaterialApp(
+            home: OffersCouponsScreen(),
+          ),
         ),
       );
+      await tester.pumpAndSettle();
 
       expect(find.text('Offers & Coupons'), findsOneWidget);
-      expect(find.text('WELCOME50'), findsOneWidget);
+      expect(find.text('ALLGO50'), findsOneWidget);
       expect(find.text('50% OFF up to ₹100'), findsOneWidget);
       expect(find.text('COPY'), findsWidgets);
 
@@ -105,4 +112,25 @@ void main() {
       expect(retried, isTrue);
     });
   });
+}
+
+class _FakeOffersApiClient extends ApiClient {
+  _FakeOffersApiClient() : super(baseUrl: 'http://localhost:3000');
+
+  @override
+  Future<List<EligiblePromotion>> listEligiblePromotions() async => [
+        EligiblePromotion(
+          id: 'promo-1',
+          code: 'ALLGO50',
+          title: '50% OFF Food',
+          isAutoApplied: false,
+          newCustomerOnly: false,
+          minOrderAmountInr: 199,
+          discountPercentage: 50,
+          maxDiscountInr: 100,
+          isEligible: true,
+          reason: 'Half off your next AllGo Food order.',
+          potentialDiscountInr: 100,
+        ),
+      ];
 }

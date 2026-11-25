@@ -65,7 +65,7 @@ void main() {
       await tester.tap(find.text('Bank Account Details'));
       await tester.pumpAndSettle();
       expect(find.text('Bank Account & Payouts'), findsOneWidget);
-      expect(find.text('Penny-Drop Verified (NPCI Validated)'), findsOneWidget);
+      expect(find.text('Submit bank details & cancelled cheque for verification'), findsOneWidget);
       expect(find.text('Account Holder Name'), findsOneWidget);
       expect(find.text('Bank IFSC Code'), findsOneWidget);
     });
@@ -104,20 +104,17 @@ void main() {
       expect(find.text('Commercial Insurance Policy'), findsOneWidget);
     });
 
-    testWidgets('PartnerBankEditScreen runs penny-drop trigger', (tester) async {
+    testWidgets('PartnerBankEditScreen validates account fields and renders save button', (tester) async {
       await tester.pumpWidget(
         const ProviderScope(
           child: MaterialApp(home: PartnerBankEditScreen()),
         ),
       );
 
-      final verifyBtn = find.text('Run Penny-Drop Instant Verification');
-      await tester.ensureVisible(verifyBtn);
-      await tester.tap(verifyBtn);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1100));
-      await tester.pumpAndSettle();
-      expect(find.text('Penny-drop verified! ₹1.00 transferred.'), findsOneWidget);
+      expect(find.text('Account Holder Name'), findsOneWidget);
+      expect(find.text('Bank IFSC Code'), findsOneWidget);
+      expect(find.text('Bank Passbook / Cheque Proof'), findsOneWidget);
+      expect(find.text('Save & Update Bank Account'), findsOneWidget);
     });
   });
 }

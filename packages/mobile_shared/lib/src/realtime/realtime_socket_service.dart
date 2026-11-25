@@ -1,6 +1,16 @@
 import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import '../data/state/auth_notifier.dart';
 import '../storage/token_storage.dart';
+
+final realtimeSocketServiceProvider = Provider<RealtimeSocketService>((ref) {
+  final client = ref.watch(apiClientProvider);
+  final storage = ref.watch(tokenStorageProvider);
+  final service = RealtimeSocketService(baseUrl: client.baseUrl, tokenStorage: storage);
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 class RealtimeSocketService {
   final String baseUrl;
@@ -89,6 +99,26 @@ class RealtimeSocketService {
 
   void subscribeJob(String jobId) {
     _socket?.emit('job:subscribe', {'jobId': jobId});
+  }
+
+  void subscribeOrder(String orderId) {
+    _socket?.emit('order:subscribe', {'orderId': orderId});
+  }
+
+  void unsubscribeOrder(String orderId) {
+    _socket?.emit('order:unsubscribe', {'orderId': orderId});
+  }
+
+  void on(String event, void Function(dynamic) handler) {
+    _socket?.on(event, handler);
+  }
+
+  void off(String event) {
+    _socket?.off(event);
+  }
+
+  void emit(String event, dynamic data) {
+    _socket?.emit(event, data);
   }
 
   void disconnect() {

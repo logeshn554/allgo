@@ -58,8 +58,8 @@ void main() {
         ),
       );
 
-      expect(find.text('AG-2026-8888'), findsOneWidget);
-      expect(find.text('Priya Raman'), findsOneWidget);
+      expect(find.text('#AG-2026-8888'), findsOneWidget);
+      expect(find.text('1x Paneer Butter Masala (₹250)'), findsOneWidget);
       expect(find.text('Accept Order'), findsOneWidget);
       expect(find.text('Reject'), findsOneWidget);
 

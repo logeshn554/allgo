@@ -6,7 +6,6 @@ import '../providers/customer_home_provider.dart';
 import '../widgets/empty_state_view.dart';
 import '../widgets/app_network_image.dart';
 import 'cart_screen.dart';
-import 'outlet_catalog_screen.dart';
 
 class QuickMartScreen extends ConsumerStatefulWidget {
   const QuickMartScreen({super.key});
@@ -305,8 +304,8 @@ class _QuickMartScreenState extends ConsumerState<QuickMartScreen> {
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                               ),
-                                              if (p.unit != null)
-                                                Text(p.unit!, style: AllGoTypography.caption.copyWith(fontSize: 10)),
+                                              if (p.categoryName.isNotEmpty)
+                                                Text(p.categoryName, style: AllGoTypography.caption.copyWith(fontSize: 10)),
                                               const Spacer(),
                                               Row(
                                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

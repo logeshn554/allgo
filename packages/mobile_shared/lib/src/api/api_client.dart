@@ -305,6 +305,24 @@ class ApiClient {
   Future<ParcelModel> courierVerifyDeliveryOtp({required String parcelId, required String deliveryOtp}) => partnerMobility.courierVerifyDeliveryOtp(parcelId: parcelId, deliveryOtp: deliveryOtp);
   Future<HireDriverBookingModel> driverAssignHireBooking(String bookingId) => partnerMobility.driverAssignHireBooking(bookingId);
   Future<HireDriverBookingModel> driverArrivedHireBooking(String bookingId) => partnerMobility.driverArrivedHireBooking(bookingId);
+  Future<HireDriverBookingModel> driverStartHireDuty({
+    required String bookingId,
+    required String startOtp,
+    required double startOdometerKm,
+  }) => partnerMobility.driverStartHireDuty(
+        bookingId: bookingId,
+        startOtp: startOtp,
+        startOdometerKm: startOdometerKm,
+      );
+  Future<HireDriverBookingModel> driverEndHireDuty({
+    required String bookingId,
+    required String endOtp,
+    required double endOdometerKm,
+  }) => partnerMobility.driverEndHireDuty(
+        bookingId: bookingId,
+        endOtp: endOtp,
+        endOdometerKm: endOdometerKm,
+      );
   Future<List<ParcelOffer>> getPartnerParcelOffers() => partnerParcel.getPartnerParcelOffers();
   Future<Map<String, dynamic>> acceptParcelOffer(String attemptId) => partnerParcel.acceptParcelOffer(attemptId);
   Future<Map<String, dynamic>> rejectParcelOffer(String attemptId, {String? reason}) => partnerParcel.rejectParcelOffer(attemptId, reason: reason);

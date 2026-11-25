@@ -112,7 +112,7 @@ class _PartnerTripHistoryScreenState extends ConsumerState<PartnerTripHistoryScr
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             leading: const Icon(Icons.local_shipping_outlined, color: AllGoColors.primary),
             title: Text(p.pickupAddress, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('To: ${p.dropAddress} • ${p.status}', maxLines: 2),
+            subtitle: Text('To: ${p.dropoffAddress} • ${p.status}', maxLines: 2),
             trailing: Text(
               '₹${p.totalFareInr.toStringAsFixed(0)}',
               style: const TextStyle(fontWeight: FontWeight.bold, color: AllGoColors.success),
@@ -140,9 +140,9 @@ class _PartnerTripHistoryScreenState extends ConsumerState<PartnerTripHistoryScr
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             leading: const Icon(Icons.two_wheeler, color: AllGoColors.secondary),
             title: Text(r.pickupAddress, maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('To: ${r.dropAddress} • ${r.status}', maxLines: 2),
+            subtitle: Text('To: ${r.dropoffAddress} • ${r.status}', maxLines: 2),
             trailing: Text(
-              '₹${(r.finalFareInr ?? r.estimatedFareInr).toStringAsFixed(0)}',
+              '₹${r.totalFareInr.toStringAsFixed(0)}',
               style: const TextStyle(fontWeight: FontWeight.bold, color: AllGoColors.success),
             ),
           );
@@ -170,7 +170,7 @@ class _PartnerTripHistoryScreenState extends ConsumerState<PartnerTripHistoryScr
             title: Text(h.pickupAddress, maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text('${h.durationHours}h • ${h.status}'),
             trailing: Text(
-              '₹${(h.finalFareInr ?? h.estimatedFareInr).toStringAsFixed(0)}',
+              '₹${h.totalAmountInr.toStringAsFixed(0)}',
               style: const TextStyle(fontWeight: FontWeight.bold, color: AllGoColors.success),
             ),
           );

@@ -127,6 +127,7 @@ void main() {
               onSelectMethod: (m) => method = m,
               useWalletBalance: useWallet,
               onToggleWallet: (w) => useWallet = w,
+              walletBalance: 250.0,
               selectedUpiApp: upiApp,
               onSelectUpiApp: (app) => upiApp = app,
             ),

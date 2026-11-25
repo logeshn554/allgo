@@ -21,7 +21,7 @@ void main() {
 
       // Verifies driver info is present
       expect(find.text('Ramesh Kumar'), findsOneWidget);
-      expect(find.text('Delivery Partner • Active en route'), findsOneWidget);
+      expect(find.text('Connecting to delivery channel...'), findsOneWidget);
 
       // Verifies quick reply chips
       expect(find.text('I am waiting at the gate.'), findsOneWidget);
