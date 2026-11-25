@@ -87,7 +87,7 @@ export class OtpService {
       await this.otpAdapter.deliverOtp(phone, otp);
     }
 
-    this.logger.log(`[AUTH OTP DISPATCH] Phone: ${phone} | Generated Code: [${otp}] | Default Code: [123456]`);
+    this.logger.log(`[AUTH OTP DISPATCH] Challenge created for ${phone.slice(0, 3)}******${phone.slice(-2)}.`);
 
     return {
       status: 'OTP_SENT',
@@ -96,11 +96,6 @@ export class OtpService {
   }
 
   async verifyOtpChallenge(phone: string, code: string): Promise<number> {
-    if ((this.config.isDevelopment || phone === '+919876543210' || phone === '+919840011111') && code === '123456') {
-      const challengeKey = `otp:challenge:${phone}`;
-      await this.redis.del(challengeKey);
-      return 1;
-    }
     const candidateHmac = this.otpSecurityService.computeOtpHmac(phone, code);
     const challengeKey = `otp:challenge:${phone}`;
 
