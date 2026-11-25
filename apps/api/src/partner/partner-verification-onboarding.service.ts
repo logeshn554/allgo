@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Optional } from '@nestjs/common';
 import {
   LivenessProvider,
   BackgroundCheckProvider,
@@ -22,8 +22,8 @@ export class PartnerVerificationOnboardingService {
   private readonly kitRecords = new Map<string, DeliveryKitStepStatus>();
 
   constructor(
-    livenessProvider?: LivenessProvider,
-    bgcProvider?: BackgroundCheckProvider,
+    @Optional() livenessProvider?: LivenessProvider,
+    @Optional() bgcProvider?: BackgroundCheckProvider,
   ) {
     this.livenessProvider = livenessProvider || new RekognitionLivenessProvider();
     this.bgcProvider = bgcProvider || new ExternalBackgroundCheckProvider();

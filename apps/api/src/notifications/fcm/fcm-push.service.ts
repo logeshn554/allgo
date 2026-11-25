@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as adminNamespace from 'firebase-admin';
+import type { Message } from 'firebase-admin/messaging';
 import { ConfigService } from '../../config/config.service.js';
 
 const admin = (adminNamespace as any).default || adminNamespace;
@@ -54,7 +55,8 @@ export class FirebaseAdminFcmService implements FcmPushService {
 
     const isProdOrStaging = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging';
 
-    if (admin.apps.length === 0) {
+    const apps = admin.apps || (adminNamespace as any).getApps?.() || [];
+    if (apps.length === 0) {
       if (isProdOrStaging) {
         throw new Error('FATAL: Firebase Admin SDK not initialized in production/staging.');
       }
@@ -78,7 +80,7 @@ export class FirebaseAdminFcmService implements FcmPushService {
     }
 
     try {
-      const message: adminNamespace.messaging.Message = {
+      const message: Message = {
         token: fcmToken,
         notification: {
           title,

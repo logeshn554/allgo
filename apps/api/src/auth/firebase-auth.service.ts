@@ -30,7 +30,8 @@ export class FirebaseAdminAuthService implements FirebaseAuthService {
   }
 
   private initFirebase() {
-    if (admin.apps.length > 0) {
+    const apps = admin.apps || (adminPkg as any).getApps?.() || [];
+    if (apps.length > 0) {
       this.initialized = true;
       return;
     }
@@ -45,8 +46,9 @@ export class FirebaseAdminAuthService implements FirebaseAuthService {
           const decoded = Buffer.from(saKey, 'base64').toString('utf-8');
           creds = JSON.parse(decoded);
         }
+        const certFn = (admin as any).credential?.cert || (adminPkg as any).cert || (admin as any).cert;
         admin.initializeApp({
-          credential: admin.credential.cert(creds),
+          credential: certFn ? certFn(creds) : undefined,
         });
         this.initialized = true;
         this.logger.log('Firebase Admin SDK initialized successfully');

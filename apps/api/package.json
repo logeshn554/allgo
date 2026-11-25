@@ -8,7 +8,10 @@
     "prebuild": "node -e \"const fs=require('fs'),cp=require('child_process');if(!fs.existsSync('../../packages/common/dist/index.d.ts')){cp.execSync('npm run build --workspace=@allgo/common',{stdio:'inherit'})}\"",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "start:dev": "npm run build && node dist/main.js"
+    "start:dev": "npm run build && node dist/main.js",
+    "dev": "nest start --watch",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint": "eslint {҂.ts,҂.tsx,҂.d.ts} --fix --config .eslintrc.js"
   },
   "dependencies": {
     "@allgo/common": "*",
@@ -20,8 +23,10 @@
     "@nestjs/swagger": "^12.1.0",
     "@nestjs/websockets": "^12.4.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "arctic": "^3.7.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "firebase-admin": "^14.5.1",
     "ioredis": "^5.6.0",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.13.3",

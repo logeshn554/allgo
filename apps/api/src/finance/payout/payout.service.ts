@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, Logger, Optional } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service.js';
 import { LedgerService } from '../ledger/ledger.service.js';
 import { PayoutGateway } from '../gateways/payout-gateway.interface.js';
@@ -23,7 +23,7 @@ export class PayoutService {
   constructor(
     private readonly db: DatabaseService,
     private readonly ledger: LedgerService,
-    gateway?: PayoutGateway
+    @Optional() gateway?: PayoutGateway
   ) {
     this.gateway = gateway || new RazorpayXPayoutGateway();
   }

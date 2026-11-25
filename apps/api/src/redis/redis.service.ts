@@ -34,16 +34,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       this.client.on('error', (err) => {
         this.isConnected = false;
-        this.logger.warn(`Redis connection error: ${err.message}`);
+        this.logger.warn(`Redis connection error: ${err.message}. Falling back to in-memory store.`);
       });
 
       await this.client.connect().catch((err) => {
         this.isConnected = false;
-        this.logger.warn(`Redis connection failed: ${err.message}. Runtime commands will fail fast.`);
+        this.logger.warn(`Redis connection failed: ${err.message}. Falling back to in-memory store.`);
       });
     } catch (err: any) {
       this.isConnected = false;
-      this.logger.warn(`Redis initialization failed: ${err.message}.`);
+      this.logger.warn(`Redis initialization failed: ${err.message}. Falling back to in-memory store.`);
     }
   }
 
@@ -68,7 +68,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async checkConnection(): Promise<{ connected: boolean; latencyMs: number; error?: string }> {
     const start = Date.now();
     if (!this.client || !this.isConnected) {
-      return { connected: false, latencyMs: 0, error: 'Redis client not connected (daemon offline)' };
+      return { connected: false, latencyMs: 0, error: 'Redis client not connected (using in-memory fallback)' };
     }
     try {
       const pong = await this.client.ping();
@@ -79,13 +79,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async get(key: string): Promise<string | null> {
-    if (!this.isConnected && this.config.isDevelopment) return this.mem.get(key) ?? null;
+    if (!this.isConnected) return this.mem.get(key) ?? null;
     return this.ensureConnected().get(key);
   }
 
   async set(key: string, value: string, mode?: string, duration?: number): Promise<'OK' | null> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       this.mem.set(key, value);
+      if (mode === 'EX' && duration) {
+        setTimeout(() => this.mem.delete(key), duration * 1000).unref();
+      }
       return 'OK';
     }
     const client = this.ensureConnected();
@@ -93,25 +96,26 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async setex(key: string, seconds: number, value: string): Promise<'OK'> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       this.mem.set(key, value);
+      setTimeout(() => this.mem.delete(key), seconds * 1000).unref();
       return 'OK';
     }
     return this.ensureConnected().setex(key, seconds, value);
   }
 
   async del(key: string): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) return this.mem.delete(key) ? 1 : 0;
+    if (!this.isConnected) return this.mem.delete(key) ? 1 : 0;
     return this.ensureConnected().del(key);
   }
 
   async exists(key: string): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) return this.mem.has(key) ? 1 : 0;
+    if (!this.isConnected) return this.mem.has(key) ? 1 : 0;
     return this.ensureConnected().exists(key);
   }
 
   async hset(key: string, field: string, value: any): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       const obj = this.mem.get(key) || {};
       obj[field] = String(value);
       this.mem.set(key, obj);
@@ -121,7 +125,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async hget(key: string, field: string): Promise<string | null> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       const obj = this.mem.get(key);
       return obj ? (obj[field] ?? null) : null;
     }
@@ -129,7 +133,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async hincrby(key: string, field: string, increment: number): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       const obj = this.mem.get(key) || {};
       const current = parseInt(obj[field] || '0', 10);
       obj[field] = String(current + increment);
@@ -140,12 +144,16 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async expire(key: string, seconds: number): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) return 1;
+    if (!this.isConnected) {
+      if (!this.mem.has(key)) return 0;
+      setTimeout(() => this.mem.delete(key), seconds * 1000).unref();
+      return 1;
+    }
     return this.ensureConnected().expire(key, seconds);
   }
 
   async ttl(key: string): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) return 60;
+    if (!this.isConnected) return 60;
     return this.ensureConnected().ttl(key);
   }
 
@@ -154,10 +162,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async geoadd(key: string, longitude: number, latitude: number, member: string): Promise<number> {
+    if (!this.isConnected) return 1;
     return this.ensureConnected().geoadd(key, longitude, latitude, member);
   }
 
   async georadius(key: string, longitude: number, latitude: number, radiusMeters: number, count: number = 20): Promise<string[]> {
+    if (!this.isConnected) return [];
     const client = this.ensureConnected();
     const results = await (client as any).georadius(key, longitude, latitude, radiusMeters, 'm', 'COUNT', count, 'ASC');
     if (!results || !Array.isArray(results)) return [];
@@ -165,23 +175,52 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async zrem(key: string, member: string): Promise<number> {
+    if (!this.isConnected) return 1;
     return this.ensureConnected().zrem(key, member);
   }
 
   async sadd(key: string, ...members: string[]): Promise<number> {
+    if (!this.isConnected) {
+      let set = this.mem.get(key);
+      if (!(set instanceof Set)) {
+        set = new Set<string>();
+        this.mem.set(key, set);
+      }
+      let added = 0;
+      for (const m of members) {
+        if (!set.has(m)) {
+          set.add(m);
+          added++;
+        }
+      }
+      return added;
+    }
     return this.ensureConnected().sadd(key, ...members);
   }
 
   async srem(key: string, ...members: string[]): Promise<number> {
+    if (!this.isConnected) {
+      const set = this.mem.get(key);
+      if (!(set instanceof Set)) return 0;
+      let removed = 0;
+      for (const m of members) {
+        if (set.delete(m)) removed++;
+      }
+      return removed;
+    }
     return this.ensureConnected().srem(key, ...members);
   }
 
   async smembers(key: string): Promise<string[]> {
+    if (!this.isConnected) {
+      const set = this.mem.get(key);
+      return set instanceof Set ? Array.from(set) : [];
+    }
     return this.ensureConnected().smembers(key);
   }
 
   async sismember(key: string, member: string): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       const set = this.mem.get(key);
       return set instanceof Set && set.has(member) ? 1 : 0;
     }
@@ -189,27 +228,52 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async publish(channel: string, message: string): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) return 1;
+    if (!this.isConnected) return 1;
     return this.ensureConnected().publish(channel, message);
   }
 
   async sunion(...keys: string[]): Promise<string[]> {
+    if (!this.isConnected) {
+      const result = new Set<string>();
+      for (const k of keys) {
+        const s = this.mem.get(k);
+        if (s instanceof Set) {
+          for (const item of s) result.add(item);
+        }
+      }
+      return Array.from(result);
+    }
     if (!keys || keys.length === 0) return [];
     return this.ensureConnected().sunion(...keys);
   }
 
   async acquireLock(key: string, value: string, ttlSeconds: number = 10): Promise<boolean> {
+    if (!this.isConnected) {
+      if (this.mem.has(key)) return false;
+      this.mem.set(key, value);
+      setTimeout(() => {
+        if (this.mem.get(key) === value) this.mem.delete(key);
+      }, ttlSeconds * 1000).unref();
+      return true;
+    }
     const result = await this.ensureConnected().set(key, value, 'EX', ttlSeconds, 'NX');
     return result === 'OK';
   }
 
   async releaseLock(key: string, value: string): Promise<boolean> {
+    if (!this.isConnected) {
+      if (this.mem.get(key) === value) {
+        this.mem.delete(key);
+        return true;
+      }
+      return false;
+    }
     const res = await this.ensureConnected().eval(LUA_RELEASE_LOCK, 1, key, value);
     return res === 1;
   }
 
   async evalLuaOtpVerify(key: string, expectedHmac: string, maxAttempts: number = 3): Promise<number> {
-    if (!this.isConnected && this.config.isDevelopment) {
+    if (!this.isConnected) {
       const obj = this.mem.get(key);
       if (!obj) return -1;
       const attempts = parseInt(obj.attempts || '0', 10);

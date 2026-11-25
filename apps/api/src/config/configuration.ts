@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 export interface AppConfig {
   port: number;
   nodeEnv: string;
@@ -21,6 +24,19 @@ export interface AppConfig {
 }
 
 export function validateAndLoadConfig(): AppConfig {
+  if (!process.env.DATABASE_URL && typeof process.loadEnvFile === 'function') {
+    for (const candidate of ['.env', 'apps/api/.env', path.resolve(process.cwd(), '../../.env')]) {
+      try {
+        if (fs.existsSync(candidate)) {
+          process.loadEnvFile(candidate);
+          break;
+        }
+      } catch {
+        // Ignore unreadable .env
+      }
+    }
+  }
+
   const nodeEnv = process.env.NODE_ENV || 'development';
   const port = parseInt(process.env.PORT || '3000', 10);
 

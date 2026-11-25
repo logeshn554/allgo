@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './auth.controller.js';
+import { AdminAuthController } from './admin-auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuthRepository } from './data/auth.repository.js';
+import { AuthManagerRepository } from './data/auth-manager.repository.js';
 import { OtpService } from './otp.service.js';
 import { TokenSessionService } from './token-session.service.js';
+import { EmailAuthService } from './email-auth.service.js';
+import { OAuthService } from './oauth.service.js';
+import { TwoFactorService } from './two-factor.service.js';
 import { LocalOtpDeliveryAdapter } from './adapters/local-otp-delivery.adapter.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -14,11 +19,15 @@ import { SmsAbuseProtectionService } from './sms-abuse-protection.service.js';
 import { IndiaDltSmsGateway } from '../notifications/sms/india-dlt-sms.gateway.js';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, AdminAuthController],
   providers: [
     AuthRepository,
+    AuthManagerRepository,
     OtpService,
     TokenSessionService,
+    EmailAuthService,
+    OAuthService,
+    TwoFactorService,
     AuthService,
     LocalOtpDeliveryAdapter,
     JwtAuthGuard,
@@ -35,6 +44,10 @@ import { IndiaDltSmsGateway } from '../notifications/sms/india-dlt-sms.gateway.j
     RolesGuard,
     LocalOtpDeliveryAdapter,
     AuthRepository,
+    AuthManagerRepository,
+    EmailAuthService,
+    OAuthService,
+    TwoFactorService,
     FirebaseAdminAuthService,
     FirebaseSessionExchangeService,
     AppCheckGuard,

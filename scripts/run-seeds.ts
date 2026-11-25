@@ -14,7 +14,8 @@ export async function runSeeds(): Promise<{ success: boolean; error?: string }> 
 
   const client = new pg.Client({
     connectionString: DATABASE_URL,
-    connectionTimeoutMillis: 3000,
+    connectionTimeoutMillis: 15000,
+    ssl: DATABASE_URL.includes('sslmode=') ? { rejectUnauthorized: false } : undefined,
   });
 
   try {
