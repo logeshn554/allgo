@@ -105,6 +105,37 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException(decision.reason || 'Insufficient privileges');
     }
 
+    const requiresAdminAccess =
+      activeRoleHeader === 'ADMIN' ||
+      requiredRoles.some((role) => role === 'ADMIN' || role === 'SUPER_ADMIN');
+
+    if (requiresAdminAccess) {
+      const allowlistSchema = await this.db.query(
+        "SELECT to_regclass('public.admin_identity_allowlist') IS NOT NULL AS enabled;",
+      );
+      if (allowlistSchema.rows[0]?.enabled) {
+        const trustedAdmin = await this.db.query(
+          `SELECT COUNT(DISTINCT a.identity_type)::int AS verified_identity_count
+           FROM admin_identity_allowlist a
+           JOIN users u ON u.id = a.user_id
+           WHERE a.user_id = $1
+             AND a.enabled = TRUE
+             AND (
+               (a.identity_type = 'PHONE' AND u.phone_verified = TRUE AND a.identity_value = u.phone)
+               OR
+               (a.identity_type = 'EMAIL' AND u.email_verified = TRUE
+                 AND LOWER(a.identity_value) = LOWER(u.email))
+             );`,
+          [user.userId],
+        );
+        if (Number(trustedAdmin.rows[0]?.verified_identity_count || 0) !== 2) {
+          throw new ForbiddenException(
+            'Admin access requires both verified phone and email identifiers to be allowlisted for this existing account.',
+          );
+        }
+      }
+    }
+
     request.activeRole = decision.activeRole;
     return true;
   }
