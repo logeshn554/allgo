@@ -146,7 +146,7 @@ export class AdminAuthController {
   async createUser(@Body() body: any) {
     const email = body?.email ? String(body.email).trim().toLowerCase() : null;
     const phone = body?.phone ? String(body.phone).trim() : null;
-    if (!phone || !/^\\+91[6-9]\\d{9}$/.test(phone)) {
+    if (!phone || !/^\+91[6-9]\d{9}$/.test(phone)) {
       throw new BadRequestException('A normalized E.164 Indian phone number is required.');
     }
     if (body?.role && String(body.role).toUpperCase() !== 'CUSTOMER') {
