@@ -65,9 +65,16 @@ export class FirebaseAdminAuthService implements FirebaseAuthService {
       throw new Error('Firebase ID token is required');
     }
 
-    // In dev / test or when token starts with mock_ or test_
-    if (!this.initialized || idToken.startsWith('mock_') || idToken.startsWith('test_')) {
+    const isMockToken = idToken.startsWith('mock_') || idToken.startsWith('test_');
+    if (isMockToken) {
+      if (!this.config.isDevelopment) {
+        throw new Error('Mock Firebase tokens are disabled outside development.');
+      }
       return this.verifyMockToken(idToken);
+    }
+    if (!this.initialized) {
+      if (this.config.isDevelopment) return this.verifyMockToken(idToken);
+      throw new Error('Firebase Admin SDK is not initialized; refusing token verification.');
     }
 
     try {
@@ -86,8 +93,16 @@ export class FirebaseAdminAuthService implements FirebaseAuthService {
       throw new Error('App Check token is required');
     }
 
-    if (!this.initialized || token.startsWith('mock_') || token.startsWith('test_')) {
+    const isMockToken = token.startsWith('mock_') || token.startsWith('test_');
+    if (isMockToken) {
+      if (!this.config.isDevelopment) {
+        throw new Error('Mock App Check tokens are disabled outside development.');
+      }
       return { app_id: 'in.allgo.app.dev' };
+    }
+    if (!this.initialized) {
+      if (this.config.isDevelopment) return { app_id: 'in.allgo.app.dev' };
+      throw new Error('Firebase Admin SDK is not initialized; refusing App Check verification.');
     }
 
     try {
