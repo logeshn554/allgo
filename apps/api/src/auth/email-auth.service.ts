@@ -361,7 +361,7 @@ export class EmailAuthService {
     await this.redis.del(otpKey);
 
     let user = await this.authManagerRepo.findUserByEmail(email);
-    if (!user) {
+    if (!user || !user.phoneVerified) {
       throw new ForbiddenException(
         'Email OTP can only verify an email linked to an existing phone-verified AllGo account.',
       );
