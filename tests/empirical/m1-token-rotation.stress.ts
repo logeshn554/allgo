@@ -1,14 +1,14 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
+import { beforeEach, describe, it } from 'node:test';
+import { ForbiddenException, UnauthorizedException, ValidationPipe } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
-import { ValidationPipe, UnauthorizedException, ForbiddenException } from '@nestjs/common';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
-import { SendOtpDto } from '../../apps/api/dist/auth/dto/send-otp.dto.js';
-import { VerifyOtpDto } from '../../apps/api/dist/auth/dto/verify-otp.dto.js';
-import { RefreshTokenDto } from '../../apps/api/dist/auth/dto/refresh-token.dto.js';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { RefreshTokenDto } from '../../services/api/dist/auth/dto/refresh-token.dto.js';
+import { SendOtpDto } from '../../services/api/dist/auth/dto/send-otp.dto.js';
+import { VerifyOtpDto } from '../../services/api/dist/auth/dto/verify-otp.dto.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', () => {
@@ -36,12 +36,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
     mockDb.users.set(testUser.id, { ...testUser, status: 'ACTIVE' });
     mockDb.userRoles.set(testUser.id, new Set(['CUSTOMER']));
 
-    authService = new AuthService(
-      config,
-      mockDb as any,
-      mockRedis as any,
-      otpAdapter
-    );
+    authService = new AuthService(config, mockDb as any, mockRedis as any, otpAdapter);
   });
 
   function mintTokens(user: any, deviceId?: string) {
@@ -55,7 +50,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
         jti: crypto.randomUUID(),
       },
       config.jwtSecret,
-      { algorithm: 'HS256', expiresIn: '1h' }
+      { algorithm: 'HS256', expiresIn: '1h' },
     );
 
     const refreshToken = jwt.sign(
@@ -66,7 +61,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
         jti: crypto.randomUUID(),
       },
       config.jwtSecret,
-      { algorithm: 'HS256', expiresIn: '30d' }
+      { algorithm: 'HS256', expiresIn: '30d' },
     );
 
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -87,17 +82,32 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       const rotated = await authService.refreshToken(rt1, 'dev_pixel_9');
       assert.ok(rotated.accessToken, 'Must issue new access token');
       assert.ok(rotated.refreshToken, 'Must issue new refresh token');
-      assert.notStrictEqual(rotated.refreshToken, rt1, 'New refresh token must be different from old');
+      assert.notStrictEqual(
+        rotated.refreshToken,
+        rt1,
+        'New refresh token must be different from old',
+      );
 
       // Old token must be marked REVOKED in Redis
       const revokedInRedis = await mockRedis.get(`token:revoked:${rt1}`);
-      assert.strictEqual(revokedInRedis, 'REVOKED', 'Old refresh token must be blacklisted in Redis');
+      assert.strictEqual(
+        revokedInRedis,
+        'REVOKED',
+        'Old refresh token must be blacklisted in Redis',
+      );
 
       // DB device record must now hold the hash of the new token
       const deviceRecord = mockDb.devices.get(`${testUser.id}:dev_pixel_9`);
       assert.ok(deviceRecord, 'Device session must exist in DB');
-      const expectedNewHash = crypto.createHash('sha256').update(rotated.refreshToken).digest('hex');
-      assert.strictEqual(deviceRecord.refresh_token_hash, expectedNewHash, 'DB must store new token hash');
+      const expectedNewHash = crypto
+        .createHash('sha256')
+        .update(rotated.refreshToken)
+        .digest('hex');
+      assert.strictEqual(
+        deviceRecord.refresh_token_hash,
+        expectedNewHash,
+        'DB must store new token hash',
+      );
     });
 
     it('should rotate cleanly when deviceId is omitted in request (falls back to JWT claim)', async () => {
@@ -110,7 +120,10 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
 
       const deviceRecord = mockDb.devices.get(`${testUser.id}:dev_pixel_9`);
       assert.ok(deviceRecord);
-      const expectedNewHash = crypto.createHash('sha256').update(rotated.refreshToken).digest('hex');
+      const expectedNewHash = crypto
+        .createHash('sha256')
+        .update(rotated.refreshToken)
+        .digest('hex');
       assert.strictEqual(deviceRecord.refresh_token_hash, expectedNewHash);
     });
 
@@ -123,7 +136,10 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
 
       const deviceRecord = mockDb.devices.get(`${testUser.id}:default_device`);
       assert.ok(deviceRecord);
-      const expectedNewHash = crypto.createHash('sha256').update(rotated.refreshToken).digest('hex');
+      const expectedNewHash = crypto
+        .createHash('sha256')
+        .update(rotated.refreshToken)
+        .digest('hex');
       assert.strictEqual(deviceRecord.refresh_token_hash, expectedNewHash);
     });
   });
@@ -141,7 +157,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof UnauthorizedException, 'Must throw UnauthorizedException');
           assert.strictEqual(err.message, 'Session not found or revoked');
           return true;
-        }
+        },
       );
     });
 
@@ -157,7 +173,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof ForbiddenException, 'Must throw ForbiddenException');
           assert.ok(err.message.includes('suspended'));
           return true;
-        }
+        },
       );
     });
 
@@ -173,7 +189,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof ForbiddenException, 'Must throw ForbiddenException');
           assert.ok(err.message.includes('blocked'));
           return true;
-        }
+        },
       );
     });
 
@@ -189,7 +205,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof ForbiddenException, 'Must throw ForbiddenException');
           assert.ok(err.message.includes('blocked'));
           return true;
-        }
+        },
       );
     });
   });
@@ -202,7 +218,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(err.message, 'Invalid or expired refresh token');
           return true;
-        }
+        },
       );
     });
 
@@ -215,7 +231,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(err.message, 'Invalid token type');
           return true;
-        }
+        },
       );
     });
 
@@ -223,7 +239,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       const forgedToken = jwt.sign(
         { userId: testUser.id, type: 'refresh', deviceId: 'dev_pixel_9' },
         'attacker-wrong-secret-key-1234567890',
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
 
       await assert.rejects(
@@ -232,7 +248,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(err.message, 'Invalid or expired refresh token');
           return true;
-        }
+        },
       );
     });
 
@@ -240,7 +256,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       const expiredToken = jwt.sign(
         { userId: testUser.id, type: 'refresh', deviceId: 'dev_pixel_9' },
         config.jwtSecret,
-        { algorithm: 'HS256', expiresIn: '-1s' }
+        { algorithm: 'HS256', expiresIn: '-1s' },
       );
 
       await assert.rejects(
@@ -249,7 +265,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(err.message, 'Invalid or expired refresh token');
           return true;
-        }
+        },
       );
     });
   });
@@ -280,7 +296,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
 
       assert.ok(
         interceptedByRedis || interceptedByDbReuse,
-        `Unexpected error message on replay: ${caughtError.message}`
+        `Unexpected error message on replay: ${caughtError.message}`,
       );
 
       // CRITICAL SECURITY EMPIRICAL CHECK:
@@ -295,7 +311,9 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       console.log('REPLAY DEFENSE AUDIT FINDING:');
       console.log(`- Intercepted by Redis blocklist? ${interceptedByRedis}`);
       console.log(`- Intercepted by DB reuse check? ${interceptedByDbReuse}`);
-      console.log(`- Active device session retained in DB after replay? ${sessionAfterReplay !== undefined}`);
+      console.log(
+        `- Active device session retained in DB after replay? ${sessionAfterReplay !== undefined}`,
+      );
     });
   });
 
@@ -321,8 +339,16 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       assert.strictEqual(transformed.deviceId, 'dev_valid_id');
       assert.strictEqual((transformed as any).role, undefined, 'role field must be stripped');
       assert.strictEqual((transformed as any).isAdmin, undefined, 'isAdmin field must be stripped');
-      assert.strictEqual((transformed as any).bypassAuth, undefined, 'bypassAuth field must be stripped');
-      assert.strictEqual((transformed as any).extraCredit, undefined, 'extraCredit field must be stripped');
+      assert.strictEqual(
+        (transformed as any).bypassAuth,
+        undefined,
+        'bypassAuth field must be stripped',
+      );
+      assert.strictEqual(
+        (transformed as any).extraCredit,
+        undefined,
+        'extraCredit field must be stripped',
+      );
     });
 
     it('should strip unwhitelisted fields from VerifyOtpDto', async () => {
@@ -332,7 +358,7 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
         phone: '+919876543210',
         code: '123456',
         platform: 'ANDROID',
-        injectedSql: "DROP TABLE users;",
+        injectedSql: 'DROP TABLE users;',
         roles: ['ADMIN'],
       };
 
@@ -344,7 +370,11 @@ describe('M1 Empirical Stress Test: Refresh Token Rotation & Session Security', 
       assert.strictEqual(transformed.phone, '+919876543210');
       assert.strictEqual(transformed.code, '123456');
       assert.strictEqual(transformed.platform, 'ANDROID');
-      assert.strictEqual((transformed as any).injectedSql, undefined, 'injectedSql must be stripped');
+      assert.strictEqual(
+        (transformed as any).injectedSql,
+        undefined,
+        'injectedSql must be stripped',
+      );
       assert.strictEqual((transformed as any).roles, undefined, 'roles must be stripped');
     });
 

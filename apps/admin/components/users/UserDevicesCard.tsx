@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { authSettingsApi, UserDeviceSession } from '@/data/api';
+import { type UserDeviceSession, authSettingsApi } from '@/data/api';
 import {
+  Badge,
+  Button,
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
-  Badge,
   HugeiconsIcon,
   toast,
 } from '@allgo/ui';
-import { LaptopPhoneSyncIcon, Delete02Icon } from '@hugeicons/core-free-icons';
+import { Delete02Icon, LaptopPhoneSyncIcon } from '@hugeicons/core-free-icons';
+import { useCallback, useEffect, useState } from 'react';
 
 export function UserDevicesCard({ userId }: { userId: string }) {
   const [devices, setDevices] = useState<UserDeviceSession[]>([]);
@@ -81,7 +81,11 @@ export function UserDevicesCard({ userId }: { userId: string }) {
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <HugeiconsIcon icon={LaptopPhoneSyncIcon} strokeWidth={2} className="size-4 text-primary" />
+            <HugeiconsIcon
+              icon={LaptopPhoneSyncIcon}
+              strokeWidth={2}
+              className="size-4 text-primary"
+            />
             Active Devices &amp; Sessions
           </CardTitle>
           <CardDescription>

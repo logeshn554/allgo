@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
 import {
   Button,
   HugeiconsIcon,
@@ -20,6 +19,8 @@ import {
   ViewIcon,
   ViewOffIcon,
 } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useState } from 'react';
 
 interface PasswordResetStepProps {
   email: string;
@@ -63,9 +64,7 @@ export function PasswordResetStep({
   };
 
   const lowerErr = (fieldError || '').toLowerCase();
-  const isCodeInvalid = Boolean(
-    lowerErr.includes('code') || (!fieldError && hasError),
-  );
+  const isCodeInvalid = Boolean(lowerErr.includes('code') || (!fieldError && hasError));
   const isNewPasswordInvalid = Boolean(
     lowerErr.includes('password') && !lowerErr.includes('match'),
   );
@@ -200,9 +199,7 @@ export function PasswordResetStep({
             className="text-xs text-muted-foreground"
           >
             <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-3.5" />
-            {resendCooldown > 0
-              ? `Resend code in ${resendCooldown}s`
-              : 'Resend reset code'}
+            {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend reset code'}
           </Button>
         </div>
       </form>

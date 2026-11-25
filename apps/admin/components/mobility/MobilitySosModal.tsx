@@ -1,13 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 import { Label } from '@allgo/ui';
@@ -39,7 +31,8 @@ export function MobilitySosModal({
         </DialogHeader>
         {selectedSos && (
           <p className="text-sm text-muted-foreground">
-            Ride #{selectedSos.ride_number} reported by {selectedSos.reporter_name} ({selectedSos.reporter_phone})
+            Ride #{selectedSos.ride_number} reported by {selectedSos.reporter_name} (
+            {selectedSos.reporter_phone})
           </p>
         )}
         <div className="space-y-2 my-2">
@@ -55,11 +48,7 @@ export function MobilitySosModal({
           />
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            disabled={isResolving}
-            onClick={onClose}
-          >
+          <Button variant="outline" disabled={isResolving} onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -69,11 +58,7 @@ export function MobilitySosModal({
           >
             Mark False Alarm
           </Button>
-          <Button
-            variant="default"
-            disabled={isResolving}
-            onClick={() => onResolve('RESOLVED')}
-          >
+          <Button variant="default" disabled={isResolving} onClick={() => onResolve('RESOLVED')}>
             Resolve Incident
           </Button>
         </DialogFooter>

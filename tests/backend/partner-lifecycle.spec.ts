@@ -1,8 +1,8 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { PartnerService } from '../../apps/api/dist/partner/partner.service.js';
-import { EncryptionService } from '../../apps/api/dist/common/encryption/encryption.service.js';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
+import { beforeEach, describe, it } from 'node:test';
+import { EncryptionService } from '../../services/api/dist/common/encryption/encryption.service.js';
+import { PartnerService } from '../../services/api/dist/partner/partner.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
 import { MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Approval', () => {
@@ -61,7 +61,10 @@ describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Ap
 
       // Verify raw stored partner has encrypted bank account
       const stored = partnerService.inMemoryPartners.get(result.partnerId);
-      assert.ok(stored.bank_account_number.startsWith('v1:'), 'Bank account must be encrypted with v1 prefix');
+      assert.ok(
+        stored.bank_account_number.startsWith('v1:'),
+        'Bank account must be encrypted with v1 prefix',
+      );
       assert.notStrictEqual(stored.bank_account_number, '50100234567890');
       assert.ok(stored.bank_account_hmac.length === 64, 'HMAC deduplication hash must be present');
     });
@@ -77,7 +80,12 @@ describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Ap
       });
 
       // Admin blocks partner
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUserId, 'BLOCKED', 'Serious policy violation');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUserId,
+        'BLOCKED',
+        'Serious policy violation',
+      );
 
       await assert.rejects(async () => {
         await partnerService.registerOrUpdate(testPartnerUserId, {
@@ -221,10 +229,21 @@ describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Ap
       await partnerService.applyForService(testPartnerUserId, 'PARCEL');
 
       // Admin approves Food Delivery only
-      await partnerService.updateAdminServiceStatus(reg.partnerId, 'FOOD_DELIVERY', adminUserId, 'APPROVED');
+      await partnerService.updateAdminServiceStatus(
+        reg.partnerId,
+        'FOOD_DELIVERY',
+        adminUserId,
+        'APPROVED',
+      );
 
       // Admin rejects Parcel with reason
-      await partnerService.updateAdminServiceStatus(reg.partnerId, 'PARCEL', adminUserId, 'REJECTED', 'Commercial permit missing');
+      await partnerService.updateAdminServiceStatus(
+        reg.partnerId,
+        'PARCEL',
+        adminUserId,
+        'REJECTED',
+        'Commercial permit missing',
+      );
 
       const profile = await partnerService.getProfile(testPartnerUserId);
       const foodService = profile.services.find((s: any) => s.service_type === 'FOOD_DELIVERY');
@@ -253,7 +272,7 @@ describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Ap
         reg.partnerId,
         adminUserId,
         'DOCUMENTS_REQUIRED',
-        'Driving license copy is expired. Please re-upload current license.'
+        'Driving license copy is expired. Please re-upload current license.',
       );
       let profile = await partnerService.getProfile(testPartnerUserId);
       assert.strictEqual(profile.status, 'DOCUMENTS_REQUIRED');
@@ -276,22 +295,42 @@ describe('Checkpoint 3: Partner Onboarding, KYC, Independent Services & Admin Ap
       assert.strictEqual(profile.status, 'DOCS_SUBMITTED');
 
       // 3. Admin approves partner
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUserId, 'APPROVED', 'All documents verified');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUserId,
+        'APPROVED',
+        'All documents verified',
+      );
       profile = await partnerService.getProfile(testPartnerUserId);
       assert.strictEqual(profile.status, 'APPROVED');
 
       // 4. Admin suspends partner
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUserId, 'SUSPENDED', 'Pending customer dispute investigation');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUserId,
+        'SUSPENDED',
+        'Pending customer dispute investigation',
+      );
       profile = await partnerService.getProfile(testPartnerUserId);
       assert.strictEqual(profile.status, 'SUSPENDED');
 
       // 5. Admin reactivates partner
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUserId, 'APPROVED', 'Dispute cleared, partner reactivated');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUserId,
+        'APPROVED',
+        'Dispute cleared, partner reactivated',
+      );
       profile = await partnerService.getProfile(testPartnerUserId);
       assert.strictEqual(profile.status, 'APPROVED');
 
       // 6. Admin rejects partner
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUserId, 'REJECTED', 'Failed background verification');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUserId,
+        'REJECTED',
+        'Failed background verification',
+      );
       profile = await partnerService.getProfile(testPartnerUserId);
       assert.strictEqual(profile.status, 'REJECTED');
     });

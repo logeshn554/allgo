@@ -1,10 +1,6 @@
 import type { AuthResponse, StoredAdminSession, UserSummary } from '../types';
 
-const LEGACY_STORAGE_KEYS = [
-  'allgo_admin_token',
-  'allgo_admin_user',
-  'allgo_admin_sessions',
-];
+const LEGACY_STORAGE_KEYS = ['allgo_admin_token', 'allgo_admin_user', 'allgo_admin_sessions'];
 
 let inMemorySessions: StoredAdminSession[] = [];
 

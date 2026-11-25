@@ -1,11 +1,11 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
 import crypto from 'node:crypto';
-import { EncryptionService } from '../../apps/api/dist/common/encryption/encryption.service.js';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, it } from 'node:test';
+import { EncryptionService } from '../../services/api/dist/common/encryption/encryption.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
 import { MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Checkpoint 2: Storage, Upload Tickets, File Validation & Encryption Security', () => {
@@ -56,7 +56,11 @@ describe('Checkpoint 2: Storage, Upload Tickets, File Validation & Encryption Se
       const enc1 = encryptionService.encrypt(plaintext);
       const enc2 = encryptionService.encrypt(plaintext);
 
-      assert.notStrictEqual(enc1, enc2, 'Two encryptions of same plaintext must produce different ciphertexts');
+      assert.notStrictEqual(
+        enc1,
+        enc2,
+        'Two encryptions of same plaintext must produce different ciphertexts',
+      );
       assert.strictEqual(encryptionService.decrypt(enc1), plaintext);
       assert.strictEqual(encryptionService.decrypt(enc2), plaintext);
     });
@@ -81,7 +85,11 @@ describe('Checkpoint 2: Storage, Upload Tickets, File Validation & Encryption Se
       const hmac2 = encryptionService.computeHmac('  abcde1234f  '); // Case and whitespace normalization
 
       assert.ok(hmac1.length === 64, 'HMAC must be 64-char hex SHA-256');
-      assert.strictEqual(hmac1, hmac2, 'HMAC should normalize case and whitespace for deduplication');
+      assert.strictEqual(
+        hmac1,
+        hmac2,
+        'HMAC should normalize case and whitespace for deduplication',
+      );
     });
 
     it('should enforce data minimization by rejecting full 12-digit Aadhaar numbers', () => {
@@ -158,7 +166,9 @@ describe('Checkpoint 2: Storage, Upload Tickets, File Validation & Encryption Se
 
     it('should validate valid PDF files and reject corrupted ones', () => {
       // Valid minimal PDF
-      const validPdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\nstartxref\n99\n%%EOF');
+      const validPdf = Buffer.from(
+        '%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\nstartxref\n99\n%%EOF',
+      );
       assert.doesNotThrow(() => {
         storageService.validateFileContent(validPdf, 'application/pdf');
       });
@@ -309,7 +319,12 @@ describe('Checkpoint 2: Storage, Upload Tickets, File Validation & Encryption Se
       const validPdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF');
       await storageService.saveUploadedFile(ticket.id, testUserId, validPdf);
 
-      const linked = await storageService.linkTicket(ticket.id, testUserId, 'partner', 'partner_uuid_001');
+      const linked = await storageService.linkTicket(
+        ticket.id,
+        testUserId,
+        'partner',
+        'partner_uuid_001',
+      );
 
       assert.strictEqual(linked.status, 'LINKED');
       assert.strictEqual(linked.linked_entity_type, 'partner');

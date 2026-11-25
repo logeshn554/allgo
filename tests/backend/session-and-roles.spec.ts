@@ -1,11 +1,10 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import jwt from 'jsonwebtoken';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { UsersService } from '../../apps/api/dist/users/users.service.js';
-import { UsersController } from '../../apps/api/dist/users/users.controller.js';
+import { beforeEach, describe, it } from 'node:test';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { UsersController } from '../../services/api/dist/users/users.controller.js';
+import { UsersService } from '../../services/api/dist/users/users.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
@@ -50,13 +49,17 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
       const rotatedSession = await authService.refreshToken(initialSession.refreshToken);
       assert.ok(rotatedSession.accessToken);
       assert.ok(rotatedSession.refreshToken);
-      assert.notStrictEqual(rotatedSession.refreshToken, initialSession.refreshToken, 'Refresh token must be rotated');
+      assert.notStrictEqual(
+        rotatedSession.refreshToken,
+        initialSession.refreshToken,
+        'Refresh token must be rotated',
+      );
     });
 
     it('should reject refresh when refresh token is malformed or forged', async () => {
       await assert.rejects(
         async () => authService.refreshToken('invalid_jwt_string'),
-        /Invalid or expired refresh token/i
+        /Invalid or expired refresh token/i,
       );
     });
 
@@ -94,7 +97,7 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
       // Attempting to refresh tokens with valid unexpired JWT must be rejected
       await assert.rejects(
         async () => authService.refreshToken(session.refreshToken),
-        /Account is blocked/i
+        /Account is blocked/i,
       );
     });
 
@@ -108,7 +111,7 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
 
       await assert.rejects(
         async () => authService.refreshToken(session.refreshToken),
-        /Account is suspended/i
+        /Account is suspended/i,
       );
     });
   });
@@ -129,7 +132,7 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
 
     it('should enforce IDOR prevention on user profile endpoint', async () => {
       const controller = new UsersController(usersService);
-      
+
       // 1. Owner accessing their own profile should succeed
       const ownerReq = { user: { userId: 'usr_admin_001', roles: ['CUSTOMER'] } };
       const ownerResult = await controller.getUser(ownerReq, 'usr_admin_001');
@@ -149,7 +152,7 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
         {
           name: 'ForbiddenException',
           message: 'Access denied: You do not have permission to view this profile.',
-        }
+        },
       );
     });
 
@@ -189,7 +192,7 @@ describe('Phase 1 Backend: Sessions, Token Rotation & Role Enforcement', () => {
         {
           name: 'ForbiddenException',
           message: 'User context is missing',
-        }
+        },
       );
     });
   });

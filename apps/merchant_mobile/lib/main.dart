@@ -29,6 +29,13 @@ class AllGoMerchantApp extends StatelessWidget {
         ),
       ),
       home: const SplashScreen(),
+      builder: (context, child) => FTheme(
+        data: AllGoTheme.foruiLightTheme,
+        child: ShadTheme(
+          data: AllGoTheme.shadLightTheme,
+          child: FToaster(child: child ?? const SizedBox.shrink()),
+        ),
+      ),
     );
   }
 }

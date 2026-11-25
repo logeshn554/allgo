@@ -71,4 +71,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
       process.exit(1);
     });
 }
-

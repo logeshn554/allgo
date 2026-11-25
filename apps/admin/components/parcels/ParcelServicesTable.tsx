@@ -1,13 +1,6 @@
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
+import type React from 'react';
 
 interface ParcelServicesTableProps {
   services: any[];
@@ -40,7 +33,9 @@ export const ParcelServicesTable: React.FC<ParcelServicesTableProps> = ({ servic
                 <TableCell className="font-semibold text-primary">
                   {Number(s.base_multiplier).toFixed(2)}x
                 </TableCell>
-                <TableCell className="text-muted-foreground">{s.estimated_delivery_hours} hours</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {s.estimated_delivery_hours} hours
+                </TableCell>
                 <TableCell className="text-muted-foreground">{s.max_distance_km} km</TableCell>
                 <TableCell>
                   <Badge variant={s.is_enabled ? 'default' : 'secondary'}>

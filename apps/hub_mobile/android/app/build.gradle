@@ -1,0 +1,12 @@
+android {
+    namespace "in.allgo.hub"
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "in.allgo.hub"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+}

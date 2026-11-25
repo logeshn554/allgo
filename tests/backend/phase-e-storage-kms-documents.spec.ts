@@ -1,15 +1,18 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
-import path from 'node:path';
 import os from 'node:os';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
-import { CloudKmsService } from '../../apps/api/dist/storage/cloud-kms.service.js';
-import { MerchantDocumentService } from '../../apps/api/dist/merchant/merchant-document.service.js';
-import { PartnerVerificationOnboardingService } from '../../apps/api/dist/partner/partner-verification-onboarding.service.js';
-import { RekognitionLivenessProvider, ExternalBackgroundCheckProvider } from '../../apps/api/dist/partner/interfaces/mock-liveness-and-bgc.provider.js';
-import { ComplianceVerificationService } from '../../apps/api/dist/common/compliance/compliance-verification.service.js';
-import { GstInvoiceService } from '../../apps/api/dist/ordering/services/gst-invoice.service.js';
+import path from 'node:path';
+import { after, before, describe, it } from 'node:test';
+import { ComplianceVerificationService } from '../../services/api/dist/common/compliance/compliance-verification.service.js';
+import { MerchantDocumentService } from '../../services/api/dist/merchant/merchant-document.service.js';
+import { GstInvoiceService } from '../../services/api/dist/ordering/services/gst-invoice.service.js';
+import {
+  ExternalBackgroundCheckProvider,
+  RekognitionLivenessProvider,
+} from '../../services/api/dist/partner/interfaces/mock-liveness-and-bgc.provider.js';
+import { PartnerVerificationOnboardingService } from '../../services/api/dist/partner/partner-verification-onboarding.service.js';
+import { CloudKmsService } from '../../services/api/dist/storage/cloud-kms.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
 import { MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite', () => {
@@ -35,13 +38,17 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
 
   describe('1. Cloud Storage, Signed URLs & Cloud KMS Document Encryption', () => {
     it('generateSignedUploadUrl and generateSignedDownloadUrl should produce signed URLs with signature and expiry', async () => {
-      const uploadUrl = await storageService.generateSignedUploadUrl('kyc/doc_101.pdf', { expiresInSeconds: 600 });
+      const uploadUrl = await storageService.generateSignedUploadUrl('kyc/doc_101.pdf', {
+        expiresInSeconds: 600,
+      });
       assert.ok(uploadUrl.includes('https://storage.googleapis.com/'));
       assert.ok(uploadUrl.includes('Action=PUT'));
       assert.ok(uploadUrl.includes('Signature='));
       assert.ok(uploadUrl.includes('Expires='));
 
-      const downloadUrl = await storageService.generateSignedDownloadUrl('kyc/doc_101.pdf', { expiresInSeconds: 300 });
+      const downloadUrl = await storageService.generateSignedDownloadUrl('kyc/doc_101.pdf', {
+        expiresInSeconds: 300,
+      });
       assert.ok(downloadUrl.includes('https://storage.googleapis.com/'));
       assert.ok(downloadUrl.includes('Action=GET'));
       assert.ok(downloadUrl.includes('Signature='));
@@ -52,7 +59,11 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
       const samplePdf = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF');
       const storageKey = 'partner_kyc_aadhaar_001.pdf';
 
-      const meta = await storageService.uploadKmsEncryptedFile(storageKey, samplePdf, 'application/pdf');
+      const meta = await storageService.uploadKmsEncryptedFile(
+        storageKey,
+        samplePdf,
+        'application/pdf',
+      );
       assert.strictEqual(meta.storageKey, storageKey);
       assert.strictEqual(meta.kmsEncrypted, true);
       assert.ok(meta.kmsKeyId);
@@ -93,17 +104,18 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
       };
       const mockDocRepo: any = {};
 
-      const docServiceNoStorage = new MerchantDocumentService(mockMerchantRepo, mockDocRepo, undefined);
-
-      await assert.rejects(
-        async () => {
-          await docServiceNoStorage.submitDocument('user_123', {
-            documentType: 'FSSAI_LICENSE',
-            ticketId: 'ticket_999',
-          });
-        },
-        /Storage service is unavailable/
+      const docServiceNoStorage = new MerchantDocumentService(
+        mockMerchantRepo,
+        mockDocRepo,
+        undefined,
       );
+
+      await assert.rejects(async () => {
+        await docServiceNoStorage.submitDocument('user_123', {
+          documentType: 'FSSAI_LICENSE',
+          ticketId: 'ticket_999',
+        });
+      }, /Storage service is unavailable/);
     });
   });
 
@@ -113,12 +125,15 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
     before(() => {
       onboardingService = new PartnerVerificationOnboardingService(
         new RekognitionLivenessProvider(),
-        new ExternalBackgroundCheckProvider()
+        new ExternalBackgroundCheckProvider(),
       );
     });
 
     it('verifySelfieLiveness should succeed with valid facial selfie key', async () => {
-      const result = await onboardingService.verifySelfieLiveness('partner_1', 'selfies/partner_1_face.jpg');
+      const result = await onboardingService.verifySelfieLiveness(
+        'partner_1',
+        'selfies/partner_1_face.jpg',
+      );
       assert.strictEqual(result.isLive, true);
       assert.ok(result.confidenceScore >= 0.95);
       assert.strictEqual(result.checks.antiSpoofingPassed, true);
@@ -129,17 +144,27 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
       assert.strictEqual(emptyResult.isLive, false);
       assert.strictEqual(emptyResult.checks.antiSpoofingPassed, false);
 
-      const spoofResult = await onboardingService.verifySelfieLiveness('partner_3', 'selfies/tampered_avatar.jpg');
+      const spoofResult = await onboardingService.verifySelfieLiveness(
+        'partner_3',
+        'selfies/tampered_avatar.jpg',
+      );
       assert.strictEqual(spoofResult.isLive, false);
       assert.ok(spoofResult.rejectionReason?.includes('spoofing'));
     });
 
     it('runPartnerBackgroundCheck should return clear for clean partners and flag adverse history', async () => {
-      const cleanCheck = await onboardingService.runPartnerBackgroundCheck('partner_1', 'Ramesh Kumar', 'DL1420110012345');
+      const cleanCheck = await onboardingService.runPartnerBackgroundCheck(
+        'partner_1',
+        'Ramesh Kumar',
+        'DL1420110012345',
+      );
       assert.strictEqual(cleanCheck.status, 'CLEAR');
       assert.strictEqual(cleanCheck.criminalHistoryFound, false);
 
-      const flaggedCheck = await onboardingService.runPartnerBackgroundCheck('partner_suspect', 'John Suspect Doe');
+      const flaggedCheck = await onboardingService.runPartnerBackgroundCheck(
+        'partner_suspect',
+        'John Suspect Doe',
+      );
       assert.strictEqual(flaggedCheck.status, 'FLAGGED');
       assert.strictEqual(flaggedCheck.criminalHistoryFound, true);
     });
@@ -255,8 +280,20 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
         customerPhone: '+919876543210',
         customerAddress: '42 Gandhi Road, Chennai',
         items: [
-          { title: 'Ghee Mysore Pak 500g', quantity: 2, unitPriceInr: 320, totalInr: 640, gstRatePercent: 5 },
-          { title: 'Madras Mixture 250g', quantity: 1, unitPriceInr: 120, totalInr: 120, gstRatePercent: 12 },
+          {
+            title: 'Ghee Mysore Pak 500g',
+            quantity: 2,
+            unitPriceInr: 320,
+            totalInr: 640,
+            gstRatePercent: 5,
+          },
+          {
+            title: 'Madras Mixture 250g',
+            quantity: 1,
+            unitPriceInr: 120,
+            totalInr: 120,
+            gstRatePercent: 12,
+          },
         ],
         taxableAmountInr: 760,
         cgstAmountInr: 23.2,
@@ -285,8 +322,18 @@ describe('Phase E: Storage, Cloud KMS, Documents, Liveness & Invoices Test Suite
         customerName: 'Karthik Raja',
         totalAmountPaidInr: 1450,
         subInvoices: [
-          { subOrderId: 'sub_1', merchantName: 'A2B Sweets', subTotalInr: 850, invoiceNumber: 'INV-01' },
-          { subOrderId: 'sub_2', merchantName: 'Nilgiris Groceries', subTotalInr: 600, invoiceNumber: 'INV-02' },
+          {
+            subOrderId: 'sub_1',
+            merchantName: 'A2B Sweets',
+            subTotalInr: 850,
+            invoiceNumber: 'INV-01',
+          },
+          {
+            subOrderId: 'sub_2',
+            merchantName: 'Nilgiris Groceries',
+            subTotalInr: 600,
+            invoiceNumber: 'INV-02',
+          },
         ],
         totalCgstInr: 45,
         totalSgstInr: 45,

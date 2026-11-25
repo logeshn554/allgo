@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { MobilityFareService } from '../../apps/api/dist/mobility/mobility-fare.service.js';
-import { ParcelsService } from '../../apps/api/dist/mobility/parcels.service.js';
-import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
-import { WalletService } from '../../apps/api/dist/finance/wallet/wallet.service.js';
+import { describe, it } from 'node:test';
+import { LedgerService } from '../../services/api/dist/finance/ledger/ledger.service.js';
+import { WalletService } from '../../services/api/dist/finance/wallet/wallet.service.js';
+import { MobilityFareService } from '../../services/api/dist/mobility/mobility-fare.service.js';
+import { ParcelsService } from '../../services/api/dist/mobility/parcels.service.js';
 
 describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
   class MockDb {
@@ -85,7 +85,10 @@ describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
       }
       if (s.includes('FROM ledger_entries') && s.includes('SUM(')) {
         const entries = this.ledger_entries.filter((e) => e.wallet_id === params[0]);
-        const bal = entries.reduce((acc, e) => (e.direction === 'CREDIT' ? acc + e.amount_inr : acc - e.amount_inr), 0);
+        const bal = entries.reduce(
+          (acc, e) => (e.direction === 'CREDIT' ? acc + e.amount_inr : acc - e.amount_inr),
+          0,
+        );
         return { rows: [{ ledger_balance: bal.toFixed(2) }] };
       }
       if (s.startsWith('SELECT balance_inr FROM wallets WHERE id = $1 FOR UPDATE')) {
@@ -99,7 +102,10 @@ describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
       }
       if (s.startsWith('UPDATE wallets SET refundable_balance_inr = refundable_balance_inr + $1')) {
         const w = this.wallets.find((x) => x.id === params[1]);
-        if (w) w.refundable_balance_inr = (Number(w.refundable_balance_inr) + Number(params[0])).toFixed(2);
+        if (w)
+          w.refundable_balance_inr = (Number(w.refundable_balance_inr) + Number(params[0])).toFixed(
+            2,
+          );
         return { rows: [w] };
       }
       if (s.includes('promotional_balance_inr = GREATEST')) {
@@ -124,17 +130,35 @@ describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
 
   it('1. Calculates fare correctly based on Porter vehicle class and distance', async () => {
     // 5 km trip, 1 kg weight
-    const bikeFare = await fareService.calculateParcelFare(5.0, 'GENERAL', 1.0, 'TWO_WHEELER', false);
+    const bikeFare = await fareService.calculateParcelFare(
+      5.0,
+      'GENERAL',
+      1.0,
+      'TWO_WHEELER',
+      false,
+    );
     // Base 40 (2km) + 3km * 12 = 40 + 36 = 76
     assert.strictEqual(bikeFare, 76.0);
 
     // 10 km trip, 50 kg weight on 3-wheeler
-    const threeWheelerFare = await fareService.calculateParcelFare(10.0, 'GENERAL', 50.0, 'THREE_WHEELER', false);
+    const threeWheelerFare = await fareService.calculateParcelFare(
+      10.0,
+      'GENERAL',
+      50.0,
+      'THREE_WHEELER',
+      false,
+    );
     // Base 150 (3km) + 7km * 20 (=140) + (50 - 20)kg * 1 (=30) = 320
     assert.strictEqual(threeWheelerFare, 320.0);
 
     // 10 km trip, 200 kg on Tata Ace
-    const tataAceFare = await fareService.calculateParcelFare(10.0, 'GENERAL', 200.0, 'TATA_ACE', false);
+    const tataAceFare = await fareService.calculateParcelFare(
+      10.0,
+      'GENERAL',
+      200.0,
+      'TATA_ACE',
+      false,
+    );
     // Base 350 (3km) + 7km * 28 (=196) + (200 - 100)kg * 0.8 (=80) = 626
     assert.strictEqual(tataAceFare, 626.0);
   });
@@ -148,7 +172,7 @@ describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
       (err: any) => {
         assert.match(err.message, /exceeds maximum capacity of 20 kg for TWO_WHEELER/);
         return true;
-      }
+      },
     );
 
     // 3-wheeler limit is 500 kg
@@ -159,13 +183,25 @@ describe('Priority 3: Porter-style Parcel Booking End-to-End', () => {
       (err: any) => {
         assert.match(err.message, /exceeds maximum capacity of 500 kg for THREE_WHEELER/);
         return true;
-      }
+      },
     );
   });
 
   it('3. Adds fragile handling surcharge when isFragile is true', async () => {
-    const normalFare = await fareService.calculateParcelFare(5.0, 'ELECTRONICS', 2.0, 'TWO_WHEELER', false);
-    const fragileFare = await fareService.calculateParcelFare(5.0, 'ELECTRONICS', 2.0, 'TWO_WHEELER', true);
+    const normalFare = await fareService.calculateParcelFare(
+      5.0,
+      'ELECTRONICS',
+      2.0,
+      'TWO_WHEELER',
+      false,
+    );
+    const fragileFare = await fareService.calculateParcelFare(
+      5.0,
+      'ELECTRONICS',
+      2.0,
+      'TWO_WHEELER',
+      true,
+    );
 
     // Fragile surcharge is exactly +₹50.0
     assert.strictEqual(fragileFare, normalFare + 50.0);

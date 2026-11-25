@@ -1,14 +1,14 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { ReferralService } from '../../apps/api/dist/users/referral.service.js';
-import { DpdpComplianceService } from '../../apps/api/dist/users/dpdp-compliance.service.js';
-import { CloudTasksGateway } from '../../apps/api/dist/common/scheduling/cloud-tasks.gateway.js';
-import { OrderSubstitutionService } from '../../apps/api/dist/ordering/services/order-substitution.service.js';
-import { MerchantCsvMenuService } from '../../apps/api/dist/catalog/merchant-csv-menu.service.js';
-import { MaskedCallGateway } from '../../apps/api/dist/common/calling/masked-call.gateway.js';
-import { MultiStoreBatchingService } from '../../apps/api/dist/delivery/multi-store-batching.service.js';
-import { PartnerContinuityExtensionService } from '../../apps/api/dist/mobility/partner-continuity-extension.service.js';
-import { NotificationLocalizationService } from '../../apps/api/dist/notifications/notification-localization.service.js';
+import { describe, it } from 'node:test';
+import { MerchantCsvMenuService } from '../../services/api/dist/catalog/merchant-csv-menu.service.js';
+import { MaskedCallGateway } from '../../services/api/dist/common/calling/masked-call.gateway.js';
+import { CloudTasksGateway } from '../../services/api/dist/common/scheduling/cloud-tasks.gateway.js';
+import { MultiStoreBatchingService } from '../../services/api/dist/delivery/multi-store-batching.service.js';
+import { PartnerContinuityExtensionService } from '../../services/api/dist/mobility/partner-continuity-extension.service.js';
+import { NotificationLocalizationService } from '../../services/api/dist/notifications/notification-localization.service.js';
+import { OrderSubstitutionService } from '../../services/api/dist/ordering/services/order-substitution.service.js';
+import { DpdpComplianceService } from '../../services/api/dist/users/dpdp-compliance.service.js';
+import { ReferralService } from '../../services/api/dist/users/referral.service.js';
 
 describe('Phase F: Core Features Integration & Safety Suite', () => {
   // 1. Referral System & Abuse Checks
@@ -24,8 +24,10 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
           if (sql.includes('SELECT id FROM referral_redemptions WHERE referee_device_id')) {
             return params[0] === 'dev_abuser' ? { rows: [{ id: 'red_prev' }] } : { rows: [] };
           }
-          if (sql.includes('SELECT id FROM referral_redemptions WHERE referee_user_id')) return { rows: [] };
-          if (sql.includes('INSERT INTO referral_redemptions')) return { rows: [{ id: 'red_new' }] };
+          if (sql.includes('SELECT id FROM referral_redemptions WHERE referee_user_id'))
+            return { rows: [] };
+          if (sql.includes('INSERT INTO referral_redemptions'))
+            return { rows: [{ id: 'red_new' }] };
           return { rows: [] };
         },
       };
@@ -38,12 +40,20 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
       assert.match(selfRes.message!, /Self-referral is strictly barred/);
 
       // Device abuse test
-      const devRes = await referralService.validateAndApplyReferral('user_new', 'ALLGO123', 'dev_abuser');
+      const devRes = await referralService.validateAndApplyReferral(
+        'user_new',
+        'ALLGO123',
+        'dev_abuser',
+      );
       assert.strictEqual(devRes.valid, false);
       assert.match(devRes.message!, /Device has already claimed/);
 
       // Valid referral
-      const validRes = await referralService.validateAndApplyReferral('user_new', 'ALLGO123', 'dev_clean');
+      const validRes = await referralService.validateAndApplyReferral(
+        'user_new',
+        'ALLGO123',
+        'dev_clean',
+      );
       assert.strictEqual(validRes.valid, true);
       assert.strictEqual(validRes.discountInr, 50.0);
     });
@@ -60,7 +70,7 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
             inserted = true;
             return { rows: [] };
           }
-          if (sql.includes('UPDATE scheduled_cloud_tasks SET status = \'CANCELLED\'')) {
+          if (sql.includes("UPDATE scheduled_cloud_tasks SET status = 'CANCELLED'")) {
             cancelled = true;
             return { rowCount: 1, rows: [] };
           }
@@ -94,15 +104,17 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
           }
           if (sql.includes('SELECT s.*, o.customer_id FROM order_item_substitutions')) {
             return {
-              rows: [{
-                id: 'sub_1',
-                customer_id: 'cust_1',
-                sub_order_id: 'sub_ord_1',
-                status: 'PENDING_CUSTOMER_APPROVAL',
-                expires_at: new Date(Date.now() + 100000).toISOString(),
-                original_price_inr: 100.0,
-                difference_refund_inr: 20.0,
-              }],
+              rows: [
+                {
+                  id: 'sub_1',
+                  customer_id: 'cust_1',
+                  sub_order_id: 'sub_ord_1',
+                  status: 'PENDING_CUSTOMER_APPROVAL',
+                  expires_at: new Date(Date.now() + 100000).toISOString(),
+                  original_price_inr: 100.0,
+                  difference_refund_inr: 20.0,
+                },
+              ],
             };
           }
           if (sql.includes('UPDATE wallets SET refundable_balance_inr')) return { rows: [] };
@@ -112,7 +124,9 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
       };
 
       const substitutionService = new OrderSubstitutionService(dbMock);
-      const decision = await substitutionService.respondToSubstitution('cust_1', 'sub_1', { decision: 'APPROVE' });
+      const decision = await substitutionService.respondToSubstitution('cust_1', 'sub_1', {
+        decision: 'APPROVE',
+      });
       assert.strictEqual(decision.status, 'APPROVED');
       assert.strictEqual(decision.refundDifferenceInr, 20.0);
       assert.match(decision.message, /refunded to wallet/);
@@ -147,7 +161,7 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
         categoryRepoMock,
         productRepoMock,
         overrideRepoMock,
-        categoryServiceMock
+        categoryServiceMock,
       );
 
       const csv = `name,category,base_price,is_veg,stock\nMasala Chai,Beverages,25.0,true,100\n,Snacks,50,true,20\nBad Item,Snacks,-10,false,10`;
@@ -166,14 +180,20 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
     it('should record user consent, export data, and enforce 30-day deletion grace period', async () => {
       const dbMock: any = {
         query: async (sql: string) => {
-          if (sql.includes('INSERT INTO dpdp_consents')) return { rows: [{ id: 'con_1', is_granted: true }] };
-          if (sql.includes('SELECT DISTINCT ON (consent_purpose)')) return { rows: [{ consent_purpose: 'LIVE_TRACKING', is_granted: true }] };
-          if (sql.includes('SELECT id, phone, email, full_name FROM users')) return { rows: [{ id: 'u_1', phone: '9999999999' }] };
+          if (sql.includes('INSERT INTO dpdp_consents'))
+            return { rows: [{ id: 'con_1', is_granted: true }] };
+          if (sql.includes('SELECT DISTINCT ON (consent_purpose)'))
+            return { rows: [{ consent_purpose: 'LIVE_TRACKING', is_granted: true }] };
+          if (sql.includes('SELECT id, phone, email, full_name FROM users'))
+            return { rows: [{ id: 'u_1', phone: '9999999999' }] };
           if (sql.includes('SELECT id, label, address_line1')) return { rows: [] };
-          if (sql.includes('SELECT COUNT(*)::int as total')) return { rows: [{ total: 2, active: 0 }] };
-          if (sql.includes('SELECT id FROM order_groups WHERE customer_id = $1 AND status IN')) return { rows: [] }; // No active orders
-          if (sql.includes('INSERT INTO dpdp_deletion_requests')) return { rows: [{ id: 'del_req_1' }] };
-          if (sql.includes('UPDATE users SET status = \'SUSPENDED\'')) return { rows: [] };
+          if (sql.includes('SELECT COUNT(*)::int as total'))
+            return { rows: [{ total: 2, active: 0 }] };
+          if (sql.includes('SELECT id FROM order_groups WHERE customer_id = $1 AND status IN'))
+            return { rows: [] }; // No active orders
+          if (sql.includes('INSERT INTO dpdp_deletion_requests'))
+            return { rows: [{ id: 'del_req_1' }] };
+          if (sql.includes("UPDATE users SET status = 'SUSPENDED'")) return { rows: [] };
           return { rows: [] };
         },
       };
@@ -202,8 +222,20 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
 
       // Store 1 & Store 2 separated by 0.8 km (Batchable)
       const storesNearby = [
-        { id: 's1', name: 'Biryani Store', latitude: 13.0827, longitude: 80.2707, prepTimeMinutes: 15 },
-        { id: 's2', name: 'Juice Corner', latitude: 13.0870, longitude: 80.2720, prepTimeMinutes: 20 },
+        {
+          id: 's1',
+          name: 'Biryani Store',
+          latitude: 13.0827,
+          longitude: 80.2707,
+          prepTimeMinutes: 15,
+        },
+        {
+          id: 's2',
+          name: 'Juice Corner',
+          latitude: 13.087,
+          longitude: 80.272,
+          prepTimeMinutes: 20,
+        },
       ];
 
       const choiceNearby = batchingService.generateCustomerFulfillmentChoice(storesNearby);
@@ -214,8 +246,14 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
 
       // Stores separated by 5 km (Unbatchable)
       const storesFar = [
-        { id: 's1', name: 'Biryani Store', latitude: 13.0827, longitude: 80.2707, prepTimeMinutes: 15 },
-        { id: 's3', name: 'Far Bakery', latitude: 13.0200, longitude: 80.2200, prepTimeMinutes: 15 },
+        {
+          id: 's1',
+          name: 'Biryani Store',
+          latitude: 13.0827,
+          longitude: 80.2707,
+          prepTimeMinutes: 15,
+        },
+        { id: 's3', name: 'Far Bakery', latitude: 13.02, longitude: 80.22, prepTimeMinutes: 15 },
       ];
       const choiceFar = batchingService.generateCustomerFulfillmentChoice(storesFar);
       assert.strictEqual(choiceFar.isBatchable, false);
@@ -285,15 +323,24 @@ describe('Phase F: Core Features Integration & Safety Suite', () => {
     it('should render templates in English, Tamil, and Hindi', () => {
       const loc = new NotificationLocalizationService();
 
-      const en = loc.renderTemplate('ORDER_CONFIRMED', 'en', { orderId: '99', merchantName: 'A2B' });
+      const en = loc.renderTemplate('ORDER_CONFIRMED', 'en', {
+        orderId: '99',
+        merchantName: 'A2B',
+      });
       assert.strictEqual(en.title, 'Order Confirmed');
       assert.strictEqual(en.body, 'Your order #99 has been confirmed by A2B.');
 
-      const ta = loc.renderTemplate('ORDER_CONFIRMED', 'ta', { orderId: '99', merchantName: 'A2B' });
+      const ta = loc.renderTemplate('ORDER_CONFIRMED', 'ta', {
+        orderId: '99',
+        merchantName: 'A2B',
+      });
       assert.strictEqual(ta.title, 'ஆர்டர் உறுதி செய்யப்பட்டது');
       assert.strictEqual(ta.body, 'உங்கள் ஆர்டர் #99 A2B ஆல் உறுதி செய்யப்பட்டுள்ளது.');
 
-      const hi = loc.renderTemplate('ORDER_CONFIRMED', 'hi', { orderId: '99', merchantName: 'A2B' });
+      const hi = loc.renderTemplate('ORDER_CONFIRMED', 'hi', {
+        orderId: '99',
+        merchantName: 'A2B',
+      });
       assert.strictEqual(hi.title, 'ऑर्डर की पुष्टि हुई');
       assert.strictEqual(hi.body, 'आपका ऑर्डर #99 A2B द्वारा स्वीकार कर लिया गया है।');
     });

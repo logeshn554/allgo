@@ -1,14 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 
@@ -45,18 +36,26 @@ export function FinancePayoutsTab({ payouts, handleProcessPayout }: FinancePayou
               payouts.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-xs">{p.id.slice(0, 8)}...</TableCell>
-                  <TableCell className="font-semibold text-foreground">{p.recipient_type}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{p.payout_channel}</TableCell>
-                  <TableCell className="font-semibold text-foreground">₹{parseFloat(p.net_amount_inr).toFixed(2)}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">{p.destination_reference || 'UPI Verified'}</TableCell>
+                  <TableCell className="font-semibold text-foreground">
+                    {p.recipient_type}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {p.payout_channel}
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground">
+                    ₹{Number.parseFloat(p.net_amount_inr).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {p.destination_reference || 'UPI Verified'}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={
                         p.status === 'SUCCESS'
                           ? 'default'
                           : p.status === 'FAILED'
-                          ? 'destructive'
-                          : 'secondary'
+                            ? 'destructive'
+                            : 'secondary'
                       }
                     >
                       {p.status}
@@ -64,10 +63,7 @@ export function FinancePayoutsTab({ payouts, handleProcessPayout }: FinancePayou
                   </TableCell>
                   <TableCell className="text-end">
                     {p.status === 'SCHEDULED' && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleProcessPayout(p.id)}
-                      >
+                      <Button size="sm" onClick={() => handleProcessPayout(p.id)}>
                         Execute Payout
                       </Button>
                     )}

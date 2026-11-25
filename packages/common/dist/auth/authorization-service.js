@@ -61,9 +61,7 @@ export function detectStaleClaims(tokenClaims, authoritativeIdentity) {
         discrepancies.push(`Status mismatch: token claim is "${tokenClaims.status}", authoritative state is "${authoritativeIdentity.accountStatus}"`);
     }
     if (tokenClaims.roles) {
-        const authoritativeActiveRoles = new Set(authoritativeIdentity.roles
-            .filter((r) => r.status === 'ACTIVE')
-            .map((r) => r.role));
+        const authoritativeActiveRoles = new Set(authoritativeIdentity.roles.filter((r) => r.status === 'ACTIVE').map((r) => r.role));
         for (const claimedRole of tokenClaims.roles) {
             if (!authoritativeActiveRoles.has(claimedRole)) {
                 discrepancies.push(`Revoked/inactive role in token: "${claimedRole}" is not active in authoritative state`);

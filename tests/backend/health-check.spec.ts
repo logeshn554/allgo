@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { HealthService } from '../../apps/api/dist/health/health.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
+import { describe, it } from 'node:test';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { HealthService } from '../../services/api/dist/health/health.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
 
 describe('Phase 1 Backend: Real Infrastructure Health Check Specification', () => {
   it('should accurately report status and dependencies without simulated healthy claims', async () => {
@@ -23,7 +23,7 @@ describe('Phase 1 Backend: Real Infrastructure Health Check Specification', () =
     // When Docker is offline on workstation, overall status must be degraded or unhealthy
     assert.ok(
       report.status === 'healthy' || report.status === 'degraded' || report.status === 'unhealthy',
-      'Status must accurately reflect dependency state'
+      'Status must accurately reflect dependency state',
     );
 
     if (report.services.postgres.status === 'down') {

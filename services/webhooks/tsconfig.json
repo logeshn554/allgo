@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noEmit": false,
+    "noUnusedLocals": false,
+    "types": ["node"],
+    "skipLibCheck": true,
+    "paths": {
+      "@allgo/common": ["../../packages/common/dist/index.d.ts"],
+      "@allgo/common/*": ["../../packages/common/dist/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

@@ -1,27 +1,20 @@
 'use client';
 
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import { Label } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
+import type React from 'react';
 
 const REFUND_DESTINATION_ITEMS = {
   WALLET: 'Customer Wallet',
@@ -63,7 +56,10 @@ export function FinanceRefundsTab({
           <CardTitle className="text-lg">Process Customer Refund</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleProcessRefund} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <form
+            onSubmit={handleProcessRefund}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end"
+          >
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Payment ID</Label>
               <Input
@@ -75,7 +71,9 @@ export function FinanceRefundsTab({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Refund Amount (INR)</Label>
+              <Label className="text-xs font-medium text-muted-foreground">
+                Refund Amount (INR)
+              </Label>
               <Input
                 type="number"
                 step="0.01"
@@ -148,17 +146,21 @@ export function FinanceRefundsTab({
                 payments.map((pm) => (
                   <TableRow key={pm.id}>
                     <TableCell className="font-mono text-xs">{pm.id?.slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs">{pm.order_group_id ? `${pm.order_group_id.slice(0, 8)}...` : 'N/A'}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {pm.order_group_id ? `${pm.order_group_id.slice(0, 8)}...` : 'N/A'}
+                    </TableCell>
                     <TableCell className="text-foreground">{pm.payment_method}</TableCell>
-                    <TableCell className="font-semibold text-foreground">₹{parseFloat(pm.amount_inr || '0').toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold text-foreground">
+                      ₹{Number.parseFloat(pm.amount_inr || '0').toFixed(2)}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant={
                           pm.status === 'CAPTURED'
                             ? 'default'
                             : pm.status === 'FAILED'
-                            ? 'destructive'
-                            : 'secondary'
+                              ? 'destructive'
+                              : 'secondary'
                         }
                       >
                         {pm.status}
@@ -201,9 +203,13 @@ export function FinanceRefundsTab({
                 refunds.map((rf) => (
                   <TableRow key={rf.id}>
                     <TableCell className="font-mono text-xs">{rf.id?.slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs">{rf.payment_id?.slice(0, 8)}...</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {rf.payment_id?.slice(0, 8)}...
+                    </TableCell>
                     <TableCell className="text-foreground">{rf.destination}</TableCell>
-                    <TableCell className="font-semibold text-destructive">₹{parseFloat(rf.amount_inr || '0').toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold text-destructive">
+                      ₹{Number.parseFloat(rf.amount_inr || '0').toFixed(2)}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{rf.reason}</TableCell>
                     <TableCell>
                       <Badge variant={rf.status === 'PROCESSED' ? 'default' : 'secondary'}>

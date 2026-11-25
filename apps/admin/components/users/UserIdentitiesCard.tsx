@@ -1,25 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { authSettingsApi, UserIdentity } from '@/data/api';
+import { OAuthProviderIcon } from '@/components/auth';
+import { type UserIdentity, authSettingsApi } from '@/data/api';
 import {
+  Badge,
+  Button,
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
+  HugeiconsIcon,
   Input,
-  Badge,
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectItem,
-  HugeiconsIcon,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { Link01Icon, Delete02Icon } from '@hugeicons/core-free-icons';
-import { OAuthProviderIcon } from '@/components/auth';
+import { Delete02Icon, Link01Icon } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export function UserIdentitiesCard({ userId }: { userId: string }) {
   const [identities, setIdentities] = useState<UserIdentity[]>([]);
@@ -109,7 +110,10 @@ export function UserIdentitiesCard({ userId }: { userId: string }) {
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <OAuthProviderIcon slug={idn.provider} className="size-4 shrink-0 text-muted-foreground" />
+                    <OAuthProviderIcon
+                      slug={idn.provider}
+                      className="size-4 shrink-0 text-muted-foreground"
+                    />
                     <Badge variant="outline" className="uppercase text-[10px]">
                       {idn.provider}
                     </Badge>

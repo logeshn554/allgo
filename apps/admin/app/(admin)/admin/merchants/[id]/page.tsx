@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
-import { adminApi, MerchantApplicationSummary } from '@/lib/api-client';
-import { StatusBadge } from '@allgo/ui';
+import { MerchantApprovalActions } from '@/components/merchants/MerchantApprovalActions';
+import { MerchantDocumentsList } from '@/components/merchants/MerchantDocumentsList';
 import { MerchantInfoCards } from '@/components/merchants/MerchantInfoCards';
 import { MerchantOutletsList } from '@/components/merchants/MerchantOutletsList';
-import { MerchantDocumentsList } from '@/components/merchants/MerchantDocumentsList';
-import { MerchantApprovalActions } from '@/components/merchants/MerchantApprovalActions';
+import { type MerchantApplicationSummary, adminApi } from '@/lib/api-client';
+import { StatusBadge } from '@allgo/ui';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function MerchantDetailPage() {
   const params = useParams();
@@ -51,7 +51,9 @@ export default function MerchantDetailPage() {
     try {
       const res = await adminApi.updateMerchantStatus(merchant.id, targetStatus, reviewNotes);
       setMerchant(res.merchant);
-      setMessage(`Merchant successfully updated to ${targetStatus}. Action recorded in audit logs.`);
+      setMessage(
+        `Merchant successfully updated to ${targetStatus}. Action recorded in audit logs.`,
+      );
       setReviewNotes('');
     } catch (err: any) {
       setError(err.message || 'Failed to update merchant status');
@@ -69,7 +71,7 @@ export default function MerchantDetailPage() {
       await adminApi.updateMerchantOutletStatus(
         outletId,
         targetStatus,
-        reviewNotes || `Admin updated outlet status to ${targetStatus}`
+        reviewNotes || `Admin updated outlet status to ${targetStatus}`,
       );
       setMessage(`Outlet status updated to ${targetStatus}.`);
       await fetchMerchant();
@@ -92,7 +94,10 @@ export default function MerchantDetailPage() {
     return (
       <div className="py-8 text-center space-y-3">
         <h2 className="text-xl font-bold text-foreground">Merchant Application Not Found</h2>
-        <Link href="/admin/merchants" className="text-primary hover:underline font-medium text-sm inline-flex items-center gap-1.5">
+        <Link
+          href="/admin/merchants"
+          className="text-primary hover:underline font-medium text-sm inline-flex items-center gap-1.5"
+        >
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 rtl:rotate-180" />
           <span>Return to Applications List</span>
         </Link>
@@ -114,11 +119,10 @@ export default function MerchantDetailPage() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1.5">
-            {merchant.business_name}
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground mb-1.5">{merchant.business_name}</h1>
           <p className="text-sm text-muted-foreground">
-            Application ID: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{merchant.id}</code>
+            Application ID:{' '}
+            <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{merchant.id}</code>
           </p>
         </div>
         <StatusBadge status={merchant.status as any} />

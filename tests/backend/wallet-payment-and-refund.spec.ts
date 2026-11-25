@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
-import { WalletService } from '../../apps/api/dist/finance/wallet/wallet.service.js';
-import { PaymentService } from '../../apps/api/dist/ordering/services/payment.service.js';
+import { describe, it } from 'node:test';
+import { LedgerService } from '../../services/api/dist/finance/ledger/ledger.service.js';
+import { WalletService } from '../../services/api/dist/finance/wallet/wallet.service.js';
+import { PaymentService } from '../../services/api/dist/ordering/services/payment.service.js';
 
 describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', () => {
   // In-memory mock database with table emulation
@@ -40,10 +40,17 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       if (s.includes('FROM ledger_entries') && s.includes('SUM(')) {
         const walletId = params[0];
         const entries = this.ledger_entries.filter((e) => e.wallet_id === walletId);
-        const bal = entries.reduce((acc, e) => (e.direction === 'CREDIT' ? acc + e.amount_inr : acc - e.amount_inr), 0);
+        const bal = entries.reduce(
+          (acc, e) => (e.direction === 'CREDIT' ? acc + e.amount_inr : acc - e.amount_inr),
+          0,
+        );
         return { rows: [{ ledger_balance: bal.toFixed(2) }] };
       }
-      if (s.startsWith('SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1')) {
+      if (
+        s.startsWith(
+          'SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1',
+        )
+      ) {
         const row = this.ledger_entries.find((e) => e.transaction_reference === params[0]);
         return { rows: row ? [row] : [] };
       }
@@ -56,25 +63,37 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         if (row) row.balance_inr = Number(params[0]).toFixed(2);
         return { rows: [row] };
       }
-      if (s.startsWith('UPDATE wallets SET promotional_balance_inr = promotional_balance_inr + $1')) {
+      if (
+        s.startsWith('UPDATE wallets SET promotional_balance_inr = promotional_balance_inr + $1')
+      ) {
         const row = this.wallets.find((w) => w.id === params[1]);
         if (row) {
-          row.promotional_balance_inr = (Number(row.promotional_balance_inr) + Number(params[0])).toFixed(2);
+          row.promotional_balance_inr = (
+            Number(row.promotional_balance_inr) + Number(params[0])
+          ).toFixed(2);
         }
         return { rows: [row] };
       }
       if (s.startsWith('UPDATE wallets SET refundable_balance_inr = refundable_balance_inr + $1')) {
         const row = this.wallets.find((w) => w.id === params[1]);
         if (row) {
-          row.refundable_balance_inr = (Number(row.refundable_balance_inr) + Number(params[0])).toFixed(2);
+          row.refundable_balance_inr = (
+            Number(row.refundable_balance_inr) + Number(params[0])
+          ).toFixed(2);
         }
         return { rows: [row] };
       }
       if (s.startsWith('UPDATE wallets') && s.includes('promotional_balance_inr = GREATEST')) {
         const row = this.wallets.find((w) => w.id === params[2]);
         if (row) {
-          row.promotional_balance_inr = Math.max(0, Number(row.promotional_balance_inr) - Number(params[0])).toFixed(2);
-          row.refundable_balance_inr = Math.max(0, Number(row.refundable_balance_inr) - Number(params[1])).toFixed(2);
+          row.promotional_balance_inr = Math.max(
+            0,
+            Number(row.promotional_balance_inr) - Number(params[0]),
+          ).toFixed(2);
+          row.refundable_balance_inr = Math.max(
+            0,
+            Number(row.refundable_balance_inr) - Number(params[1]),
+          ).toFixed(2);
         }
         return { rows: [row] };
       }
@@ -130,7 +149,9 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         const subOrderId = params[0];
         const alloc = this.refund_allocations.find((a) => a.sub_order_id === subOrderId);
         if (alloc) {
-          const ref = this.refunds.find((r) => r.id === alloc.refund_id && r.status === 'PROCESSED');
+          const ref = this.refunds.find(
+            (r) => r.id === alloc.refund_id && r.status === 'PROCESSED',
+          );
           return { rows: ref ? [ref] : [] };
         }
         return { rows: [] };
@@ -138,10 +159,14 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       if (s.includes('FROM payment_transactions pt') && s.includes('JOIN payments p')) {
         const subOrderId = params[0];
         const pt = this.payment_transactions.find(
-          (t) => (t.sub_order_id === subOrderId || t.order_group_id) && ['CAPTURED', 'AUTHORIZED'].includes(t.status)
+          (t) =>
+            (t.sub_order_id === subOrderId || t.order_group_id) &&
+            ['CAPTURED', 'AUTHORIZED'].includes(t.status),
         );
         if (pt) {
-          const p = this.payments.find((pay) => pay.order_group_id === pt.order_group_id) || { id: 'p_can_1' };
+          const p = this.payments.find((pay) => pay.order_group_id === pt.order_group_id) || {
+            id: 'p_can_1',
+          };
           return { rows: [{ ...pt, canonical_payment_id: p.id }] };
         }
         return { rows: [] };
@@ -170,7 +195,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         this.refund_allocations.push(row);
         return { rows: [row] };
       }
-      if (s.startsWith('UPDATE payment_transactions SET status = \'REFUNDED\'')) {
+      if (s.startsWith("UPDATE payment_transactions SET status = 'REFUNDED'")) {
         const row = this.payment_transactions.find((t) => t.id === params[0]);
         if (row) row.status = 'REFUNDED';
         return { rows: [row] };
@@ -179,7 +204,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         const row = this.payment_transactions.find((t) => t.id === params[0]);
         return { rows: row ? [row] : [] };
       }
-      if (s.startsWith('UPDATE payment_transactions') && s.includes('SET status = \'CAPTURED\'')) {
+      if (s.startsWith('UPDATE payment_transactions') && s.includes("SET status = 'CAPTURED'")) {
         const row = this.payment_transactions.find((t) => t.id === params[2]);
         if (row) {
           row.status = 'CAPTURED';
@@ -188,7 +213,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         }
         return { rows: row ? [row] : [] };
       }
-      if (s.startsWith('UPDATE payments') && s.includes('SET status = \'CAPTURED\'')) {
+      if (s.startsWith('UPDATE payments') && s.includes("SET status = 'CAPTURED'")) {
         const row = this.payments.find((p) => p.order_group_id === params[2]);
         if (row) {
           row.status = 'CAPTURED';
@@ -208,7 +233,13 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
     const ledger = new LedgerService(mockDb as any);
     const walletService = new WalletService(mockDb as any, ledger);
 
-    const userWallet = await walletService.creditWallet('user_100', 500.0, 'Initial Top-up', 'TX-TOPUP-001', false);
+    const userWallet = await walletService.creditWallet(
+      'user_100',
+      500.0,
+      'Initial Top-up',
+      'TX-TOPUP-001',
+      false,
+    );
     assert.strictEqual(userWallet.balanceInr, 500.0);
     assert.strictEqual(userWallet.refundableBalanceInr, 500.0);
 
@@ -240,13 +271,13 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
           'user_poor',
           'WALLET',
           250.0,
-          'idem_wal_1'
+          'idem_wal_1',
         );
       },
       (err: any) => {
         assert.match(err.message, /Insufficient wallet balance/);
         return true;
-      }
+      },
     );
 
     // Wallet balance remains ₹100
@@ -269,7 +300,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       'user_rich',
       'WALLET',
       420.0,
-      'idem_wal_2'
+      'idem_wal_2',
     );
 
     assert.strictEqual(paymentResult.status, 'CAPTURED');
@@ -282,7 +313,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
 
     // Check ledger entry for merchant settlement
     const settlementCredit = mockDb.ledger_entries.find(
-      (e) => e.account_type === 'MERCHANT_SETTLEMENT' && e.direction === 'CREDIT'
+      (e) => e.account_type === 'MERCHANT_SETTLEMENT' && e.direction === 'CREDIT',
     );
     assert.ok(settlementCredit, 'Expected credit entry to MERCHANT_SETTLEMENT');
     assert.strictEqual(settlementCredit.amount_inr, 420.0);
@@ -303,14 +334,18 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       'user_buyer',
       'WALLET',
       350.0,
-      'idem_wal_3'
+      'idem_wal_3',
     );
 
     let w = await walletService.getOrCreateWallet('user_buyer');
     assert.strictEqual(w.balanceInr, 450.0);
 
     // Process refund for sub_cancelled
-    const refund = await paymentService.processRefund('sub_cancelled', 350.0, 'Out of stock at merchant');
+    const refund = await paymentService.processRefund(
+      'sub_cancelled',
+      350.0,
+      'Out of stock at merchant',
+    );
     assert.ok(refund);
     assert.strictEqual(refund.status, 'PROCESSED');
     assert.strictEqual(refund.destination, 'WALLET');
@@ -320,8 +355,16 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
     assert.strictEqual(w.balanceInr, 800.0);
 
     // Attempt second refund for same sub-order (idempotency check)
-    const duplicateRefund = await paymentService.processRefund('sub_cancelled', 350.0, 'Duplicate request');
-    assert.strictEqual(duplicateRefund.id, refund.id, 'Idempotency must return identical refund record');
+    const duplicateRefund = await paymentService.processRefund(
+      'sub_cancelled',
+      350.0,
+      'Duplicate request',
+    );
+    assert.strictEqual(
+      duplicateRefund.id,
+      refund.id,
+      'Idempotency must return identical refund record',
+    );
 
     // Wallet balance MUST remain 800.0 (no double refund)
     w = await walletService.getOrCreateWallet('user_buyer');
@@ -359,7 +402,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       'user_rzp',
       'UPI',
       650.0,
-      'idem_rzp_1'
+      'idem_rzp_1',
     );
 
     assert.strictEqual(initiation.paymentMethod, 'UPI');
@@ -381,7 +424,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       'user_rzp_2',
       'CARD',
       900.0,
-      'idem_rzp_2'
+      'idem_rzp_2',
     );
 
     const keySecret = (paymentService as any).gateway.keySecret || 'test_secret';
@@ -401,20 +444,20 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
         await paymentService.confirmPayment(
           initiation.transactionId,
           paymentId,
-          'forged_tampered_signature_xyz'
+          'forged_tampered_signature_xyz',
         );
       },
       (err: any) => {
         assert.match(err.message, /Invalid Razorpay payment signature/);
         return true;
-      }
+      },
     );
 
     // Legitimate signature confirms payment and transitions status to CAPTURED
     const confirmed = await paymentService.confirmPayment(
       initiation.transactionId,
       paymentId,
-      validSignature
+      validSignature,
     );
 
     assert.strictEqual(confirmed.status, 'CAPTURED');
@@ -434,7 +477,7 @@ describe('Priority 1: Real Wallet Payments, Double-Entry Ledger and Refunds', ()
       'user_cod',
       'COD',
       320.0,
-      'idem_cod_1'
+      'idem_cod_1',
     );
 
     assert.strictEqual(initiation.paymentMethod, 'COD');

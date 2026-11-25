@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
 import { authApi } from '@/data/api/auth.api';
 import { sanitizeApiErrorMessage } from '@/data/api/base-client';
+import { useAuth } from '@/lib/auth-context';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   detectIdentifierKind,
   hasAnyIdentifierMethod,
@@ -81,11 +81,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
   const [twoFactorBackupMode, setTwoFactorBackupMode] = useState(false);
 
   const [error, setError] = useState<string | null>(() =>
-    oauthNoAccount === '1'
-      ? null
-      : oauthError
-        ? sanitizeApiErrorMessage(oauthError)
-        : null,
+    oauthNoAccount === '1' ? null : oauthError ? sanitizeApiErrorMessage(oauthError) : null,
   );
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -95,31 +91,22 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
   const exchangedOAuthCodeRef = useRef<string | null>(null);
   const submittingRef = useRef(false);
 
-  const detectedKind = useMemo(
-    () => detectIdentifierKind(identifier),
-    [identifier],
-  );
+  const detectedKind = useMemo(() => detectIdentifierKind(identifier), [identifier]);
 
-  const hasIdentifierMethod = useMemo(
-    () => hasAnyIdentifierMethod(methods),
-    [methods],
-  );
+  const hasIdentifierMethod = useMemo(() => hasAnyIdentifierMethod(methods), [methods]);
 
-  const enterTwoFactorChallenge = useCallback(
-    (token: string, displayIdentifier?: string) => {
-      if (displayIdentifier) {
-        setActiveIdentifier(displayIdentifier);
-      }
-      setTwoFactorToken(token);
-      setTwoFactorCode('');
-      setTwoFactorBackupMode(false);
-      setError(null);
-      setFieldError(null);
-      setInfoMessage('Two-factor authentication is enabled on this account.');
-      setStep('TWO_FACTOR');
-    },
-    [],
-  );
+  const enterTwoFactorChallenge = useCallback((token: string, displayIdentifier?: string) => {
+    if (displayIdentifier) {
+      setActiveIdentifier(displayIdentifier);
+    }
+    setTwoFactorToken(token);
+    setTwoFactorCode('');
+    setTwoFactorBackupMode(false);
+    setError(null);
+    setFieldError(null);
+    setInfoMessage('Two-factor authentication is enabled on this account.');
+    setStep('TWO_FACTOR');
+  }, []);
 
   // Fetch enabled authentication methods & OAuth providers
   useEffect(() => {
@@ -138,9 +125,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
           });
         }
         if (res.oauthProviders) {
-          setOauthProviders(
-            res.oauthProviders.filter((p) => p.configured !== false),
-          );
+          setOauthProviders(res.oauthProviders.filter((p) => p.configured !== false));
         }
       })
       .catch(() => {
@@ -195,8 +180,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
         }
       })
       .catch((err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : 'OAuth sign-in failed';
+        const message = err instanceof Error ? err.message : 'OAuth sign-in failed';
         setError(message);
         setOauthPending(false);
       });
@@ -264,7 +248,9 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
               setFullName('');
               setAccountHasPassword(false);
               setEmailAuthMode('signup');
-              setInfoMessage(`No account found for ${lookup.normalizedIdentifier}. Create your new account below.`);
+              setInfoMessage(
+                `No account found for ${lookup.normalizedIdentifier}. Create your new account below.`,
+              );
               setStep('EMAIL_PASSWORD');
               return;
             }
@@ -361,8 +347,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
           enterTwoFactorChallenge(res.twoFactorToken, res.identifier);
         }
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : 'Invalid or expired verification code';
+        const message = err instanceof Error ? err.message : 'Invalid or expired verification code';
         setError(message);
       } finally {
         submittingRef.current = false;
@@ -392,8 +377,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
         await dispatchEmailOtp(activeIdentifier);
       }
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to resend verification code';
+      const message = err instanceof Error ? err.message : 'Failed to resend verification code';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -470,8 +454,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
       setInfoMessage(`We sent a 6-digit password reset code to ${activeIdentifier}`);
       setStep('PASSWORD_RESET');
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to send password reset code';
+      const message = err instanceof Error ? err.message : 'Failed to send password reset code';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -489,8 +472,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
       setResendCooldown(res.cooldownSeconds ?? 60);
       setInfoMessage(`A new 6-digit password reset code was sent to ${activeIdentifier}`);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to resend password reset code';
+      const message = err instanceof Error ? err.message : 'Failed to resend password reset code';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -529,8 +511,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
       setInfoMessage(res.message || 'Password reset successful. Sign in with your new password.');
       setStep('EMAIL_PASSWORD');
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to reset password';
+      const message = err instanceof Error ? err.message : 'Failed to reset password';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -589,8 +570,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
     try {
       await dispatchEmailOtp(activeIdentifier);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to send email verification code';
+      const message = err instanceof Error ? err.message : 'Failed to send email verification code';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -607,8 +587,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
     try {
       await dispatchPhoneOtp(activeIdentifier);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to send SMS verification code';
+      const message = err instanceof Error ? err.message : 'Failed to send SMS verification code';
       setError(message);
     } finally {
       submittingRef.current = false;
@@ -650,8 +629,7 @@ export function useLoginFlow(options: UseLoginFlowOptions = {}) {
 
   const startOAuth = useCallback(
     (slug: string) => {
-      const baseOrigin =
-        typeof window !== 'undefined' ? window.location.origin : '';
+      const baseOrigin = typeof window !== 'undefined' ? window.location.origin : '';
       const params = new URLSearchParams();
       if (redirectUrl !== '/admin/dashboard') {
         params.set('redirect', redirectUrl);

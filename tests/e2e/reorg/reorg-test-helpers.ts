@@ -1,6 +1,6 @@
+import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { spawnSync } from 'node:child_process';
 
 export const ROOT_DIR = path.resolve(import.meta.dirname, '../../../');
 
@@ -24,27 +24,102 @@ export const TARGET_PROJECTS = {
   partnerMobile: path.join(ROOT_DIR, 'apps/partner_mobile'),
   merchantMobile: path.join(ROOT_DIR, 'apps/merchant_mobile'),
   admin: path.join(ROOT_DIR, 'apps/admin'),
-  api: path.join(ROOT_DIR, 'apps/api'),
+  api: path.join(ROOT_DIR, 'services/api'),
 } as const;
 
 export const REORG_FEATURES = [
-  { id: 1, name: 'mobile_shared API Client Decomposition', project: 'packages/mobile_shared', milestone: 'M1' },
-  { id: 2, name: 'mobile_shared Models & Structure Reorg', project: 'packages/mobile_shared', milestone: 'M1' },
-  { id: 3, name: 'customer_mobile Home & Outlets Modularization', project: 'apps/customer_mobile', milestone: 'M2' },
-  { id: 4, name: 'customer_mobile Mobility & Parcels Modularization', project: 'apps/customer_mobile', milestone: 'M2' },
-  { id: 5, name: 'customer_mobile Checkout & Orders Modularization', project: 'apps/customer_mobile', milestone: 'M2' },
-  { id: 6, name: 'customer_mobile Directory Structure R1 Migration', project: 'apps/customer_mobile', milestone: 'M2' },
-  { id: 7, name: 'partner_mobile Home Shell & Registration Decomposition', project: 'apps/partner_mobile', milestone: 'M3' },
-  { id: 8, name: 'merchant_mobile Dashboard Shell Decomposition', project: 'apps/merchant_mobile', milestone: 'M3' },
-  { id: 9, name: 'merchant_mobile Operating Hours & Registration Decomposition', project: 'apps/merchant_mobile', milestone: 'M3' },
-  { id: 10, name: 'Partner & Merchant R1 Directory Migration', project: 'apps/partner_mobile & apps/merchant_mobile', milestone: 'M3' },
-  { id: 11, name: 'admin API Client & State Modularization', project: 'apps/admin', milestone: 'M4' },
+  {
+    id: 1,
+    name: 'mobile_shared API Client Decomposition',
+    project: 'packages/mobile_shared',
+    milestone: 'M1',
+  },
+  {
+    id: 2,
+    name: 'mobile_shared Models & Structure Reorg',
+    project: 'packages/mobile_shared',
+    milestone: 'M1',
+  },
+  {
+    id: 3,
+    name: 'customer_mobile Home & Outlets Modularization',
+    project: 'apps/customer_mobile',
+    milestone: 'M2',
+  },
+  {
+    id: 4,
+    name: 'customer_mobile Mobility & Parcels Modularization',
+    project: 'apps/customer_mobile',
+    milestone: 'M2',
+  },
+  {
+    id: 5,
+    name: 'customer_mobile Checkout & Orders Modularization',
+    project: 'apps/customer_mobile',
+    milestone: 'M2',
+  },
+  {
+    id: 6,
+    name: 'customer_mobile Directory Structure R1 Migration',
+    project: 'apps/customer_mobile',
+    milestone: 'M2',
+  },
+  {
+    id: 7,
+    name: 'partner_mobile Home Shell & Registration Decomposition',
+    project: 'apps/partner_mobile',
+    milestone: 'M3',
+  },
+  {
+    id: 8,
+    name: 'merchant_mobile Dashboard Shell Decomposition',
+    project: 'apps/merchant_mobile',
+    milestone: 'M3',
+  },
+  {
+    id: 9,
+    name: 'merchant_mobile Operating Hours & Registration Decomposition',
+    project: 'apps/merchant_mobile',
+    milestone: 'M3',
+  },
+  {
+    id: 10,
+    name: 'Partner & Merchant R1 Directory Migration',
+    project: 'apps/partner_mobile & apps/merchant_mobile',
+    milestone: 'M3',
+  },
+  {
+    id: 11,
+    name: 'admin API Client & State Modularization',
+    project: 'apps/admin',
+    milestone: 'M4',
+  },
   { id: 12, name: 'admin Heavy Pages Decomposition', project: 'apps/admin', milestone: 'M4' },
-  { id: 13, name: 'api Merchant & Catalog Services Decomposition', project: 'apps/api', milestone: 'M5' },
-  { id: 14, name: 'api Parcels & Orders Services Decomposition', project: 'apps/api', milestone: 'M5' },
-  { id: 15, name: 'api Mobility, Zones & Finance Decomposition', project: 'apps/api', milestone: 'M5' },
+  {
+    id: 13,
+    name: 'api Merchant & Catalog Services Decomposition',
+    project: 'apps/api',
+    milestone: 'M5',
+  },
+  {
+    id: 14,
+    name: 'api Parcels & Orders Services Decomposition',
+    project: 'apps/api',
+    milestone: 'M5',
+  },
+  {
+    id: 15,
+    name: 'api Mobility, Zones & Finance Decomposition',
+    project: 'apps/api',
+    milestone: 'M5',
+  },
   { id: 16, name: 'api ESM NodeNext Extension Compliance', project: 'apps/api', milestone: 'M5' },
-  { id: 17, name: 'Comprehensive Monorepo Verification & Test Suites', project: 'All 6 Targets', milestone: 'M6' },
+  {
+    id: 17,
+    name: 'Comprehensive Monorepo Verification & Test Suites',
+    project: 'All 6 Targets',
+    milestone: 'M6',
+  },
 ] as const;
 
 export interface LineMetrics {
@@ -138,7 +213,7 @@ export function isNonTrivialFile(filePath: string): boolean {
  */
 export function findSourceFiles(
   dirPath: string,
-  extensions: string[] = ['.dart', '.ts', '.tsx']
+  extensions: string[] = ['.dart', '.ts', '.tsx'],
 ): string[] {
   const results: string[] = [];
   if (!fs.existsSync(dirPath)) {
@@ -196,14 +271,11 @@ export function extractDartImports(sourceCode: string): DartImportInfo {
  * Inspects all relative imports in a TypeScript / JavaScript file and checks
  * whether they include explicit `.js` extensions (ESM NodeNext requirement).
  */
-export function inspectRelativeImports(
-  sourceCode: string
-): RelativeImportCheck[] {
+export function inspectRelativeImports(sourceCode: string): RelativeImportCheck[] {
   const checks: RelativeImportCheck[] = [];
   const lines = sourceCode.split(/\r?\n/);
 
-  const importExportRegex =
-    /(?:import|export)\s+(?:[\w*\s{},]*\s+from\s+)?['"](\.[^'"]+)['"]/g;
+  const importExportRegex = /(?:import|export)\s+(?:[\w*\s{},]*\s+from\s+)?['"](\.[^'"]+)['"]/g;
 
   lines.forEach((lineText, index) => {
     // Ignore pure comments
@@ -215,8 +287,7 @@ export function inspectRelativeImports(
     let match: RegExpExecArray | null;
     while ((match = importExportRegex.exec(lineText)) !== null) {
       const importPath = match[1];
-      const hasJs =
-        importPath.endsWith('.js') || importPath.endsWith('.json');
+      const hasJs = importPath.endsWith('.js') || importPath.endsWith('.json');
       checks.push({
         importPath,
         hasJsExtension: hasJs,
@@ -233,7 +304,7 @@ export function inspectRelativeImports(
  */
 export function verifyReexportBridge(
   bridgeFilePath: string,
-  targetPattern: string | RegExp
+  targetPattern: string | RegExp,
 ): { exists: boolean; validExport: boolean; content: string } {
   if (!fs.existsSync(bridgeFilePath)) {
     return { exists: false, validExport: false, content: '' };
@@ -254,10 +325,7 @@ export function verifyReexportBridge(
 /**
  * Validates a single file against boundary limits (LOC <= maxLoc, non-empty, non-whitespace).
  */
-export function validateFileBoundaries(
-  filePath: string,
-  maxLoc: number = 300
-): BoundaryValidationResult {
+export function validateFileBoundaries(filePath: string, maxLoc = 300): BoundaryValidationResult {
   const metrics = getLineMetrics(filePath);
   const isWithinLimit = metrics.totalLines <= maxLoc;
   const isNonEmpty = metrics.totalLines > 0;
@@ -286,10 +354,7 @@ export function validateFileBoundaries(
 /**
  * Audits all source files in a project against the LOC ceiling.
  */
-export function auditProjectLOC(
-  projectDir: string,
-  maxLoc: number = 300
-): ProjectAuditResult {
+export function auditProjectLOC(projectDir: string, maxLoc = 300): ProjectAuditResult {
   const files = findSourceFiles(projectDir);
   const filesWithinLimit: string[] = [];
   const filesExceedingLimit: { filePath: string; lines: number }[] = [];
@@ -326,7 +391,7 @@ export function runCommand(
   cmd: string,
   args: string[],
   cwd: string = ROOT_DIR,
-  timeoutMs: number = 60000
+  timeoutMs = 60000,
 ): { status: number | null; stdout: string; stderr: string; error?: Error } {
   const res = spawnSync(cmd, args, {
     cwd,

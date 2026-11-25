@@ -1,13 +1,13 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
   detectIdentifierKind,
-  normalizePhone,
-  normalizeEmail,
-  resolveIdentifierSubmission,
-  getIdentifierPlaceholder,
   getIdentifierActionLabel,
+  getIdentifierPlaceholder,
   hasAnyIdentifierMethod,
+  normalizeEmail,
+  normalizePhone,
+  resolveIdentifierSubmission,
   sanitizeRedirectUrl,
 } from '../../apps/admin/components/auth/identifier.ts';
 import type { AuthMethodsConfig } from '../../apps/admin/components/auth/types.ts';
@@ -155,10 +155,7 @@ describe('Identifier Flow Resolution', () => {
   });
 
   it('computes dynamic placeholder and action labels', () => {
-    assert.equal(
-      getIdentifierPlaceholder(ALL_ENABLED),
-      'Enter email or phone number',
-    );
+    assert.equal(getIdentifierPlaceholder(ALL_ENABLED), 'Enter email or phone number');
     assert.equal(
       getIdentifierPlaceholder({ ...ALL_ENABLED, phoneOtp: false, emailPassword: false }),
       'Enter email address',
@@ -172,18 +169,12 @@ describe('Identifier Flow Resolution', () => {
       'Enter phone number',
     );
 
-    assert.equal(
-      getIdentifierActionLabel('phone', ALL_ENABLED),
-      'Continue with Phone',
-    );
+    assert.equal(getIdentifierActionLabel('phone', ALL_ENABLED), 'Continue with Phone');
     assert.equal(
       getIdentifierActionLabel('phone', { ...ALL_ENABLED, emailPassword: false }),
       'Send Verification Code',
     );
-    assert.equal(
-      getIdentifierActionLabel('email', ALL_ENABLED),
-      'Continue with Email',
-    );
+    assert.equal(getIdentifierActionLabel('email', ALL_ENABLED), 'Continue with Email');
     assert.equal(
       getIdentifierActionLabel('email', { ...ALL_ENABLED, emailPassword: false }),
       'Send Email Code',

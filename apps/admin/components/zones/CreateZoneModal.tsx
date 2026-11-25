@@ -1,17 +1,11 @@
 'use client';
 
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 import { Label } from '@allgo/ui';
+import type React from 'react';
 
 interface CreateZoneModalProps {
   showCreateModal: boolean;
@@ -42,20 +36,17 @@ export function CreateZoneModal({
     <Dialog open={showCreateModal} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg">
-            Create New Geographic Service Zone
-          </DialogTitle>
+          <DialogTitle className="text-lg">Create New Geographic Service Zone</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Define boundaries using GeoJSON coordinates. PostGIS validity and closing rings are validated automatically.
+          Define boundaries using GeoJSON coordinates. PostGIS validity and closing rings are
+          validated automatically.
         </p>
 
         <form onSubmit={handleCreateZone} className="space-y-4 my-2">
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-1">
-              <Label className="text-xs font-semibold text-foreground">
-                Zone Name *
-              </Label>
+              <Label className="text-xs font-semibold text-foreground">Zone Name *</Label>
               <Input
                 type="text"
                 required
@@ -65,9 +56,7 @@ export function CreateZoneModal({
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-foreground">
-                Zone Code *
-              </Label>
+              <Label className="text-xs font-semibold text-foreground">Zone Code *</Label>
               <Input
                 type="text"
                 required

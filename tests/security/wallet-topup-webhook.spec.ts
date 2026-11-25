@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
-import { WalletService } from '../../apps/api/dist/finance/wallet/wallet.service.js';
-import { WalletWebhookService } from '../../apps/api/dist/finance/wallet/wallet-webhook.service.js';
+import { describe, it } from 'node:test';
+import { LedgerService } from '../../services/api/dist/finance/ledger/ledger.service.js';
+import { WalletWebhookService } from '../../services/api/dist/finance/wallet/wallet-webhook.service.js';
+import { WalletService } from '../../services/api/dist/finance/wallet/wallet.service.js';
 import { MockDatabaseService } from './wallet-mock-db.ts';
 
 describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
@@ -27,7 +27,11 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
     assert.strictEqual(topupOrder.status, 'PENDING');
 
     const walletInfo = await wallet.getOrCreateWallet(userId);
-    assert.strictEqual(walletInfo.balanceInr, 0, 'Wallet balance must remain 0 until webhook confirmation');
+    assert.strictEqual(
+      walletInfo.balanceInr,
+      0,
+      'Wallet balance must remain 0 until webhook confirmation',
+    );
   });
 
   it('should credit wallet and post double-entry ledger record upon verified payment.captured webhook', async () => {
@@ -69,8 +73,8 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
     const credit = ledgerEntries.find((e) => e.direction === 'CREDIT');
     assert.strictEqual(debit.account_type, 'GATEWAY_ESCROW');
     assert.strictEqual(credit.account_type, 'CUSTOMER_WALLET');
-    assert.strictEqual(parseFloat(debit.amount_inr), 750);
-    assert.strictEqual(parseFloat(credit.amount_inr), 750);
+    assert.strictEqual(Number.parseFloat(debit.amount_inr), 750);
+    assert.strictEqual(Number.parseFloat(credit.amount_inr), 750);
   });
 
   it('should reject forged webhook signatures', async () => {
@@ -103,7 +107,7 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
         await walletWebhook.handlePaymentWebhook(rawBody, forgedSignature, webhookEvent);
       },
       /Invalid Razorpay webhook signature/i,
-      'Must reject forged webhook signature'
+      'Must reject forged webhook signature',
     );
   });
 
@@ -137,7 +141,7 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
         await walletWebhook.handlePaymentWebhook(rawBody, validSignature, webhookEvent);
       },
       /Payment amount mismatch/i,
-      'Must reject mismatched payment amount'
+      'Must reject mismatched payment amount',
     );
   });
 
@@ -166,7 +170,11 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
     const rawBody = JSON.stringify(webhookEvent);
     const validSignature = signPayload(rawBody);
 
-    const firstAttempt = await walletWebhook.handlePaymentWebhook(rawBody, validSignature, webhookEvent);
+    const firstAttempt = await walletWebhook.handlePaymentWebhook(
+      rawBody,
+      validSignature,
+      webhookEvent,
+    );
     assert.strictEqual(firstAttempt.handled, true);
     assert.strictEqual(firstAttempt.idempotentDuplicate, undefined);
 
@@ -174,12 +182,24 @@ describe('A.3: Wallet Topup Razorpay Order and Webhook Invariants', () => {
     assert.strictEqual(walletInfo.balanceInr, 300);
     assert.strictEqual(mockDb.ledgerEntries.length, 2);
 
-    const replayAttempt = await walletWebhook.handlePaymentWebhook(rawBody, validSignature, webhookEvent);
+    const replayAttempt = await walletWebhook.handlePaymentWebhook(
+      rawBody,
+      validSignature,
+      webhookEvent,
+    );
     assert.strictEqual(replayAttempt.handled, true);
     assert.strictEqual(replayAttempt.idempotentDuplicate, true);
 
     walletInfo = await wallet.getOrCreateWallet(userId);
-    assert.strictEqual(walletInfo.balanceInr, 300, 'Replay attack must not double-credit wallet balance');
-    assert.strictEqual(mockDb.ledgerEntries.length, 2, 'Replay attack must not create duplicate ledger entries');
+    assert.strictEqual(
+      walletInfo.balanceInr,
+      300,
+      'Replay attack must not double-credit wallet balance',
+    );
+    assert.strictEqual(
+      mockDb.ledgerEntries.length,
+      2,
+      'Replay attack must not create duplicate ledger entries',
+    );
   });
 });

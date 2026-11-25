@@ -1,13 +1,12 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import crypto from 'node:crypto';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { ZonesService } from '../../apps/api/dist/zones/zones.service.js';
-import { DiscoveryService } from '../../apps/api/dist/discovery/discovery.service.js';
-import { PricingService } from '../../apps/api/dist/ordering/services/pricing.service.js';
-import { CouponsService } from '../../apps/api/dist/ordering/services/coupons.service.js';
+import { after, before, describe, it } from 'node:test';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { DiscoveryService } from '../../services/api/dist/discovery/discovery.service.js';
+import { CouponsService } from '../../services/api/dist/ordering/services/coupons.service.js';
+import { PricingService } from '../../services/api/dist/ordering/services/pricing.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
+import { ZonesService } from '../../services/api/dist/zones/zones.service.js';
 
 describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promotional Engine', () => {
   let db: DatabaseService;
@@ -30,7 +29,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
   let testOutletId: string;
   let testItemId: string;
   let testOrderGroupId: string;
-  let testBarcode = '890103' + Date.now().toString().slice(-7);
+  const testBarcode = '890103' + Date.now().toString().slice(-7);
 
   let isLiveAvailable = false;
   before(async () => {
@@ -41,7 +40,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     await db.onModuleInit();
     await redis.onModuleInit();
     try {
-      await db.query("SELECT 1;");
+      await db.query('SELECT 1;');
       isLiveAvailable = true;
     } catch {
       isLiveAvailable = false;
@@ -50,14 +49,15 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       return;
     }
 
-
     zonesService = new ZonesService(db);
     discoveryService = new DiscoveryService(db, redis);
     couponsService = new CouponsService(db);
     pricingService = new PricingService(db, couponsService);
 
     // Clean previous P6 coupons & redemptions if any
-    await db.query(`DELETE FROM coupon_redemptions WHERE coupon_id IN (SELECT id FROM coupons WHERE code LIKE 'P6_%');`);
+    await db.query(
+      `DELETE FROM coupon_redemptions WHERE coupon_id IN (SELECT id FROM coupons WHERE code LIKE 'P6_%');`,
+    );
     await db.query(`DELETE FROM coupons WHERE code LIKE 'P6_%';`);
 
     // Seed test users
@@ -69,7 +69,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
          ($3, 'fb_cust_p6_existing', '+919800000003', 'Phase6 Existing Customer', 'ACTIVE', 'en'),
          ($4, 'fb_merch_p6', '+919800000004', 'Phase6 Merchant Owner', 'ACTIVE', 'en')
        ON CONFLICT (id) DO UPDATE SET status = 'ACTIVE';`,
-      [testAdminId, testCustomerId, testCustomerWithOrdersId, testMerchantOwnerId]
+      [testAdminId, testCustomerId, testCustomerWithOrdersId, testMerchantOwnerId],
     );
 
     // Seed test merchant and outlet
@@ -77,7 +77,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       `INSERT INTO merchants (owner_id, business_name, merchant_type, pan_number, status, commission_rate_percentage)
        VALUES ($1, 'Phase 6 Buhari Biryani Kitchen', 'RESTAURANT', 'P6PAN1234F', 'APPROVED', 15.00)
        RETURNING id;`,
-      [testMerchantOwnerId]
+      [testMerchantOwnerId],
     );
     testMerchantId = merchRes.rows[0].id;
 
@@ -87,7 +87,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
        VALUES ($1, '30000000-0000-0000-0000-000000000004', 'Buhari Royal Biryani Outlet', '12 2nd Avenue, Anna Nagar', '600040',
                ST_SetSRID(ST_MakePoint(80.2150, 13.0850), 4326), 'ACTIVE', TRUE, '+919988776655')
        RETURNING id;`,
-      [testMerchantId]
+      [testMerchantId],
     );
     testOutletId = outletRes.rows[0].id;
 
@@ -96,14 +96,14 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       `SELECT so.id FROM sub_orders so
        JOIN order_groups og ON og.id = so.order_group_id
        WHERE og.customer_id = $1 LIMIT 1;`,
-      [testCustomerWithOrdersId]
+      [testCustomerWithOrdersId],
     );
 
     if (existingOrders.rows.length === 0) {
       let orderGroupId: string;
       const existingOg = await db.query(
         `SELECT id FROM order_groups WHERE customer_id = $1 LIMIT 1;`,
-        [testCustomerWithOrdersId]
+        [testCustomerWithOrdersId],
       );
 
       if (existingOg.rows.length > 0) {
@@ -113,7 +113,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
           `INSERT INTO addresses (user_id, label, recipient_name, recipient_phone, address_line1, postal_code, city, state, location)
            VALUES ($1, 'HOME', 'Existing Customer', '+919800000003', '10 Test Street', '600001', 'Chennai', 'Tamil Nadu', ST_SetSRID(ST_MakePoint(80.20, 13.08), 4326))
            RETURNING id;`,
-          [testCustomerWithOrdersId]
+          [testCustomerWithOrdersId],
         );
         const existingAddrId = addrRes.rows[0].id;
 
@@ -126,7 +126,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
              $1, $2, 200.00, 30.00, 10.00, 5.00, 5.00, 250.00,
              'CONVERTED', 'SEPARATE', NOW() + INTERVAL '1 hour'
            ) RETURNING id;`,
-          [testCustomerWithOrdersId, existingAddrId]
+          [testCustomerWithOrdersId, existingAddrId],
         );
 
         const orderGroupNum = `GRP-P6-${Date.now()}`;
@@ -140,7 +140,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
              $1, $2, $3, $4,
              'CONFIRMED', 200.00, 30.00, 10.00, 5.00, 5.00, 0.00, 250.00, 'SEPARATE'
            ) RETURNING id;`,
-          [testCustomerWithOrdersId, sessionRes.rows[0].id, existingAddrId, orderGroupNum]
+          [testCustomerWithOrdersId, sessionRes.rows[0].id, existingAddrId, orderGroupNum],
         );
         orderGroupId = ogRes.rows[0].id;
       }
@@ -157,14 +157,13 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
            200.00, 30.00, 10.00, 5.00, 5.00, 0.00, 250.00, '{"addressLine1": "Test Address"}'::jsonb,
            30.00, 170.00
          ) RETURNING id;`,
-        [orderGroupId, testOutletId, subOrderNum]
+        [orderGroupId, testOutletId, subOrderNum],
       );
     }
 
-    const ogCheck = await db.query(
-      `SELECT id FROM order_groups WHERE customer_id = $1 LIMIT 1;`,
-      [testCustomerWithOrdersId]
-    );
+    const ogCheck = await db.query(`SELECT id FROM order_groups WHERE customer_id = $1 LIMIT 1;`, [
+      testCustomerWithOrdersId,
+    ]);
     testOrderGroupId = ogCheck.rows[0].id;
 
     // Catalog & Category
@@ -172,7 +171,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       `INSERT INTO catalogs (outlet_id, name, vertical_type, is_active)
        VALUES ($1, 'Royal Dining Menu', 'FOOD', TRUE)
        RETURNING id;`,
-      [testOutletId]
+      [testOutletId],
     );
     const catalogId = catRes.rows[0].id;
 
@@ -180,7 +179,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       `INSERT INTO categories (catalog_id, name, is_active)
        VALUES ($1, 'Special Biryani & Tandoor', TRUE)
        RETURNING id;`,
-      [catalogId]
+      [catalogId],
     );
     const categoryId = categoryRes.rows[0].id;
 
@@ -189,7 +188,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       `INSERT INTO items (category_id, name, description, base_price_inr, is_veg, is_active, barcode)
        VALUES ($1, 'Royal Mutton Dum Biryani Feast', 'Signature aromatic Basmati rice dum cooked with tender goat mutton', 380.00, FALSE, TRUE, $2)
        RETURNING id;`,
-      [categoryId, testBarcode]
+      [categoryId, testBarcode],
     );
     testItemId = itemRes.rows[0].id;
 
@@ -197,12 +196,14 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     await db.query(
       `INSERT INTO items (category_id, name, description, base_price_inr, is_veg, is_active)
        VALUES ($1, 'Tandoori Paneer Tikka Platter', 'Marinated cottage cheese charred in tandoor', 220.00, TRUE, TRUE);`,
-      [categoryId]
+      [categoryId],
     );
   });
 
   after(async () => {
-    if (!isLiveAvailable) { return; }
+    if (!isLiveAvailable) {
+      return;
+    }
     // Clean test zones & settings
     if (createdZoneIdA) {
       await db.query(`DELETE FROM zone_service_settings WHERE zone_id = $1;`, [createdZoneIdA]);
@@ -220,7 +221,9 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       testCustomerWithOrdersId,
     ]);
     await db.query(`DELETE FROM promotion_pricing_audit_logs WHERE actor_id = $1;`, [testAdminId]);
-    await db.query(`DELETE FROM coupon_redemptions WHERE coupon_id IN (SELECT id FROM coupons WHERE code LIKE 'P6_%');`);
+    await db.query(
+      `DELETE FROM coupon_redemptions WHERE coupon_id IN (SELECT id FROM coupons WHERE code LIKE 'P6_%');`,
+    );
     await db.query(`DELETE FROM coupons WHERE code LIKE 'P6_%';`);
 
     await db.onModuleDestroy();
@@ -229,7 +232,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
 
   it('1. should create valid PostGIS service zone and reject malformed/self-intersecting polygons', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Valid Polygon covering Anna Nagar area
@@ -237,11 +240,11 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       type: 'Polygon',
       coordinates: [
         [
-          [80.2000, 13.0700],
-          [80.2300, 13.0700],
-          [80.2300, 13.1000],
-          [80.2000, 13.1000],
-          [80.2000, 13.0700],
+          [80.2, 13.07],
+          [80.23, 13.07],
+          [80.23, 13.1],
+          [80.2, 13.1],
+          [80.2, 13.07],
         ],
       ],
     };
@@ -265,7 +268,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
           },
         ],
       },
-      testAdminId
+      testAdminId,
     );
 
     assert.ok(created.id, 'Zone must have generated UUID');
@@ -277,11 +280,11 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       type: 'Polygon',
       coordinates: [
         [
-          [80.2000, 13.0700],
-          [80.2300, 13.1000],
-          [80.2000, 13.1000],
-          [80.2300, 13.0700],
-          [80.2000, 13.0700],
+          [80.2, 13.07],
+          [80.23, 13.1],
+          [80.2, 13.1],
+          [80.23, 13.07],
+          [80.2, 13.07],
         ],
       ],
     };
@@ -296,15 +299,18 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         });
       },
       (err: any) => {
-        assert.ok(err.message.includes('Invalid polygon geometry'), 'Must reject self-intersecting polygon');
+        assert.ok(
+          err.message.includes('Invalid polygon geometry'),
+          'Must reject self-intersecting polygon',
+        );
         return true;
-      }
+      },
     );
   });
 
   it('2. should deterministically resolve overlapping zones using priority and tie-breaker', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Create inner micro-zone with higher priority (15 vs 5)
@@ -312,11 +318,11 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       type: 'Polygon',
       coordinates: [
         [
-          [80.2100, 13.0800],
-          [80.2250, 13.0800],
-          [80.2250, 13.0950],
-          [80.2100, 13.0950],
-          [80.2100, 13.0800],
+          [80.21, 13.08],
+          [80.225, 13.08],
+          [80.225, 13.095],
+          [80.21, 13.095],
+          [80.21, 13.08],
         ],
       ],
     };
@@ -337,32 +343,32 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
           },
         ],
       },
-      testAdminId
+      testAdminId,
     );
     createdZoneIdB = zoneB.id;
 
     // Location inside BOTH Zone A and Zone B (80.2150, 13.0850)
-    const result = await zonesService.checkServiceability(13.0850, 80.2150, 'FOOD');
+    const result = await zonesService.checkServiceability(13.085, 80.215, 'FOOD');
     assert.strictEqual(result.isServiceable, true);
     assert.strictEqual(
       result.zone.id,
       createdZoneIdB,
-      'Higher priority zone (15) must be selected over lower priority zone (5)'
+      'Higher priority zone (15) must be selected over lower priority zone (5)',
     );
     assert.strictEqual(result.serviceSettings.baseDeliveryFeeInr, 45.0);
   });
 
   it('3. should enforce serviceability boundaries and vertical-specific gating', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Inside zone
-    const inside = await zonesService.checkServiceability(13.0850, 80.2150, 'FOOD');
+    const inside = await zonesService.checkServiceability(13.085, 80.215, 'FOOD');
     assert.strictEqual(inside.isServiceable, true);
 
     // Far outside zone (e.g., Sri Lanka / Indian Ocean: 6.0000, 80.0000)
-    const outside = await zonesService.checkServiceability(6.0000, 80.0000, 'FOOD');
+    const outside = await zonesService.checkServiceability(6.0, 80.0, 'FOOD');
     assert.strictEqual(outside.isServiceable, false);
     assert.ok(outside.reason.includes('outside supported AllGo service zones'));
 
@@ -374,21 +380,25 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         isServiceEnabled: false,
         priority: 15,
       },
-      testAdminId
+      testAdminId,
     );
 
-    const groceryCheck = await zonesService.checkServiceability(13.0850, 80.2150, 'GROCERY');
+    const groceryCheck = await zonesService.checkServiceability(13.085, 80.215, 'GROCERY');
     assert.strictEqual(groceryCheck.isServiceable, false);
     assert.ok(groceryCheck.reason.includes('disabled'));
   });
 
   it('4. should assign outlets to zones and list serviceable outlets', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Assign test outlet to Zone B
-    const assignResult = await zonesService.assignOutletsToZone(createdZoneIdB, [testOutletId], true);
+    const assignResult = await zonesService.assignOutletsToZone(
+      createdZoneIdB,
+      [testOutletId],
+      true,
+    );
     assert.strictEqual(assignResult.success, true);
     assert.strictEqual(assignResult.assignedCount, 1);
 
@@ -397,14 +407,14 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     assert.ok(zoneWithOutlets.assignedOutlets.some((o: any) => o.id === testOutletId));
 
     // Check serviceability returns the outlet
-    const serv = await zonesService.checkServiceability(13.0850, 80.2150, 'FOOD');
+    const serv = await zonesService.checkServiceability(13.085, 80.215, 'FOOD');
     assert.ok(serv.eligibleOutletsCount >= 1);
     assert.ok(serv.eligibleOutlets.some((o: any) => o.id === testOutletId));
   });
 
   it('5. should execute PostgreSQL full-text and trigram multi-vertical search', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // A. Search by exact barcode
@@ -420,10 +430,13 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       q: 'briyani feast',
       verticalType: 'FOOD',
     });
-    assert.ok(fuzzyResult.results.items.length >= 1, 'Trigram search must match "Mutton Dum Biryani" on fuzzy query');
+    assert.ok(
+      fuzzyResult.results.items.length >= 1,
+      'Trigram search must match "Mutton Dum Biryani" on fuzzy query',
+    );
     assert.ok(
       fuzzyResult.results.items.some((i: any) => i.id === testItemId),
-      'Must find the seeded test item in search results'
+      'Must find the seeded test item in search results',
     );
 
     // C. Search outlet by name
@@ -434,7 +447,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     assert.ok(outletSearchResult.results.outlets.length >= 1, 'Must find outlet by name');
     assert.ok(
       outletSearchResult.results.outlets.some((o: any) => o.id === testOutletId),
-      'Must find the seeded test outlet in search results'
+      'Must find the seeded test outlet in search results',
     );
 
     // D. Search category
@@ -447,25 +460,29 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
 
   it('6. should strictly filter out unapproved merchants, inactive outlets, and respect dietary filters', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Seed an inactive item
     const inactiveCat = await db.query(
       `SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id = $1);`,
-      [testOutletId]
+      [testOutletId],
     );
     await db.query(
       `INSERT INTO items (category_id, name, base_price_inr, is_active)
        VALUES ($1, 'Secret Hidden Dish Ghostly', 500.00, FALSE);`,
-      [inactiveCat.rows[0].id]
+      [inactiveCat.rows[0].id],
     );
 
     const hiddenSearch = await discoveryService.search({
       q: 'Ghostly',
       verticalType: 'FOOD',
     });
-    assert.strictEqual(hiddenSearch.results.items.length, 0, 'Inactive items must never appear in search');
+    assert.strictEqual(
+      hiddenSearch.results.items.length,
+      0,
+      'Inactive items must never appear in search',
+    );
 
     // Dietary Filter: Veg only
     const vegSearch = await discoveryService.search({
@@ -474,12 +491,15 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       isVeg: true,
     });
     assert.ok(vegSearch.results.items.length >= 1);
-    assert.ok(vegSearch.results.items.every((i: any) => i.is_veg === true), 'isVeg filter must exclude non-veg items');
+    assert.ok(
+      vegSearch.results.items.every((i: any) => i.is_veg === true),
+      'isVeg filter must exclude non-veg items',
+    );
   });
 
   it('7. should calculate zone-aware dynamic delivery pricing with free distance allowance', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Configure Zone B settings: Base ₹40, Free 3 km, ₹10/km after
@@ -495,7 +515,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         isSurgeActive: false,
         priority: 20,
       },
-      testAdminId
+      testAdminId,
     );
 
     // Cart: 1 Biryani (₹380)
@@ -505,18 +525,22 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     const nearbyEstimate = await pricingService.calculateCheckoutTotals(
       cartItems,
       testOutletId,
-      { latitude: 13.0870, longitude: 80.2170 },
+      { latitude: 13.087, longitude: 80.217 },
       undefined,
-      testCustomerId
+      testCustomerId,
     );
 
-    assert.strictEqual(nearbyEstimate.deliveryFeeInr, 40.0, 'Nearby distance within 3km must cost base fee ₹40');
+    assert.strictEqual(
+      nearbyEstimate.deliveryFeeInr,
+      40.0,
+      'Nearby distance within 3km must cost base fee ₹40',
+    );
     assert.strictEqual(nearbyEstimate.zoneInfo?.zoneId, createdZoneIdB);
   });
 
   it('8. should enforce surge pricing multiplier bounds (1.0x-3.0x) and record mandatory admin audit logs', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // A. Reject surge multiplier > 3.0x or < 1.0x
@@ -529,13 +553,13 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
             isSurgeActive: true,
             reason: 'Excessive illegal surge',
           },
-          testAdminId
+          testAdminId,
         );
       },
       (err: any) => {
         assert.ok(err.message.includes('Surge multiplier must be between 1.00x and 3.00x'));
         return true;
-      }
+      },
     );
 
     // B. Apply valid surge 1.8x with reason
@@ -547,14 +571,14 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         reason: 'Heavy Monsoon Rain Surge',
         verticalType: 'FOOD',
       },
-      testAdminId
+      testAdminId,
     );
 
     // Check audit log was written
     const auditRes = await db.query(
       `SELECT * FROM promotion_pricing_audit_logs
        WHERE actor_id = $1 AND target_type = 'ZONE_SURGE' AND action = 'SURGE_ACTIVATED';`,
-      [testAdminId]
+      [testAdminId],
     );
     assert.ok(auditRes.rows.length >= 1, 'Audit log must record surge activation');
     assert.strictEqual(auditRes.rows[0].reason, 'Heavy Monsoon Rain Surge');
@@ -564,9 +588,9 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     const surgedEstimate = await pricingService.calculateCheckoutTotals(
       cartItems,
       testOutletId,
-      { latitude: 13.0870, longitude: 80.2170 },
+      { latitude: 13.087, longitude: 80.217 },
       undefined,
-      testCustomerId
+      testCustomerId,
     );
 
     assert.strictEqual(surgedEstimate.zoneInfo?.isSurgeActive, true);
@@ -574,7 +598,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     // Base 40 * 1.8 = 72 (plus late night peak if test runs late night)
     assert.ok(
       surgedEstimate.deliveryFeeInr === 72.0 || surgedEstimate.deliveryFeeInr === 87.0,
-      `Delivery fee must reflect 1.8x surge (was ${surgedEstimate.deliveryFeeInr})`
+      `Delivery fee must reflect 1.8x surge (was ${surgedEstimate.deliveryFeeInr})`,
     );
 
     // Deactivate surge
@@ -586,13 +610,13 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         reason: 'Rain subsided',
         verticalType: 'FOOD',
       },
-      testAdminId
+      testAdminId,
     );
   });
 
   it('9. should handle advanced promotions: auto-applied, first-time customer restriction, and global redemption caps', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // A. Auto-applied coupon: 10% off up to ₹50 for orders over ₹200
@@ -606,16 +630,16 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         maxDiscountInr: 50,
         validUntil: new Date(Date.now() + 86400000).toISOString(),
       },
-      testAdminId
+      testAdminId,
     );
 
     const cartItems = [{ item_id: testItemId, quantity: 1, selected_options: [] }]; // ₹380
     const autoEstimate = await pricingService.calculateCheckoutTotals(
       cartItems,
       testOutletId,
-      { latitude: 13.0870, longitude: 80.2170 },
+      { latitude: 13.087, longitude: 80.217 },
       undefined, // No coupon code passed
-      testCustomerId
+      testCustomerId,
     );
 
     assert.strictEqual(autoEstimate.appliedCoupon?.code, autoCoupon.code);
@@ -632,7 +656,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         newCustomerOnly: true,
         validUntil: new Date(Date.now() + 86400000).toISOString(),
       },
-      testAdminId
+      testAdminId,
     );
 
     // Customer with 0 orders -> Valid
@@ -640,7 +664,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
       newCustomerCoupon.code,
       testCustomerId,
       380.0,
-      testOutletId
+      testOutletId,
     );
     assert.strictEqual(validCheck.discountAmountInr, 50.0);
 
@@ -651,13 +675,13 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
           newCustomerCoupon.code,
           testCustomerWithOrdersId,
           380.0,
-          testOutletId
+          testOutletId,
         );
       },
       (err: any) => {
         assert.ok(err.message.includes('first-time customers'));
         return true;
-      }
+      },
     );
 
     // C. Global Redemption Cap: max 1 total redemption
@@ -669,7 +693,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         maxTotalRedemptions: 1,
         validUntil: new Date(Date.now() + 86400000).toISOString(),
       },
-      testAdminId
+      testAdminId,
     );
 
     // First redemption succeeds
@@ -678,18 +702,24 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
     // Second redemption fails due to cap
     await assert.rejects(
       async () => {
-        await couponsService.redeemCoupon(db, cappedCoupon.id, testCustomerId, testOrderGroupId, 25.0);
+        await couponsService.redeemCoupon(
+          db,
+          cappedCoupon.id,
+          testCustomerId,
+          testOrderGroupId,
+          25.0,
+        );
       },
       (err: any) => {
         assert.ok(err.message.includes('Coupon redemption cap reached'));
         return true;
-      }
+      },
     );
   });
 
   it('10. should leverage Redis caching for live search suggestions and record customer search history', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Suggestions
@@ -706,7 +736,7 @@ describe('Phase 6: Multi-Vertical Search, Service Zones, Dynamic Pricing & Promo
         q: 'Royal Biryani Feast',
         verticalType: 'FOOD',
       },
-      testCustomerId
+      testCustomerId,
     );
 
     const history = await discoveryService.getSearchHistory(testCustomerId);

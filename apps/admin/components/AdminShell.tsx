@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth-context';
-import { AppSidebar } from '@/components/app-sidebar';
 import { Header } from '@/components/Header';
-import { SidebarProvider, SidebarInset } from '@allgo/ui';
+import { AppSidebar } from '@/components/app-sidebar';
+import { useAuth } from '@/lib/auth-context';
+import { SidebarInset, SidebarProvider } from '@allgo/ui';
+import { usePathname, useRouter } from 'next/navigation';
+import type React from 'react';
+import { useEffect } from 'react';
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading, isAdmin } = useAuth();

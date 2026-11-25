@@ -1,8 +1,8 @@
-import React from 'react';
-import { MerchantApplicationSummary } from '@/lib/api-client';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import type { MerchantApplicationSummary } from '@/lib/api-client';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
+import type React from 'react';
 
 interface MerchantDocumentsListProps {
   merchant: MerchantApplicationSummary;
@@ -26,7 +26,9 @@ export const MerchantDocumentsList: React.FC<MerchantDocumentsListProps> = ({ me
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-foreground">{doc.document_type}</span>
+                    <span className="font-semibold text-sm text-foreground">
+                      {doc.document_type}
+                    </span>
                     <Badge variant="outline" className="text-xs">
                       v{doc.version || 1}
                     </Badge>
@@ -35,7 +37,8 @@ export const MerchantDocumentsList: React.FC<MerchantDocumentsListProps> = ({ me
                     </Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Document #: {doc.document_number || 'N/A'} • Status: {doc.verification_status || 'PENDING'}
+                    Document #: {doc.document_number || 'N/A'} • Status:{' '}
+                    {doc.verification_status || 'PENDING'}
                   </div>
                 </div>
                 <Button

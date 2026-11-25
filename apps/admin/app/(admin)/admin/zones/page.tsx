@@ -1,14 +1,15 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { ZonesMetrics } from '@/components/zones/ZonesMetrics';
-import { ZonesTable } from '@/components/zones/ZonesTable';
-import { ZoneSurgeModal } from '@/components/zones/ZoneSurgeModal';
 import { CreateZoneModal } from '@/components/zones/CreateZoneModal';
 import { ServiceabilitySimulator } from '@/components/zones/ServiceabilitySimulator';
+import { ZoneSurgeModal } from '@/components/zones/ZoneSurgeModal';
+import { ZonesMetrics } from '@/components/zones/ZonesMetrics';
+import { ZonesTable } from '@/components/zones/ZonesTable';
+import { adminApi } from '@/lib/api-client';
 import { Button } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { Add01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 export default function ServiceZonesPage() {
   const [zones, setZones] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,17 +29,17 @@ export default function ServiceZonesPage() {
         type: 'Polygon',
         coordinates: [
           [
-            [80.20, 13.07],
+            [80.2, 13.07],
             [80.25, 13.07],
             [80.25, 13.12],
-            [80.20, 13.12],
-            [80.20, 13.07],
+            [80.2, 13.12],
+            [80.2, 13.07],
           ],
         ],
       },
       null,
-      2
-    )
+      2,
+    ),
   );
   const [isCreatingZone, setIsCreatingZone] = useState(false);
   const [showSimulator, setShowSimulator] = useState(false);
@@ -147,8 +148,8 @@ export default function ServiceZonesPage() {
     setIsSimulating(true);
     setSimResult(null);
     try {
-      const lat = parseFloat(simLat);
-      const lng = parseFloat(simLng);
+      const lat = Number.parseFloat(simLat);
+      const lng = Number.parseFloat(simLng);
       const res = await adminApi.testServiceability(lat, lng, simVertical);
       setSimResult(res);
     } catch (err: any) {
@@ -160,31 +161,24 @@ export default function ServiceZonesPage() {
   const totalZones = zones.length;
   const activeZones = zones.filter((z) => z.is_active).length;
   const surgeActiveCount = zones.filter((z) =>
-    z.service_settings?.some((s: any) => s.isSurgeActive && s.surgeMultiplier > 1.0)
+    z.service_settings?.some((s: any) => s.isSurgeActive && s.surgeMultiplier > 1.0),
   ).length;
   return (
     <div>
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Service Zones & Geofencing Control
-          </h1>
+          <h1 className="text-2xl font-bold text-foreground">Service Zones & Geofencing Control</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            PostGIS spatial boundaries, vertical serviceability toggles, dynamic pricing and surge controls.
+            PostGIS spatial boundaries, vertical serviceability toggles, dynamic pricing and surge
+            controls.
           </p>
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowSimulator(!showSimulator)}
-          >
+          <Button variant="outline" onClick={() => setShowSimulator(!showSimulator)}>
             {showSimulator ? 'Hide Simulator' : 'Test Serviceability'}
           </Button>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-1.5"
-          >
+          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-1.5">
             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} className="size-4" />
             <span>New Service Zone</span>
           </Button>
@@ -193,7 +187,9 @@ export default function ServiceZonesPage() {
       {successMessage && (
         <div className="p-4 rounded-lg bg-primary/10 text-primary border border-primary/20 flex justify-between items-center mb-6 text-sm">
           <span>Success: {successMessage}</span>
-          <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>Dismiss</Button>
+          <Button variant="ghost" size="sm" onClick={() => setSuccessMessage(null)}>
+            Dismiss
+          </Button>
         </div>
       )}
       {errorMessage && (
@@ -201,7 +197,11 @@ export default function ServiceZonesPage() {
           Error: {errorMessage}
         </div>
       )}
-      <ZonesMetrics totalZones={totalZones} activeZones={activeZones} surgeActiveCount={surgeActiveCount} />
+      <ZonesMetrics
+        totalZones={totalZones}
+        activeZones={activeZones}
+        surgeActiveCount={surgeActiveCount}
+      />
       <ServiceabilitySimulator
         showSimulator={showSimulator}
         simLat={simLat}

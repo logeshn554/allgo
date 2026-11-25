@@ -1,21 +1,21 @@
-import { API_BASE, getAdminHeaders, adminFetch, safeFetchJson } from './base-client';
-import { upsertStoredSession } from '../auth/session-store';
 import { getOrCreateWebDeviceId } from '../auth/device-id';
+import { upsertStoredSession } from '../auth/session-store';
 import {
-  SendOtpResponse,
-  AuthResponse,
-  AuthLoginResult,
+  type ActiveDeviceSession,
+  type AuthLoginResult,
+  type AuthResponse,
+  type IdentifierLookupResponse,
+  type LinkedIdentity,
+  type LogoutResponse,
+  type SendOtpResponse,
+  type TwoFactorEnableResponse,
+  type TwoFactorPolicy,
+  type TwoFactorSetupResponse,
+  type TwoFactorStatusResponse,
+  type UserSummary,
   isTwoFactorChallenge,
-  IdentifierLookupResponse,
-  TwoFactorPolicy,
-  TwoFactorStatusResponse,
-  TwoFactorSetupResponse,
-  TwoFactorEnableResponse,
-  LogoutResponse,
-  ActiveDeviceSession,
-  LinkedIdentity,
-  UserSummary,
 } from '../types';
+import { API_BASE, adminFetch, getAdminHeaders, safeFetchJson } from './base-client';
 
 export class AuthApi {
   async sendOtp(phone: string): Promise<SendOtpResponse> {
@@ -126,7 +126,12 @@ export class AuthApi {
       {
         method: 'POST',
         headers: getAdminHeaders(),
-        body: JSON.stringify({ identifier, password, platform: 'WEB', deviceId: getOrCreateWebDeviceId() }),
+        body: JSON.stringify({
+          identifier,
+          password,
+          platform: 'WEB',
+          deviceId: getOrCreateWebDeviceId(),
+        }),
       },
       'Invalid credentials',
     );
@@ -136,7 +141,10 @@ export class AuthApi {
     return data;
   }
 
-  async refreshSession(refreshToken: string, deviceId = getOrCreateWebDeviceId()): Promise<AuthResponse> {
+  async refreshSession(
+    refreshToken: string,
+    deviceId = getOrCreateWebDeviceId(),
+  ): Promise<AuthResponse> {
     const data = await safeFetchJson<AuthResponse>(
       `${API_BASE}/v1/auth/refresh`,
       {
@@ -156,7 +164,12 @@ export class AuthApi {
       {
         method: 'POST',
         headers: getAdminHeaders(),
-        body: JSON.stringify({ email, password, platform: 'WEB', deviceId: getOrCreateWebDeviceId() }),
+        body: JSON.stringify({
+          email,
+          password,
+          platform: 'WEB',
+          deviceId: getOrCreateWebDeviceId(),
+        }),
       },
       'Email login failed',
     );
@@ -176,7 +189,13 @@ export class AuthApi {
       {
         method: 'POST',
         headers: getAdminHeaders(),
-        body: JSON.stringify({ email, password, fullName, platform: 'WEB', deviceId: getOrCreateWebDeviceId() }),
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          platform: 'WEB',
+          deviceId: getOrCreateWebDeviceId(),
+        }),
       },
       'Email registration failed',
     );
@@ -256,7 +275,10 @@ export class AuthApi {
     );
   }
 
-  async changePassword(currentPassword: string | undefined, newPassword: string): Promise<{ success: boolean }> {
+  async changePassword(
+    currentPassword: string | undefined,
+    newPassword: string,
+  ): Promise<{ success: boolean }> {
     return adminFetch<{ success: boolean }>('/v1/auth/password/change', {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
@@ -346,9 +368,12 @@ export class AuthApi {
   }
 
   async unlinkMyIdentity(identityId: string): Promise<{ success: boolean }> {
-    return adminFetch<{ success: boolean }>(`/v1/auth/identities/${encodeURIComponent(identityId)}`, {
-      method: 'DELETE',
-    });
+    return adminFetch<{ success: boolean }>(
+      `/v1/auth/identities/${encodeURIComponent(identityId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
   }
 
   async sendLinkPhoneOtp(phone: string): Promise<SendOtpResponse> {

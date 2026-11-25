@@ -1,12 +1,18 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_PATH = path.join(ROOT_DIR, 'database/migrations/009_phase7_parcel_and_courier_delivery.sql');
-const ROLLBACK_PATH = path.join(ROOT_DIR, 'database/rollbacks/009_phase7_parcel_and_courier_delivery_rollback.sql');
+const MIGRATION_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/009_phase7_parcel_and_courier_delivery.sql',
+);
+const ROLLBACK_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/009_phase7_parcel_and_courier_delivery_rollback.sql',
+);
 
 describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
   it('should verify migration 009 and rollback 009 files exist and conform to SQL transaction safety', () => {
@@ -23,7 +29,8 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
   });
 
   it('should apply and rollback migration 009 symmetrically on an isolated disposable database', async () => {
-    const baseDevUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/allgo_dev';
+    const baseDevUrl =
+      process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/allgo_dev';
     const adminUrlObj = new URL(baseDevUrl);
     adminUrlObj.pathname = '/postgres';
     const adminUrl = process.env.DATABASE_ADMIN_URL || adminUrlObj.toString();
@@ -35,7 +42,9 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
     try {
       await adminClient.connect();
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
@@ -114,11 +123,14 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
       `);
       const stateId = stateRes.rows[0].id;
 
-      const cityRes = await testClient.query(`
+      const cityRes = await testClient.query(
+        `
         INSERT INTO cities (state_id, name, slug, status)
         VALUES ($1, 'Chennai', 'chennai', 'PILOT')
         RETURNING id;
-      `, [stateId]);
+      `,
+        [stateId],
+      );
       const cityId = cityRes.rows[0].id;
 
       const userRes = await testClient.query(`
@@ -128,7 +140,8 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
       `);
       const userId = userRes.rows[0].id;
 
-      const parcelRes = await testClient.query(`
+      const parcelRes = await testClient.query(
+        `
         INSERT INTO parcels (
           parcel_number, sender_id, customer_id, city_id, status,
           pickup_address, pickup_location, pickup_contact_name, pickup_contact_phone,
@@ -142,25 +155,37 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
           'DOCUMENTS', 1.0, '1234', '5678',
           40.0, 40.0, 32.0
         ) RETURNING id;
-      `, [userId, cityId]);
+      `,
+        [userId, cityId],
+      );
       const parcelId = parcelRes.rows[0].id;
 
-      const testEvent = await testClient.query(`
+      const testEvent = await testClient.query(
+        `
         INSERT INTO parcel_delivery_events (parcel_id, event_type, from_status, to_status)
         VALUES ($1, 'BOOKED', NULL, 'BOOKED')
         RETURNING id;
-      `, [parcelId]);
+      `,
+        [parcelId],
+      );
       const eventId = testEvent.rows[0].id;
 
       let updateBlocked = false;
       try {
-        await testClient.query(`UPDATE parcel_delivery_events SET reason = 'Tampered' WHERE id = $1;`, [eventId]);
+        await testClient.query(
+          `UPDATE parcel_delivery_events SET reason = 'Tampered' WHERE id = $1;`,
+          [eventId],
+        );
       } catch (err: any) {
         if (err.message.includes('append-only')) {
           updateBlocked = true;
         }
       }
-      assert.strictEqual(updateBlocked, true, 'Trigger must block UPDATE on parcel_delivery_events');
+      assert.strictEqual(
+        updateBlocked,
+        true,
+        'Trigger must block UPDATE on parcel_delivery_events',
+      );
 
       let deleteBlocked = false;
       try {
@@ -170,7 +195,11 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
           deleteBlocked = true;
         }
       }
-      assert.strictEqual(deleteBlocked, true, 'Trigger must block DELETE on parcel_delivery_events');
+      assert.strictEqual(
+        deleteBlocked,
+        true,
+        'Trigger must block DELETE on parcel_delivery_events',
+      );
 
       // Revert test parcel status to pre-Phase-7 status so legacy constraint check passes on rollback
       await testClient.query(`UPDATE parcels SET status = 'CREATED' WHERE id = $1;`, [parcelId]);
@@ -185,7 +214,11 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
         WHERE table_schema = 'public' 
           AND table_name IN ('parcel_service_configs', 'parcel_restrictions_config', 'parcel_assignments', 'parcel_delivery_events', 'parcel_policy_audit_logs');
       `);
-      assert.strictEqual(postRollbackTables.rows.length, 0, 'Phase 7 tables must be dropped after rollback');
+      assert.strictEqual(
+        postRollbackTables.rows.length,
+        0,
+        'Phase 7 tables must be dropped after rollback',
+      );
 
       // Verify additive columns removed
       const postRollbackCols = await testClient.query(`
@@ -194,7 +227,11 @@ describe('Phase 7: Database Migration 009 & Rollback Verification', () => {
           'service_type', 'pickup_otp_hash', 'delivery_otp_hash', 'return_assigned_partner_id'
         );
       `);
-      assert.strictEqual(postRollbackCols.rows.length, 0, 'Phase 7 columns must be dropped after rollback');
+      assert.strictEqual(
+        postRollbackCols.rows.length,
+        0,
+        'Phase 7 columns must be dropped after rollback',
+      );
     } finally {
       await testClient.end();
       await adminClient.query(`DROP DATABASE IF EXISTS "${testDbName}";`);

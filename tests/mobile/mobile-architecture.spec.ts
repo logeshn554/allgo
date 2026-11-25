@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 
@@ -121,7 +121,10 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
         assert.ok(fs.existsSync(screenPath), `Screen ${s} must exist`);
       }
 
-      const homeContent = fs.readFileSync(path.join(APP_DIR, 'lib/src/screens/customer_home_shell.dart'), 'utf-8');
+      const homeContent = fs.readFileSync(
+        path.join(APP_DIR, 'lib/src/screens/customer_home_shell.dart'),
+        'utf-8',
+      );
       assert.match(homeContent, /Food Delivery/i);
       assert.match(homeContent, /Quick Grocery/i);
       assert.match(homeContent, /City Parcel/i);
@@ -216,9 +219,18 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
     const apps = ['customer_mobile', 'merchant_mobile', 'partner_mobile'];
 
     it('should maintain three strictly independent entry points with distinct branding and root widgets', () => {
-      const customerMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/customer_mobile/lib/main.dart'), 'utf-8');
-      const merchantMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/merchant_mobile/lib/main.dart'), 'utf-8');
-      const partnerMain = fs.readFileSync(path.join(ROOT_DIR, 'apps/partner_mobile/lib/main.dart'), 'utf-8');
+      const customerMain = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/customer_mobile/lib/main.dart'),
+        'utf-8',
+      );
+      const merchantMain = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/merchant_mobile/lib/main.dart'),
+        'utf-8',
+      );
+      const partnerMain = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/partner_mobile/lib/main.dart'),
+        'utf-8',
+      );
 
       assert.match(customerMain, /class AllGoCustomerApp/);
       assert.match(customerMain, /AllGo Customer/);
@@ -238,9 +250,18 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
       };
 
       for (const [app, pkgId] of Object.entries(packages)) {
-        const manifest = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/android/app/src/main/AndroidManifest.xml`), 'utf-8');
-        const gradle = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/android/app/build.gradle`), 'utf-8');
-        const plist = fs.readFileSync(path.join(ROOT_DIR, `apps/${app}/ios/Runner/Info.plist`), 'utf-8');
+        const manifest = fs.readFileSync(
+          path.join(ROOT_DIR, `apps/${app}/android/app/src/main/AndroidManifest.xml`),
+          'utf-8',
+        );
+        const gradle = fs.readFileSync(
+          path.join(ROOT_DIR, `apps/${app}/android/app/build.gradle`),
+          'utf-8',
+        );
+        const plist = fs.readFileSync(
+          path.join(ROOT_DIR, `apps/${app}/ios/Runner/Info.plist`),
+          'utf-8',
+        );
 
         assert.match(manifest, new RegExp(`package="${pkgId}"`));
         assert.match(gradle, new RegExp(`applicationId "${pkgId}"`));
@@ -264,12 +285,12 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
             assert.strictEqual(
               content.includes(`package:${other}`),
               false,
-              `Violation: ${app}/${file} must not import from ${other}`
+              `Violation: ${app}/${file} must not import from ${other}`,
             );
             assert.strictEqual(
               content.includes(`apps/${other}`),
               false,
-              `Violation: ${app}/${file} must not reference apps/${other}`
+              `Violation: ${app}/${file} must not reference apps/${other}`,
             );
           }
         }
@@ -289,20 +310,28 @@ describe('Phase 1 Mobile: Flutter Applications & Shared Foundation Architecture'
           assert.strictEqual(
             /select.*role|choose.*role|role.*select/i.test(content),
             false,
-            `Violation: ${app}/${file} contains prohibited multi-role selection logic`
+            `Violation: ${app}/${file} contains prohibited multi-role selection logic`,
           );
         }
       }
     });
 
     it('should enforce independent activeRole context headers in mobile client', () => {
-      const customerSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/customer_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
-      const merchantSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/merchant_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
-      const partnerSplash = fs.readFileSync(path.join(ROOT_DIR, 'apps/partner_mobile/lib/src/screens/splash_screen.dart'), 'utf-8');
+      const customerSplash = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/customer_mobile/lib/src/screens/splash_screen.dart'),
+        'utf-8',
+      );
+      const merchantSplash = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/merchant_mobile/lib/src/screens/splash_screen.dart'),
+        'utf-8',
+      );
+      const partnerSplash = fs.readFileSync(
+        path.join(ROOT_DIR, 'apps/partner_mobile/lib/src/screens/splash_screen.dart'),
+        'utf-8',
+      );
 
       assert.match(merchantSplash, /client\.activeRole = 'MERCHANT_ADMIN'/);
       assert.match(partnerSplash, /client\.activeRole = 'PARTNER'/);
     });
   });
 });
-

@@ -47,7 +47,7 @@ export interface OrderTotalCalculationResult {
 
 /**
  * calculateOrderTotal
- * 
+ *
  * Strict Server-Side Price & Tax Calculation Engine:
  * - Deprecates client-supplied unit prices, totals, and tax sums.
  * - All monetary values are computed using integer paisa to prevent IEEE-754 precision drift.
@@ -73,7 +73,7 @@ export function calculateOrderTotal(params: {
     deliveryFeePaisa = 0,
     surgeMultiplier = 1.0,
     packagingFeePaisa = 1500, // ₹15.00 default
-    platformFeePaisa = 500,   // ₹5.00 default
+    platformFeePaisa = 500, // ₹5.00 default
     discountPaisa = 0,
   } = params;
 
@@ -87,7 +87,9 @@ export function calculateOrderTotal(params: {
 
   for (const item of items) {
     if (item.quantity <= 0 || !Number.isInteger(item.quantity)) {
-      throw new Error(`INVALID_QUANTITY: Item quantity must be a positive integer (got ${item.quantity})`);
+      throw new Error(
+        `INVALID_QUANTITY: Item quantity must be a positive integer (got ${item.quantity})`,
+      );
     }
 
     const dbItem = dbItems.get(item.skuOrId);
@@ -96,7 +98,9 @@ export function calculateOrderTotal(params: {
     }
 
     if (!dbItem.isActive || !dbItem.outletAvailable) {
-      throw new Error(`ITEM_UNAVAILABLE: Item ${dbItem.name} (${item.skuOrId}) is currently inactive or out of stock`);
+      throw new Error(
+        `ITEM_UNAVAILABLE: Item ${dbItem.name} (${item.skuOrId}) is currently inactive or out of stock`,
+      );
     }
 
     let unitPricePaisa = dbItem.basePricePaisa;
@@ -140,7 +144,7 @@ export function calculateOrderTotal(params: {
       effectiveDeliveryFeePaisa +
       packagingFeePaisa +
       platformFeePaisa -
-      discountPaisa
+      discountPaisa,
   );
 
   return {

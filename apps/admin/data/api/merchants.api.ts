@@ -1,10 +1,10 @@
-import { adminFetch } from './base-client';
-import {
-  MerchantApplicationSummary,
+import type {
   ListMerchantsOptions,
   ListMerchantsResponse,
+  MerchantApplicationSummary,
   UpdateMerchantStatusResponse,
 } from '../types';
+import { adminFetch } from './base-client';
 
 export class MerchantsApi {
   async listMerchants(options: ListMerchantsOptions = {}): Promise<ListMerchantsResponse> {

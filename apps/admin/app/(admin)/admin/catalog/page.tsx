@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { CatalogProductsTable, CatalogProduct } from '@/components/catalog/CatalogProductsTable';
+import {
+  type CatalogProduct,
+  CatalogProductsTable,
+} from '@/components/catalog/CatalogProductsTable';
 import { CatalogRejectModal } from '@/components/catalog/CatalogRejectModal';
+import { adminApi } from '@/lib/api-client';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
+import { useEffect, useState } from 'react';
 
 export default function CatalogModerationPage() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
@@ -86,7 +89,8 @@ export default function CatalogModerationPage() {
             Catalog & Food Menu Moderation
           </h1>
           <p className="text-sm text-muted-foreground">
-            Inspect restaurant dishes and grocery products submitted by merchants, verify pricing, dietary tags, and enforce safety standards.
+            Inspect restaurant dishes and grocery products submitted by merchants, verify pricing,
+            dietary tags, and enforce safety standards.
           </p>
         </div>
         <div>

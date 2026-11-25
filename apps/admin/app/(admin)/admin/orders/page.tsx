@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { OrdersKpiCards } from '@/components/orders/OrdersKpiCards';
-import { OrdersTable } from '@/components/orders/OrdersTable';
-import { OrderDetailDrawer } from '@/components/orders/OrderDetailDrawer';
 import { CouponsTable } from '@/components/orders/CouponsTable';
 import { CreateCouponModal } from '@/components/orders/CreateCouponModal';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@allgo/ui';
+import { OrderDetailDrawer } from '@/components/orders/OrderDetailDrawer';
+import { OrdersKpiCards } from '@/components/orders/OrdersKpiCards';
+import { OrdersTable } from '@/components/orders/OrdersTable';
+import { adminApi } from '@/lib/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
+import { PlusSignIcon, RefreshIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { RefreshIcon, PlusSignIcon } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function OrdersManagementPage() {
   const [activeTab, setActiveTab] = useState<'orders' | 'coupons'>('orders');
@@ -139,7 +140,8 @@ export default function OrdersManagementPage() {
             Multi-Vertical Order Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Live governance for Food, Grocery & Retail Orders, Inventory Reservations, Payments & Refunds
+            Live governance for Food, Grocery & Retail Orders, Inventory Reservations, Payments &
+            Refunds
           </p>
         </div>
 
@@ -147,7 +149,10 @@ export default function OrdersManagementPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => { fetchOrders(); fetchCoupons(); }}
+            onClick={() => {
+              fetchOrders();
+              fetchCoupons();
+            }}
             className="gap-2 cursor-pointer"
           >
             <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
@@ -172,12 +177,8 @@ export default function OrdersManagementPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList variant="line">
-          <TabsTrigger value="orders">
-            Orders Queue ({orders.length})
-          </TabsTrigger>
-          <TabsTrigger value="coupons">
-            Promotional Coupons ({coupons.length})
-          </TabsTrigger>
+          <TabsTrigger value="orders">Orders Queue ({orders.length})</TabsTrigger>
+          <TabsTrigger value="coupons">Promotional Coupons ({coupons.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders">

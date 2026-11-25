@@ -1,39 +1,32 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 
 // Load compiled entities from dist
 import {
-  RideStatus,
-  ALL_RIDE_STATUSES,
-  TERMINAL_RIDE_STATUSES,
   ACTIVE_RIDE_STATUSES,
+  ALL_ASSIGNMENT_STATUSES,
+  ALL_MOBILITY_SERVICES,
+  ALL_PRICING_MODELS,
+  ALL_RIDE_STATUSES,
+  ALL_SERVICE_TYPES,
   CANCELLABLE_RIDE_STATUSES,
+  RideStatus,
+  TERMINAL_RIDE_STATUSES,
   VALID_RIDE_TRANSITIONS,
   isValidRideTransition,
-  ServiceType,
-  MobilityServiceType,
-  ALL_SERVICE_TYPES,
-  ALL_MOBILITY_SERVICES,
-  VehicleCategory,
-  STANDARD_VEHICLE_CATEGORIES,
-  VehicleTransmission,
-  VehicleFuelType,
-  AssignmentStatus,
-  ALL_ASSIGNMENT_STATUSES,
-  TERMINAL_ASSIGNMENT_STATUSES,
-  PricingModel,
-  ALL_PRICING_MODELS,
-  ActorType,
-  ALL_ACTOR_TYPES,
-  RideEventType,
-  HireDriverEventType,
-} from '../../apps/api/dist/mobility/entities/index.js';
+} from '../../services/api/dist/mobility/entities/index.js';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_010_PATH = path.join(ROOT_DIR, 'database/migrations/010_phase8_mobility_services_and_hire_driver.sql');
-const ROLLBACK_010_PATH = path.join(ROOT_DIR, 'database/rollbacks/010_phase8_mobility_services_and_hire_driver_rollback.sql');
+const MIGRATION_010_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/010_phase8_mobility_services_and_hire_driver.sql',
+);
+const ROLLBACK_010_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/010_phase8_mobility_services_and_hire_driver_rollback.sql',
+);
 
 describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
   const mig010Sql = fs.readFileSync(MIGRATION_010_PATH, 'utf8');
@@ -59,7 +52,7 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
           assert.strictEqual(
             actual,
             expected,
-            `Transition ${from} -> ${to} mismatch: expected ${expected}, got ${actual}`
+            `Transition ${from} -> ${to} mismatch: expected ${expected}, got ${actual}`,
           );
 
           if (actual) validCount++;
@@ -68,8 +61,14 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
       }
 
       // Assert reasonable graph connectivity
-      assert.ok(validCount >= 20 && validCount <= 40, `Valid transition count (${validCount}) within expected domain bounds`);
-      assert.ok(invalidCount > 180, `Invalid transition count (${invalidCount}) demonstrates strict gatekeeping`);
+      assert.ok(
+        validCount >= 20 && validCount <= 40,
+        `Valid transition count (${validCount}) within expected domain bounds`,
+      );
+      assert.ok(
+        invalidCount > 180,
+        `Invalid transition count (${invalidCount}) demonstrates strict gatekeeping`,
+      );
     });
 
     it('1.2 should strictly prevent invalid backward or skipping transitions', () => {
@@ -77,28 +76,28 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
       assert.strictEqual(
         isValidRideTransition(RideStatus.RIDE_REQUESTED, RideStatus.TRIP_STARTED),
         false,
-        'Cannot jump directly from RIDE_REQUESTED to TRIP_STARTED without assignment and arrival'
+        'Cannot jump directly from RIDE_REQUESTED to TRIP_STARTED without assignment and arrival',
       );
 
       // Re-opening completed ride
       assert.strictEqual(
         isValidRideTransition(RideStatus.TRIP_COMPLETED, RideStatus.TRIP_STARTED),
         false,
-        'Cannot re-start completed trip'
+        'Cannot re-start completed trip',
       );
 
       // Cancelling completed ride
       assert.strictEqual(
         isValidRideTransition(RideStatus.TRIP_COMPLETED, RideStatus.CUSTOMER_CANCELLED),
         false,
-        'Cannot cancel a trip after completion'
+        'Cannot cancel a trip after completion',
       );
 
       // Re-activating expired ride
       assert.strictEqual(
         isValidRideTransition(RideStatus.RIDE_EXPIRED, RideStatus.SEARCHING_FOR_DRIVER),
         false,
-        'Cannot reactivate expired ride without new request'
+        'Cannot reactivate expired ride without new request',
       );
 
       // Outgoing from DISPUTED
@@ -106,14 +105,20 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
         assert.strictEqual(
           isValidRideTransition(RideStatus.DISPUTED, target),
           false,
-          `DISPUTED is strictly terminal: transition to ${target} must be rejected`
+          `DISPUTED is strictly terminal: transition to ${target} must be rejected`,
         );
       }
     });
 
     it('1.3 should handle defensive edge cases with non-existent or malformed status inputs', () => {
-      assert.strictEqual(isValidRideTransition('UNKNOWN_STATUS' as any, RideStatus.TRIP_STARTED), false);
-      assert.strictEqual(isValidRideTransition(RideStatus.RIDE_REQUESTED, 'UNKNOWN_STATUS' as any), false);
+      assert.strictEqual(
+        isValidRideTransition('UNKNOWN_STATUS' as any, RideStatus.TRIP_STARTED),
+        false,
+      );
+      assert.strictEqual(
+        isValidRideTransition(RideStatus.RIDE_REQUESTED, 'UNKNOWN_STATUS' as any),
+        false,
+      );
       assert.strictEqual(isValidRideTransition(null as any, RideStatus.TRIP_STARTED), false);
       assert.strictEqual(isValidRideTransition(RideStatus.RIDE_REQUESTED, undefined as any), false);
       assert.strictEqual(isValidRideTransition('' as any, '' as any), false);
@@ -126,7 +131,7 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
           assert.strictEqual(
             isValidRideTransition(term, active),
             false,
-            `Terminal status ${term} cannot transition to active status ${active}`
+            `Terminal status ${term} cannot transition to active status ${active}`,
           );
         }
       }
@@ -135,9 +140,16 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
       for (const cancellable of CANCELLABLE_RIDE_STATUSES) {
         const allowed = VALID_RIDE_TRANSITIONS[cancellable];
         const hasCancel = allowed.some((s) =>
-          [RideStatus.CUSTOMER_CANCELLED, RideStatus.DRIVER_CANCELLED, RideStatus.RIDE_CANCELLED].includes(s)
+          [
+            RideStatus.CUSTOMER_CANCELLED,
+            RideStatus.DRIVER_CANCELLED,
+            RideStatus.RIDE_CANCELLED,
+          ].includes(s),
         );
-        assert.ok(hasCancel, `Cancellable status ${cancellable} must have at least one cancel route`);
+        assert.ok(
+          hasCancel,
+          `Cancellable status ${cancellable} must have at least one cancel route`,
+        );
       }
     });
   });
@@ -148,62 +160,87 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
   describe('2. SQL DDL vs TypeScript Model Alignment Oracles', () => {
     it('2.1 should verify chk_ride_status check constraint in SQL contains all 15 RideStatus enum values', () => {
       // Extract the chk_ride_status block specifically from SQL
-      const chkBlockMatch = mig010Sql.match(/ADD\s+CONSTRAINT\s+chk_ride_status\s+CHECK\s*\(([\s\S]*?)\);/i);
-      assert.ok(chkBlockMatch, 'Migration 010 must contain ADD CONSTRAINT chk_ride_status CHECK (...)');
+      const chkBlockMatch = mig010Sql.match(
+        /ADD\s+CONSTRAINT\s+chk_ride_status\s+CHECK\s*\(([\s\S]*?)\);/i,
+      );
+      assert.ok(
+        chkBlockMatch,
+        'Migration 010 must contain ADD CONSTRAINT chk_ride_status CHECK (...)',
+      );
 
       const chkContent = chkBlockMatch[1];
       for (const status of ALL_RIDE_STATUSES) {
         assert.ok(
           chkContent.includes(`'${status}'`),
-          `chk_ride_status check constraint block must contain status '${status}'`
+          `chk_ride_status check constraint block must contain status '${status}'`,
         );
       }
     });
 
     it('2.2 should verify chk_rides_service_type supports both MobilityServiceType and ServiceType', () => {
-      const chkBlockMatch = mig010Sql.match(/ADD\s+CONSTRAINT\s+chk_rides_service_type\s+CHECK\s*\(([\s\S]*?)\);/i);
-      assert.ok(chkBlockMatch, 'Migration 010 must contain ADD CONSTRAINT chk_rides_service_type CHECK (...)');
+      const chkBlockMatch = mig010Sql.match(
+        /ADD\s+CONSTRAINT\s+chk_rides_service_type\s+CHECK\s*\(([\s\S]*?)\);/i,
+      );
+      assert.ok(
+        chkBlockMatch,
+        'Migration 010 must contain ADD CONSTRAINT chk_rides_service_type CHECK (...)',
+      );
 
       const chkContent = chkBlockMatch[1];
       // MobilityServiceType
       for (const svc of ALL_MOBILITY_SERVICES) {
         assert.ok(
           chkContent.includes(`'${svc}'`),
-          `chk_rides_service_type must contain mobility service '${svc}'`
+          `chk_rides_service_type must contain mobility service '${svc}'`,
         );
       }
       // ServiceType
       for (const svc of ALL_SERVICE_TYPES) {
         assert.ok(
           chkContent.includes(`'${svc}'`),
-          `chk_rides_service_type must contain trip service type '${svc}'`
+          `chk_rides_service_type must contain trip service type '${svc}'`,
         );
       }
     });
 
     it('2.3 should verify chk_hire_driver_pricing_model covers ALL_PRICING_MODELS', () => {
-      const chkBlockMatch = mig010Sql.match(/ADD\s+CONSTRAINT\s+chk_hire_driver_pricing_model\s+CHECK\s*\(([\s\S]*?)\);/i);
-      assert.ok(chkBlockMatch, 'Migration 010 must contain ADD CONSTRAINT chk_hire_driver_pricing_model CHECK (...)');
+      const chkBlockMatch = mig010Sql.match(
+        /ADD\s+CONSTRAINT\s+chk_hire_driver_pricing_model\s+CHECK\s*\(([\s\S]*?)\);/i,
+      );
+      assert.ok(
+        chkBlockMatch,
+        'Migration 010 must contain ADD CONSTRAINT chk_hire_driver_pricing_model CHECK (...)',
+      );
 
       const chkContent = chkBlockMatch[1];
       for (const pm of ALL_PRICING_MODELS) {
         assert.ok(
           chkContent.includes(`'${pm}'`),
-          `chk_hire_driver_pricing_model must contain '${pm}'`
+          `chk_hire_driver_pricing_model must contain '${pm}'`,
         );
       }
     });
 
     it('2.4 should verify AssignmentStatus enum matches chk_ride_assignment_status and chk_hire_driver_assignment_status', () => {
-      const rideAssignMatch = mig010Sql.match(/CONSTRAINT\s+chk_ride_assignment_status\s+CHECK\s*\(([\s\S]*?)\)/i);
+      const rideAssignMatch = mig010Sql.match(
+        /CONSTRAINT\s+chk_ride_assignment_status\s+CHECK\s*\(([\s\S]*?)\)/i,
+      );
       assert.ok(rideAssignMatch, 'Must define chk_ride_assignment_status');
 
-      const hireAssignMatch = mig010Sql.match(/CONSTRAINT\s+chk_hire_driver_assignment_status\s+CHECK\s*\(([\s\S]*?)\)/i);
+      const hireAssignMatch = mig010Sql.match(
+        /CONSTRAINT\s+chk_hire_driver_assignment_status\s+CHECK\s*\(([\s\S]*?)\)/i,
+      );
       assert.ok(hireAssignMatch, 'Must define chk_hire_driver_assignment_status');
 
       for (const status of ALL_ASSIGNMENT_STATUSES) {
-        assert.ok(rideAssignMatch[1].includes(`'${status}'`), `chk_ride_assignment_status must contain '${status}'`);
-        assert.ok(hireAssignMatch[1].includes(`'${status}'`), `chk_hire_driver_assignment_status must contain '${status}'`);
+        assert.ok(
+          rideAssignMatch[1].includes(`'${status}'`),
+          `chk_ride_assignment_status must contain '${status}'`,
+        );
+        assert.ok(
+          hireAssignMatch[1].includes(`'${status}'`),
+          `chk_hire_driver_assignment_status must contain '${status}'`,
+        );
       }
     });
 
@@ -219,7 +256,10 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
         'partner_payout_inr',
       ];
       for (const col of expectedRideMonetary) {
-        const regex = new RegExp(`ALTER\\s+TABLE\\s+rides\\s+ALTER\\s+COLUMN\\s+${col}\\s+TYPE\\s+NUMERIC\\(12,2\\)`, 'i');
+        const regex = new RegExp(
+          `ALTER\\s+TABLE\\s+rides\\s+ALTER\\s+COLUMN\\s+${col}\\s+TYPE\\s+NUMERIC\\(12,2\\)`,
+          'i',
+        );
         assert.match(mig010Sql, regex, `rides.${col} must be widened to NUMERIC(12,2)`);
       }
 
@@ -233,8 +273,15 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
         'partner_payout_inr',
       ];
       for (const col of expectedHireMonetary) {
-        const regex = new RegExp(`ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ALTER\\s+COLUMN\\s+${col}\\s+TYPE\\s+NUMERIC\\(12,2\\)`, 'i');
-        assert.match(mig010Sql, regex, `hire_driver_bookings.${col} must be widened to NUMERIC(12,2)`);
+        const regex = new RegExp(
+          `ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ALTER\\s+COLUMN\\s+${col}\\s+TYPE\\s+NUMERIC\\(12,2\\)`,
+          'i',
+        );
+        assert.match(
+          mig010Sql,
+          regex,
+          `hire_driver_bookings.${col} must be widened to NUMERIC(12,2)`,
+        );
       }
     });
   });
@@ -257,12 +304,17 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
 
       // Verify that SQL actually has them
       for (const col of missedColumns) {
-        const sqlRegex = new RegExp(`ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`, 'i');
+        const sqlRegex = new RegExp(
+          `ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`,
+          'i',
+        );
         assert.match(mig010Sql, sqlRegex, `SQL actually adds ${col}`);
       }
 
       // Check whether expectedHireColumns in test 3 contains them
-      const test3Match = testSpecContent.match(/it\('3\. should verify additive columns on canonical hire_driver_bookings table'[\s\S]*?const expectedHireColumns = \[([\s\S]*?)\];/);
+      const test3Match = testSpecContent.match(
+        /it\('3\. should verify additive columns on canonical hire_driver_bookings table'[\s\S]*?const expectedHireColumns = \[([\s\S]*?)\];/,
+      );
       assert.ok(test3Match, 'Test 3 should exist in spec');
       const arrayContent = test3Match[1];
 
@@ -272,7 +324,7 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
         assert.strictEqual(
           isPresentInWorkerTestArray,
           false,
-          `Empirically confirmed finding: worker's expectedHireColumns omitted '${col}'`
+          `Empirically confirmed finding: worker's expectedHireColumns omitted '${col}'`,
         );
       }
     });
@@ -288,7 +340,7 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
       assert.strictEqual(
         testsChkHireDriverStatus,
         false,
-        'Empirically confirmed finding: chk_hire_driver_status is NOT verified in Tier 1 static checks'
+        'Empirically confirmed finding: chk_hire_driver_status is NOT verified in Tier 1 static checks',
       );
     });
 
@@ -297,13 +349,13 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
       assert.match(
         mig010Sql,
         /CREATE\s+TRIGGER\s+trg_prevent_ride_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+ride_events/i,
-        'trg_prevent_ride_events_mutation must guard BEFORE UPDATE OR DELETE'
+        'trg_prevent_ride_events_mutation must guard BEFORE UPDATE OR DELETE',
       );
 
       assert.match(
         mig010Sql,
         /CREATE\s+TRIGGER\s+trg_prevent_hire_driver_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+hire_driver_events/i,
-        'trg_prevent_hire_driver_events_mutation must guard BEFORE UPDATE OR DELETE'
+        'trg_prevent_hire_driver_events_mutation must guard BEFORE UPDATE OR DELETE',
       );
     });
   });
@@ -313,23 +365,39 @@ describe('Milestone 1 Empirical Challenger Adversarial Stress Suite', () => {
   // =========================================================================
   describe('4. Rollback Script Completeness & Symmetry', () => {
     it('4.1 should symmetrically drop all 4 dedicated tables in reverse dependency order', () => {
-      const dropTablesRegex = /DROP\s+TABLE\s+IF\s+EXISTS\s+(hire_driver_events|hire_driver_assignments|ride_events|ride_assignments)/gi;
+      const dropTablesRegex =
+        /DROP\s+TABLE\s+IF\s+EXISTS\s+(hire_driver_events|hire_driver_assignments|ride_events|ride_assignments)/gi;
       const matches = [...rollback010Sql.matchAll(dropTablesRegex)].map((m) => m[1]);
 
       assert.ok(matches.includes('hire_driver_events'), 'Rollback must drop hire_driver_events');
-      assert.ok(matches.includes('hire_driver_assignments'), 'Rollback must drop hire_driver_assignments');
+      assert.ok(
+        matches.includes('hire_driver_assignments'),
+        'Rollback must drop hire_driver_assignments',
+      );
       assert.ok(matches.includes('ride_events'), 'Rollback must drop ride_events');
       assert.ok(matches.includes('ride_assignments'), 'Rollback must drop ride_assignments');
     });
 
     it('4.2 should symmetrically drop all trigger functions', () => {
-      assert.match(rollback010Sql, /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_ride_events_mutation\(\)/i);
-      assert.match(rollback010Sql, /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_hire_driver_events_mutation\(\)/i);
+      assert.match(
+        rollback010Sql,
+        /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_ride_events_mutation\(\)/i,
+      );
+      assert.match(
+        rollback010Sql,
+        /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_hire_driver_events_mutation\(\)/i,
+      );
     });
 
     it('4.3 should restore monetary columns back to NUMERIC(10,2) in rollback', () => {
-      assert.match(rollback010Sql, /ALTER\s+TABLE\s+rides\s+ALTER\s+COLUMN\s+total_fare_inr\s+TYPE\s+NUMERIC\(10,2\)/i);
-      assert.match(rollback010Sql, /ALTER\s+TABLE\s+hire_driver_bookings\s+ALTER\s+COLUMN\s+total_amount_inr\s+TYPE\s+NUMERIC\(10,2\)/i);
+      assert.match(
+        rollback010Sql,
+        /ALTER\s+TABLE\s+rides\s+ALTER\s+COLUMN\s+total_fare_inr\s+TYPE\s+NUMERIC\(10,2\)/i,
+      );
+      assert.match(
+        rollback010Sql,
+        /ALTER\s+TABLE\s+hire_driver_bookings\s+ALTER\s+COLUMN\s+total_amount_inr\s+TYPE\s+NUMERIC\(10,2\)/i,
+      );
     });
   });
 });

@@ -1,8 +1,4 @@
 'use client';
-
-import React from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   Avatar,
@@ -37,6 +33,8 @@ import {
   SecurityCheckIcon,
   Shield01Icon,
 } from '@hugeicons/core-free-icons';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 
 function getInitials(name?: string | null, email?: string | null, phone?: string | null): string {
   if (name && name.trim()) {
@@ -91,7 +89,9 @@ export function Header() {
           <HugeiconsIcon
             icon={Shield01Icon}
             strokeWidth={2}
-            className={user?.twoFactorEnabled ? 'size-3.5 text-emerald-500' : 'size-3.5 text-amber-500'}
+            className={
+              user?.twoFactorEnabled ? 'size-3.5 text-emerald-500' : 'size-3.5 text-amber-500'
+            }
           />
           <span>{user?.twoFactorEnabled ? '2FA On' : 'Enable 2FA'}</span>
         </Link>
@@ -124,14 +124,23 @@ export function Header() {
             </Avatar>
             <div className="text-start hidden lg:block">
               <p className="text-xs font-semibold text-foreground leading-tight flex items-center gap-1">
-                <HugeiconsIcon icon={SecurityCheckIcon} strokeWidth={2} className="size-3.5 text-primary inline" />
+                <HugeiconsIcon
+                  icon={SecurityCheckIcon}
+                  strokeWidth={2}
+                  className="size-3.5 text-primary inline"
+                />
                 {user?.fullName || 'Super Administrator'}
               </p>
               <p className="text-[11px] text-muted-foreground font-mono leading-tight mt-0.5">
-                {user?.email || user?.phone || '+919876543210'} • {user?.roles?.join(', ') || 'ADMIN'}
+                {user?.email || user?.phone || '+919876543210'} •{' '}
+                {user?.roles?.join(', ') || 'ADMIN'}
               </p>
             </div>
-            <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              strokeWidth={2}
+              className="size-3.5 text-muted-foreground"
+            />
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" sideOffset={8} className="w-72">
@@ -146,7 +155,10 @@ export function Header() {
                       {user?.email || user?.phone}
                     </p>
                   </div>
-                  <Badge variant={user?.twoFactorEnabled ? 'default' : 'outline'} className="text-[10px] shrink-0">
+                  <Badge
+                    variant={user?.twoFactorEnabled ? 'default' : 'outline'}
+                    className="text-[10px] shrink-0"
+                  >
                     {user?.twoFactorEnabled ? '2FA On' : '2FA Off'}
                   </Badge>
                 </div>
@@ -204,7 +216,11 @@ export function Header() {
               ))}
               {user && (
                 <div className="flex items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground">
-                  <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-3.5 text-emerald-500 shrink-0" />
+                  <HugeiconsIcon
+                    icon={CheckmarkCircle02Icon}
+                    strokeWidth={2}
+                    className="size-3.5 text-emerald-500 shrink-0"
+                  />
                   <span className="truncate">Active: {user.email || user.phone}</span>
                 </div>
               )}

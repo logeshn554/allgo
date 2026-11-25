@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
 import { authSettingsApi } from '@/data/api';
 import type { TwoFactorStatusResponse } from '@/data/types';
 import {
@@ -14,6 +13,7 @@ import {
   HugeiconsIcon,
 } from '@allgo/ui';
 import { Shield01Icon } from '@hugeicons/core-free-icons';
+import { useCallback, useEffect, useState } from 'react';
 
 export function UserTwoFactorCard({ userId }: { userId: string }) {
   const [status, setStatus] = useState<TwoFactorStatusResponse | null>(null);
@@ -89,15 +89,12 @@ export function UserTwoFactorCard({ userId }: { userId: string }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="space-y-1 text-muted-foreground">
               <p>
-                Global Policy:{' '}
-                <span className="font-medium text-foreground">{status.policy}</span>
+                Global Policy: <span className="font-medium text-foreground">{status.policy}</span>
               </p>
               {status.enabled && (
                 <p>
                   Backup Codes Remaining:{' '}
-                  <span className="font-medium text-foreground">
-                    {status.backupCodesRemaining}
-                  </span>
+                  <span className="font-medium text-foreground">{status.backupCodesRemaining}</span>
                 </p>
               )}
               {status.enabledAt && (

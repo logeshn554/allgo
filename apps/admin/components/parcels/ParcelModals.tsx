@@ -1,25 +1,19 @@
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { adminApi } from '@/lib/api-client';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import { Label } from '@allgo/ui';
-import { adminApi } from '@/lib/api-client';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
+import type React from 'react';
 
 interface ReassignModalProps {
   show: boolean;
@@ -52,7 +46,9 @@ export const ReassignModal: React.FC<ReassignModalProps> = ({
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 my-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Select New Delivery Partner:</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Select New Delivery Partner:
+            </Label>
             <Select
               value={partnerId || null}
               items={onlinePartners.map((p) => ({
@@ -76,7 +72,9 @@ export const ReassignModal: React.FC<ReassignModalProps> = ({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Reason for Reassignment:</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Reason for Reassignment:
+            </Label>
             <Input
               type="text"
               required
@@ -124,7 +122,9 @@ export const CancelModal: React.FC<CancelModalProps> = ({
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4 my-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Administrative Reason:</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Administrative Reason:
+            </Label>
             <Input
               type="text"
               required
@@ -176,7 +176,9 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
             This flags the package as undeliverable and generates reverse routing waybills.
           </p>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Return Authorization Reason:</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Return Authorization Reason:
+            </Label>
             <Select
               value={reason || null}
               items={{
@@ -193,10 +195,16 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="RECIPIENT_UNAVAILABLE">Recipient Unavailable / Phone Unreachable</SelectItem>
-                  <SelectItem value="PREMISES_LOCKED">Delivery Address Closed / Premises Locked</SelectItem>
+                  <SelectItem value="RECIPIENT_UNAVAILABLE">
+                    Recipient Unavailable / Phone Unreachable
+                  </SelectItem>
+                  <SelectItem value="PREMISES_LOCKED">
+                    Delivery Address Closed / Premises Locked
+                  </SelectItem>
                   <SelectItem value="RECIPIENT_REJECTED">Recipient Refused Package</SelectItem>
-                  <SelectItem value="PROHIBITED_CONTRABAND">Prohibited Goods Detected on Inspection</SelectItem>
+                  <SelectItem value="PROHIBITED_CONTRABAND">
+                    Prohibited Goods Detected on Inspection
+                  </SelectItem>
                   <SelectItem value="DAMAGED_IN_TRANSIT">Package Damaged During Transit</SelectItem>
                 </SelectGroup>
               </SelectContent>
@@ -261,7 +269,10 @@ export const ParcelModals: React.FC<ParcelModalsProps> = ({
   return (
     <>
       {/* Parcel Inspection Details Modal */}
-      <Dialog open={Boolean(selectedParcel) && !isForceModalOpen} onOpenChange={(open) => !open && onCloseDetails()}>
+      <Dialog
+        open={Boolean(selectedParcel) && !isForceModalOpen}
+        onOpenChange={(open) => !open && onCloseDetails()}
+      >
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg">
@@ -278,7 +289,9 @@ export const ParcelModals: React.FC<ParcelModalsProps> = ({
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs">Service: </span>
-                  <span className="font-semibold">{selectedParcel.service_type || selectedParcel.serviceType}</span>
+                  <span className="font-semibold">
+                    {selectedParcel.service_type || selectedParcel.serviceType}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs">Category: </span>
@@ -286,26 +299,39 @@ export const ParcelModals: React.FC<ParcelModalsProps> = ({
                 </div>
                 <div>
                   <span className="text-muted-foreground text-xs">Weight: </span>
-                  <span>{selectedParcel.estimated_weight_kg || selectedParcel.weightKg || 1} kg</span>
+                  <span>
+                    {selectedParcel.estimated_weight_kg || selectedParcel.weightKg || 1} kg
+                  </span>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-border">
                 <div className="text-xs font-semibold text-primary">SENDER</div>
-                <div className="font-medium">{selectedParcel.sender_name || selectedParcel.senderName}</div>
-                <div className="text-xs text-muted-foreground">{selectedParcel.pickup_address || selectedParcel.pickupAddress}</div>
+                <div className="font-medium">
+                  {selectedParcel.sender_name || selectedParcel.senderName}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {selectedParcel.pickup_address || selectedParcel.pickupAddress}
+                </div>
               </div>
 
               <div className="pt-2 border-t border-border">
                 <div className="text-xs font-semibold text-primary">RECIPIENT</div>
-                <div className="font-medium">{selectedParcel.recipient_name || selectedParcel.recipientName}</div>
-                <div className="text-xs text-muted-foreground">{selectedParcel.drop_address || selectedParcel.dropAddress}</div>
+                <div className="font-medium">
+                  {selectedParcel.recipient_name || selectedParcel.recipientName}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {selectedParcel.drop_address || selectedParcel.dropAddress}
+                </div>
               </div>
 
               <div className="pt-2 border-t border-border flex justify-between items-center">
                 <span className="text-xs font-semibold text-muted-foreground">Total Fee:</span>
                 <span className="text-base font-bold text-primary">
-                  ₹{Number(selectedParcel.total_amount_inr || selectedParcel.totalAmountInr || 0).toFixed(2)}
+                  ₹
+                  {Number(
+                    selectedParcel.total_amount_inr || selectedParcel.totalAmountInr || 0,
+                  ).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -323,14 +349,13 @@ export const ParcelModals: React.FC<ParcelModalsProps> = ({
       <Dialog open={isForceModalOpen} onOpenChange={(open) => !open && onCloseForce()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg text-destructive">
-              Force State Transition
-            </DialogTitle>
+            <DialogTitle className="text-lg text-destructive">Force State Transition</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleForceTransition} className="space-y-4 my-2">
             <p className="text-xs text-muted-foreground">
-              Administrative state override for Parcel #{selectedParcel?.parcel_number || selectedParcel?.parcelNumber}.
+              Administrative state override for Parcel #
+              {selectedParcel?.parcel_number || selectedParcel?.parcelNumber}.
             </p>
 
             <div className="space-y-1.5">
@@ -360,7 +385,9 @@ export const ParcelModals: React.FC<ParcelModalsProps> = ({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Reason / Audit Trail:</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Reason / Audit Trail:
+              </Label>
               <Textarea
                 rows={3}
                 required

@@ -1,6 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Button, HugeiconsIcon, Input, Label, Separator, cn } from '@allgo/ui';
 import {
   ArrowLeft01Icon,
@@ -10,6 +9,8 @@ import {
   ViewIcon,
   ViewOffIcon,
 } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useState } from 'react';
 import type { EmailAuthMode } from './types';
 
 interface EmailPasswordStepProps {
@@ -197,26 +198,30 @@ export function EmailPasswordStep({
         </>
       )}
 
-      {mode === 'signin' && !hasPassword && !isEmailIdentifier && canUsePhoneOtp && onSwitchToPhoneOtp && (
-        <>
-          <div className="relative flex items-center justify-center">
-            <Separator />
-            <span className="bg-card px-2 text-[11px] uppercase text-muted-foreground absolute">
-              Or
-            </span>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={loading}
-            onClick={onSwitchToPhoneOtp}
-            className="w-full"
-          >
-            <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className="size-4" />
-            Send SMS verification code instead
-          </Button>
-        </>
-      )}
+      {mode === 'signin' &&
+        !hasPassword &&
+        !isEmailIdentifier &&
+        canUsePhoneOtp &&
+        onSwitchToPhoneOtp && (
+          <>
+            <div className="relative flex items-center justify-center">
+              <Separator />
+              <span className="bg-card px-2 text-[11px] uppercase text-muted-foreground absolute">
+                Or
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={onSwitchToPhoneOtp}
+              className="w-full"
+            >
+              <HugeiconsIcon icon={Key01Icon} strokeWidth={2} className="size-4" />
+              Send SMS verification code instead
+            </Button>
+          </>
+        )}
 
       {allowSelfSignup && (
         <div className="text-center">
@@ -226,9 +231,7 @@ export function EmailPasswordStep({
             onClick={onToggleMode}
             className="text-xs text-muted-foreground hover:text-foreground hover:underline cursor-pointer"
           >
-            {mode === 'signin'
-              ? 'Need an account? Create one'
-              : 'Already have an account? Sign in'}
+            {mode === 'signin' ? 'Need an account? Create one' : 'Already have an account? Sign in'}
           </button>
         </div>
       )}

@@ -25,7 +25,7 @@ export function haversineDistanceMeters(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -41,7 +41,7 @@ export function haversineDistanceMeters(
 
 export function buildRedisGeoAddCommand(
   key: string,
-  driver: RedisDriverCandidate
+  driver: RedisDriverCandidate,
 ): [string, number, number, string] {
   return [key, driver.longitude, driver.latitude, driver.partnerId];
 }
@@ -55,7 +55,7 @@ export function evaluateNearestDrivers(
     requiredVehicleType?: string;
     maxResults?: number;
     maxStaleAgeMs?: number;
-  }
+  },
 ): NearbyDriverResult[] {
   const maxRadius = options?.maxRadiusMeters ?? 5000;
   const maxResults = options?.maxResults ?? 10;
@@ -66,7 +66,11 @@ export function evaluateNearestDrivers(
 
   for (const driver of drivers) {
     if (driver.isAvailable === false) continue;
-    if (options?.requiredVehicleType && driver.vehicleType && driver.vehicleType !== options.requiredVehicleType) {
+    if (
+      options?.requiredVehicleType &&
+      driver.vehicleType &&
+      driver.vehicleType !== options.requiredVehicleType
+    ) {
       continue;
     }
     if (driver.timestampMs && now - driver.timestampMs > maxStaleAge) {

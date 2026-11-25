@@ -1,12 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { authApi } from '@/data/api/auth.api';
-import { useAuth } from '@/lib/auth-context';
 import type { LinkedIdentity } from '@/data/types';
-import { OAuthProviderIcon } from './OAuthProviderIcon';
-import type { PublicOAuthProvider } from './types';
+import { useAuth } from '@/lib/auth-context';
 import {
   Badge,
   Button,
@@ -26,6 +22,11 @@ import {
   Mail01Icon,
   SmartPhone01Icon,
 } from '@hugeicons/core-free-icons';
+import Link from 'next/link';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { OAuthProviderIcon } from './OAuthProviderIcon';
+import type { PublicOAuthProvider } from './types';
 
 const PROVIDER_LABELS: Record<string, string> = {
   phone: 'Phone',
@@ -204,19 +205,27 @@ export function LinkedAccountsCard() {
           Linked Accounts &amp; Sign-In Methods
         </CardTitle>
         <CardDescription className="text-xs">
-          Link your phone number, email address, Google, Microsoft, Apple ID, or GitHub to sign in with any method.
+          Link your phone number, email address, Google, Microsoft, Apple ID, or GitHub to sign in
+          with any method.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {message && (
           <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4 shrink-0" />
+            <HugeiconsIcon
+              icon={CheckmarkCircle02Icon}
+              strokeWidth={2}
+              className="size-4 shrink-0"
+            />
             <span>{message}</span>
           </div>
         )}
 
         {error && (
-          <div role="alert" className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
+          <div
+            role="alert"
+            className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium"
+          >
             {error}
           </div>
         )}
@@ -235,7 +244,10 @@ export function LinkedAccountsCard() {
                   className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-xs"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <OAuthProviderIcon slug={identity.provider} className="size-4 shrink-0 text-muted-foreground" />
+                    <OAuthProviderIcon
+                      slug={identity.provider}
+                      className="size-4 shrink-0 text-muted-foreground"
+                    />
                     <Badge variant="outline" className="capitalize shrink-0">
                       {PROVIDER_LABELS[identity.provider] || identity.provider}
                     </Badge>
@@ -273,7 +285,11 @@ export function LinkedAccountsCard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-xl border p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <HugeiconsIcon icon={SmartPhone01Icon} strokeWidth={2} className="size-4 text-primary" />
+              <HugeiconsIcon
+                icon={SmartPhone01Icon}
+                strokeWidth={2}
+                className="size-4 text-primary"
+              />
               <Label className="text-xs font-semibold">Link Phone Number</Label>
             </div>
             {!phoneOtpSent ? (
@@ -286,7 +302,12 @@ export function LinkedAccountsCard() {
                   disabled={busy}
                   className="text-xs"
                 />
-                <Button type="submit" size="sm" variant="outline" disabled={busy || !linkPhone.trim()}>
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || !linkPhone.trim()}
+                >
                   Send OTP
                 </Button>
               </form>
@@ -338,7 +359,12 @@ export function LinkedAccountsCard() {
                   disabled={busy}
                   className="text-xs"
                 />
-                <Button type="submit" size="sm" variant="outline" disabled={busy || !linkEmail.trim()}>
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || !linkEmail.trim()}
+                >
                   Send OTP
                 </Button>
               </form>
@@ -379,16 +405,14 @@ export function LinkedAccountsCard() {
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold text-foreground">Single Sign-On Providers</p>
-            <Link
-              href="/admin/auth-settings"
-              className="text-[11px] text-primary hover:underline"
-            >
+            <Link href="/admin/auth-settings" className="text-[11px] text-primary hover:underline">
               Configure OAuth providers
             </Link>
           </div>
           {oauthProviders.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              No OAuth providers are currently enabled. Enable Google, Microsoft, Apple ID, or GitHub in Auth &amp; OAuth Settings.
+              No OAuth providers are currently enabled. Enable Google, Microsoft, Apple ID, or
+              GitHub in Auth &amp; OAuth Settings.
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -408,7 +432,10 @@ export function LinkedAccountsCard() {
                       <OAuthProviderIcon slug={prov.slug} className="size-4 shrink-0" />
                       <span className="truncate">{prov.displayName}</span>
                     </span>
-                    <Badge variant={isLinked ? 'default' : 'outline'} className="text-[10px] shrink-0">
+                    <Badge
+                      variant={isLinked ? 'default' : 'outline'}
+                      className="text-[10px] shrink-0"
+                    >
                       {isLinked ? 'Connected' : isConfigured ? 'Connect' : 'Unconfigured'}
                     </Badge>
                   </Button>

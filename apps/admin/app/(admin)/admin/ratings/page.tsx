@@ -1,19 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api-client';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { StarIcon } from '@hugeicons/core-free-icons';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { useEffect, useState } from 'react';
 
 export default function RatingsAdminPage() {
   const [ratings, setRatings] = useState<any[]>([]);
@@ -42,7 +35,9 @@ export default function RatingsAdminPage() {
   const handleModerate = async (id: string, isHidden: boolean) => {
     try {
       await adminApi.moderateRating(id, isHidden, moderationReason || undefined);
-      setActionSuccess(`Rating #${id.slice(0, 8)} ${isHidden ? 'hidden from public view' : 'restored to public view'}.`);
+      setActionSuccess(
+        `Rating #${id.slice(0, 8)} ${isHidden ? 'hidden from public view' : 'restored to public view'}.`,
+      );
       setModerationReason('');
       fetchRatings();
     } catch (err: any) {
@@ -61,9 +56,7 @@ export default function RatingsAdminPage() {
             Review customer feedback across food, grocery, parcel, mobility, and designated drivers.
           </p>
         </div>
-        <Button onClick={fetchRatings}>
-          Refresh Ratings
-        </Button>
+        <Button onClick={fetchRatings}>Refresh Ratings</Button>
       </div>
 
       {actionSuccess && (
@@ -79,12 +72,16 @@ export default function RatingsAdminPage() {
       )}
 
       <div className="space-y-3">
-        <div className="text-lg font-semibold tracking-tight">Customer Reviews ({ratings.length})</div>
+        <div className="text-lg font-semibold tracking-tight">
+          Customer Reviews ({ratings.length})
+        </div>
         <div className="overflow-hidden rounded-md border border-border">
           {loading ? (
             <div className="p-8 text-center text-sm text-muted-foreground">Loading ratings...</div>
           ) : ratings.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">No customer reviews recorded yet.</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              No customer reviews recorded yet.
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -101,7 +98,9 @@ export default function RatingsAdminPage() {
               <TableBody>
                 {ratings.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium text-foreground">{r.reviewer_name || r.reviewer_phone}</TableCell>
+                    <TableCell className="font-medium text-foreground">
+                      {r.reviewer_name || r.reviewer_phone}
+                    </TableCell>
                     <TableCell className="font-semibold text-foreground">{r.target_type}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-0.5">
@@ -114,13 +113,17 @@ export default function RatingsAdminPage() {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-xs text-foreground truncate">{r.feedback || '—'}</TableCell>
+                    <TableCell className="max-w-xs text-foreground truncate">
+                      {r.feedback || '—'}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={r.is_hidden ? 'destructive' : 'default'}>
                         {r.is_hidden ? 'HIDDEN' : 'PUBLIC'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </TableCell>
                     <TableCell className="text-end">
                       {r.is_hidden ? (
                         <Button

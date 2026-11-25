@@ -26,7 +26,10 @@
     "baseUrl": ".",
     "paths": {
       "@allgo/common": ["./packages/common/src/index.ts"],
-      "@allgo/common/*": ["./packages/common/src/*"]
+      "@allgo/common/*": ["./packages/common/src/*"],
+      "@allgo/env": ["./packages/env/src/index.ts"],
+      "@allgo/api-client": ["./packages/api-client/src/index.ts"],
+      "@allgo/ui": ["./packages/ui/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "dist"]

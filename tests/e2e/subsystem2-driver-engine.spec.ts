@@ -1,29 +1,22 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
   createDispatchOffer,
   evaluateBatchingFeasibility,
-} from '../../src/data/dispatchMatchingEngine.ts';
-import {
-  verifyProofOfDelivery,
-} from '../../src/data/proofOfDeliveryService.ts';
-import {
-  enqueueOfflineAction,
-  getOfflineQueue,
-  flushOfflineQueue,
-  clearOfflineQueue,
-} from '../../src/data/offlineActionQueue.ts';
-import {
-  buildNavigationUri,
-  launchNavigation,
-} from '../../src/data/navigationLauncher.ts';
+} from './legacy-mobile-data/dispatchMatchingEngine.ts';
 import {
   loadDriverEarnings,
   requestInstantPayout,
-} from '../../src/data/driverWalletService.ts';
+} from './legacy-mobile-data/driverWalletService.ts';
+import { buildNavigationUri, launchNavigation } from './legacy-mobile-data/navigationLauncher.ts';
 import {
-  saveNewOrder,
-} from '../../src/data/orderStorage.ts';
+  clearOfflineQueue,
+  enqueueOfflineAction,
+  flushOfflineQueue,
+  getOfflineQueue,
+} from './legacy-mobile-data/offlineActionQueue.ts';
+import { saveNewOrder } from './legacy-mobile-data/orderStorage.ts';
+import { verifyProofOfDelivery } from './legacy-mobile-data/proofOfDeliveryService.ts';
 
 describe('Subsystem 2: Driver & Fleet Partner Engine Unit Tests', () => {
   describe('Automated Dispatch & Intelligent Matching', () => {
@@ -34,7 +27,7 @@ describe('Subsystem 2: Driver & Fleet Partner Engine Unit Tests', () => {
         { address: 'Koramangala 4th Block', lat: 12.9352, lon: 77.6245 },
         { address: 'Indiranagar 100ft Rd', lat: 12.9784, lon: 77.6408 },
         9500,
-        25
+        25,
       );
 
       assert.equal(offer.status, 'PENDING');
@@ -44,16 +37,42 @@ describe('Subsystem 2: Driver & Fleet Partner Engine Unit Tests', () => {
     });
 
     it('should clamp acceptance timer within 15-30s constraint', () => {
-      const shortOffer = createDispatchOffer('O1', 'P1', { address: 'A', lat: 0, lon: 0 }, { address: 'B', lat: 0, lon: 0 }, 5000, 5);
+      const shortOffer = createDispatchOffer(
+        'O1',
+        'P1',
+        { address: 'A', lat: 0, lon: 0 },
+        { address: 'B', lat: 0, lon: 0 },
+        5000,
+        5,
+      );
       assert.equal(shortOffer.acceptanceDurationSeconds, 15);
 
-      const longOffer = createDispatchOffer('O2', 'P1', { address: 'A', lat: 0, lon: 0 }, { address: 'B', lat: 0, lon: 0 }, 5000, 60);
+      const longOffer = createDispatchOffer(
+        'O2',
+        'P1',
+        { address: 'A', lat: 0, lon: 0 },
+        { address: 'B', lat: 0, lon: 0 },
+        5000,
+        60,
+      );
       assert.equal(longOffer.acceptanceDurationSeconds, 30);
     });
 
     it('should batch nearby pickups and dropoffs along the same route', () => {
-      const orderA = { orderId: 'ORD-A', pickupLat: 12.9350, pickupLon: 77.6240, dropoffLat: 12.9780, dropoffLon: 77.6400 };
-      const orderB = { orderId: 'ORD-B', pickupLat: 12.9360, pickupLon: 77.6250, dropoffLat: 12.9800, dropoffLon: 77.6410 };
+      const orderA = {
+        orderId: 'ORD-A',
+        pickupLat: 12.935,
+        pickupLon: 77.624,
+        dropoffLat: 12.978,
+        dropoffLon: 77.64,
+      };
+      const orderB = {
+        orderId: 'ORD-B',
+        pickupLat: 12.936,
+        pickupLon: 77.625,
+        dropoffLat: 12.98,
+        dropoffLon: 77.641,
+      };
 
       const res = evaluateBatchingFeasibility(orderA, orderB, 1500);
       assert.equal(res.canBatch, true);
@@ -140,11 +159,10 @@ describe('Subsystem 2: Driver & Fleet Partner Engine Unit Tests', () => {
 
     it('should invoke navigation launcher callback successfully', () => {
       let launchedUri = '';
-      const res = launchNavigation(
-        'google',
-        { latitude: 12.9716, longitude: 77.5946 },
-        (uri) => { launchedUri = uri; return true; }
-      );
+      const res = launchNavigation('google', { latitude: 12.9716, longitude: 77.5946 }, (uri) => {
+        launchedUri = uri;
+        return true;
+      });
 
       assert.equal(res.success, true);
       assert.equal(launchedUri, res.uri);
@@ -161,9 +179,9 @@ describe('Subsystem 2: Driver & Fleet Partner Engine Unit Tests', () => {
       assert.equal(
         earnings.weeklyTotalCents,
         earnings.baseFareSumCents +
-        earnings.distancePaySumCents +
-        earnings.waitingTimeSumCents +
-        earnings.surgeBonusSumCents
+          earnings.distancePaySumCents +
+          earnings.waitingTimeSumCents +
+          earnings.surgeBonusSumCents,
       );
     });
 

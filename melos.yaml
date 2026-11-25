@@ -1,0 +1,26 @@
+name: allgo_flutter
+repository: https://github.com/allgo/allgo
+
+packages:
+  - packages/mobile_shared
+  - apps/customer_mobile
+  - apps/merchant_mobile
+  - apps/partner_mobile
+  - apps/hub_mobile
+
+command:
+  bootstrap:
+    usePubspecOverrides: true
+
+scripts:
+  analyze:
+    run: melos exec -- "flutter analyze"
+    description: Run flutter analyze across all Flutter apps and packages.
+
+  test:
+    run: melos exec --dir-exists="test" -- "flutter test"
+    description: Run flutter test across all Flutter apps and packages.
+
+  format:
+    run: melos exec -- "dart format --output=none --set-exit-if-changed ."
+    description: Verify Dart formatting across all Flutter apps and packages.

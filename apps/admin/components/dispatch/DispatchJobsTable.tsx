@@ -1,24 +1,17 @@
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { FilterIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
 const DISPATCH_STATUS_ITEMS = {
   ALL: 'All Statuses',
@@ -110,7 +103,10 @@ export const DispatchJobsTable: React.FC<DispatchJobsTableProps> = ({
                 <TableRow key={job.id}>
                   <TableCell className="font-semibold text-foreground">{job.job_number}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/20"
+                    >
                       {job.vertical_type}
                     </Badge>
                   </TableCell>
@@ -121,8 +117,8 @@ export const DispatchJobsTable: React.FC<DispatchJobsTableProps> = ({
                         job.status === 'DELIVERED'
                           ? 'default'
                           : job.status === 'CANCELLED'
-                          ? 'destructive'
-                          : 'secondary'
+                            ? 'destructive'
+                            : 'secondary'
                       }
                     >
                       {job.status}
@@ -142,19 +138,23 @@ export const DispatchJobsTable: React.FC<DispatchJobsTableProps> = ({
                     ₹{Number(job.courier_fee_inr || 0).toFixed(0)}
                   </TableCell>
                   <TableCell className="text-xs">
-                    {job.delivery_pin && <div>PIN: <strong>{job.delivery_pin}</strong></div>}
-                    {job.handover_otp && <div className="text-amber-500">OTP: <strong>{job.handover_otp}</strong></div>}
+                    {job.delivery_pin && (
+                      <div>
+                        PIN: <strong>{job.delivery_pin}</strong>
+                      </div>
+                    )}
+                    {job.handover_otp && (
+                      <div className="text-amber-500">
+                        OTP: <strong>{job.handover_otp}</strong>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {new Date(job.created_at).toLocaleTimeString()}
                   </TableCell>
                   <TableCell className="text-end">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onViewDetails(job.id)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => onViewDetails(job.id)}>
                         Details
                       </Button>
                       {job.status !== 'DELIVERED' && job.status !== 'CANCELLED' && (
@@ -163,7 +163,10 @@ export const DispatchJobsTable: React.FC<DispatchJobsTableProps> = ({
                             variant="secondary"
                             size="sm"
                             onClick={() => {
-                              onOpenAssign(job.id, onlinePartners.length > 0 ? onlinePartners[0].id : undefined);
+                              onOpenAssign(
+                                job.id,
+                                onlinePartners.length > 0 ? onlinePartners[0].id : undefined,
+                              );
                             }}
                           >
                             Assign

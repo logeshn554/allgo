@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { AddressService } from '../../apps/api/dist/ordering/services/address.service.js';
-import { DiscoveryRepository } from '../../apps/api/dist/discovery/data/discovery.repository.js';
-import { DiscoveryService } from '../../apps/api/dist/discovery/discovery.service.js';
-import { NearbyOutletsService } from '../../apps/api/dist/discovery/nearby-outlets.service.js';
+import { describe, it } from 'node:test';
+import { DiscoveryRepository } from '../../services/api/dist/discovery/data/discovery.repository.js';
+import { DiscoveryService } from '../../services/api/dist/discovery/discovery.service.js';
+import { NearbyOutletsService } from '../../services/api/dist/discovery/nearby-outlets.service.js';
+import { AddressService } from '../../services/api/dist/ordering/services/address.service.js';
 
 describe('Saved Addresses & Discovery Favorites/Recents Unit Specification', () => {
   it('should support address updating and default setting logic via mock db', async () => {
@@ -80,7 +80,9 @@ describe('Saved Addresses & Discovery Favorites/Recents Unit Specification', () 
           return { rows: [] };
         }
         if (sql.includes('SELECT id FROM customer_favorite_outlets')) {
-          const found = favoriteStores.find((f) => f.customer_id === params![0] && f.outlet_id === params![1]);
+          const found = favoriteStores.find(
+            (f) => f.customer_id === params![0] && f.outlet_id === params![1],
+          );
           return { rows: found ? [found] : [] };
         }
         if (sql.includes('INSERT INTO customer_favorite_outlets')) {
@@ -88,11 +90,16 @@ describe('Saved Addresses & Discovery Favorites/Recents Unit Specification', () 
           return { rows: [] };
         }
         if (sql.includes('DELETE FROM customer_favorite_outlets')) {
-          const idx = favoriteStores.findIndex((f) => f.customer_id === params![0] && f.outlet_id === params![1]);
+          const idx = favoriteStores.findIndex(
+            (f) => f.customer_id === params![0] && f.outlet_id === params![1],
+          );
           if (idx >= 0) favoriteStores.splice(idx, 1);
           return { rows: [] };
         }
-        if (sql.includes('SELECT o.id, o.merchant_id') && sql.includes('customer_favorite_outlets')) {
+        if (
+          sql.includes('SELECT o.id, o.merchant_id') &&
+          sql.includes('customer_favorite_outlets')
+        ) {
           return {
             rows: favoriteStores
               .filter((f) => f.customer_id === params![0])

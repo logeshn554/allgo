@@ -1,30 +1,30 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { type DashboardSummary, adminApi } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { adminApi, DashboardSummary } from '@/lib/api-client';
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Badge,
   Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   HugeiconsIcon,
 } from '@allgo/ui';
 import {
-  RefreshIcon,
-  UserGroupIcon,
-  Motorbike01Icon,
-  Store01Icon,
+  Activity01Icon,
+  Alert02Icon,
+  CheckmarkCircle01Icon,
+  CloudServerIcon,
   Coins01Icon,
   Database01Icon,
-  CloudServerIcon,
-  Activity01Icon,
-  CheckmarkCircle01Icon,
-  Alert02Icon,
+  Motorbike01Icon,
+  RefreshIcon,
+  Store01Icon,
+  UserGroupIcon,
 } from '@hugeicons/core-free-icons';
+import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -73,7 +73,11 @@ export default function DashboardPage() {
             Operations Overview
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Welcome back, <span className="font-semibold text-foreground">{user?.fullName || 'Super Administrator'}</span>. Platform metrics and real-time infrastructure telemetry.
+            Welcome back,{' '}
+            <span className="font-semibold text-foreground">
+              {user?.fullName || 'Super Administrator'}
+            </span>
+            . Platform metrics and real-time infrastructure telemetry.
           </p>
         </div>
         <Button
@@ -83,7 +87,11 @@ export default function DashboardPage() {
           size="sm"
           className="gap-2 self-start sm:self-auto"
         >
-          <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+          <HugeiconsIcon
+            icon={RefreshIcon}
+            strokeWidth={2}
+            className={`size-4 ${loading ? 'animate-spin' : ''}`}
+          />
           <span>{loading ? 'Refreshing...' : 'Refresh Metrics'}</span>
         </Button>
       </div>
@@ -93,7 +101,9 @@ export default function DashboardPage() {
           <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">Notice: API Connection Error</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{error}. Displaying last known or cached state.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {error}. Displaying last known or cached state.
+            </p>
           </div>
         </div>
       )}
@@ -112,9 +122,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-extrabold text-foreground">{totalUsersStr}</div>
             <div className="mt-1">
-              <Badge variant="outline">
-                {newUsersStr}
-              </Badge>
+              <Badge variant="outline">{newUsersStr}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -131,9 +139,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-extrabold text-foreground">{couriersStr}</div>
             <div className="mt-1">
-              <Badge variant="secondary">
-                {onlinePartnersStr}
-              </Badge>
+              <Badge variant="secondary">{onlinePartnersStr}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -150,9 +156,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-extrabold text-foreground">{outletsStr}</div>
             <div className="mt-1">
-              <Badge variant="secondary">
-                {outletsSubtitle}
-              </Badge>
+              <Badge variant="secondary">{outletsSubtitle}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -181,7 +185,8 @@ export default function DashboardPage() {
             Infrastructure Health Status (Real-time Probe)
           </CardTitle>
           <CardDescription>
-            Telemetry probes connected directly to core database, in-memory cache, and API gateway services.
+            Telemetry probes connected directly to core database, in-memory cache, and API gateway
+            services.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -190,7 +195,11 @@ export default function DashboardPage() {
             <div className="p-4 rounded-xl border border-border bg-muted/40 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <HugeiconsIcon icon={Database01Icon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+                  <HugeiconsIcon
+                    icon={Database01Icon}
+                    strokeWidth={2}
+                    className="size-3.5 text-muted-foreground"
+                  />
                   PostgreSQL / PostGIS
                 </span>
                 <Badge variant={isPgUp ? 'default' : 'destructive'}>
@@ -203,14 +212,22 @@ export default function DashboardPage() {
               <div className="flex items-center gap-1.5 text-xs">
                 {isPgUp ? (
                   <>
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5 text-primary" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle01Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-primary"
+                    />
                     <span className="text-primary font-medium">
                       Connected ({summary?.infrastructure?.postgres?.latencyMs ?? 18}ms)
                     </span>
                   </>
                 ) : (
                   <>
-                    <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3.5 text-destructive" />
+                    <HugeiconsIcon
+                      icon={Alert02Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-destructive"
+                    />
                     <span className="text-destructive font-medium">Unreachable</span>
                   </>
                 )}
@@ -221,7 +238,11 @@ export default function DashboardPage() {
             <div className="p-4 rounded-xl border border-border bg-muted/40 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <HugeiconsIcon icon={CloudServerIcon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+                  <HugeiconsIcon
+                    icon={CloudServerIcon}
+                    strokeWidth={2}
+                    className="size-3.5 text-muted-foreground"
+                  />
                   Redis Memory Store
                 </span>
                 <Badge variant={isRedisUp ? 'default' : 'destructive'}>
@@ -234,14 +255,22 @@ export default function DashboardPage() {
               <div className="flex items-center gap-1.5 text-xs">
                 {isRedisUp ? (
                   <>
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5 text-primary" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle01Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-primary"
+                    />
                     <span className="text-primary font-medium">
                       Connected ({summary?.infrastructure?.redis?.latencyMs ?? 2}ms)
                     </span>
                   </>
                 ) : (
                   <>
-                    <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3.5 text-destructive" />
+                    <HugeiconsIcon
+                      icon={Alert02Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-destructive"
+                    />
                     <span className="text-destructive font-medium">Unreachable</span>
                   </>
                 )}
@@ -252,7 +281,11 @@ export default function DashboardPage() {
             <div className="p-4 rounded-xl border border-border bg-muted/40 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <HugeiconsIcon icon={Activity01Icon} strokeWidth={2} className="size-3.5 text-muted-foreground" />
+                  <HugeiconsIcon
+                    icon={Activity01Icon}
+                    strokeWidth={2}
+                    className="size-3.5 text-muted-foreground"
+                  />
                   Core API Gateway
                 </span>
                 <Badge variant={isApiUp ? 'default' : 'destructive'}>
@@ -260,20 +293,31 @@ export default function DashboardPage() {
                 </Badge>
               </div>
               <p className="text-sm font-bold text-foreground">
-                NestJS Microservice ({summary?.infrastructure?.apiGateway?.environment || 'production'})
+                NestJS Microservice (
+                {summary?.infrastructure?.apiGateway?.environment || 'production'})
               </p>
               <div className="flex items-center gap-1.5 text-xs">
                 {isApiUp ? (
                   <>
-                    <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5 text-primary" />
+                    <HugeiconsIcon
+                      icon={CheckmarkCircle01Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-primary"
+                    />
                     <span className="text-primary font-medium">
                       Healthy (Uptime: {summary?.infrastructure?.apiGateway?.uptimeSeconds ?? 120}s)
                     </span>
                   </>
                 ) : (
                   <>
-                    <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3.5 text-amber-600 dark:text-amber-400" />
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">Probing gateway...</span>
+                    <HugeiconsIcon
+                      icon={Alert02Icon}
+                      strokeWidth={2}
+                      className="size-3.5 text-amber-600 dark:text-amber-400"
+                    />
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                      Probing gateway...
+                    </span>
                   </>
                 )}
               </div>

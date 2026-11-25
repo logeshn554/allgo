@@ -1,12 +1,11 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { GoogleMapsGateway } from '../../apps/api/dist/common/maps/google-maps.gateway.js';
-import { MapsController } from '../../apps/api/dist/common/maps/maps.controller.js';
-import { PartnerAvailabilityService } from '../../apps/api/dist/delivery/partner-availability.service.js';
-import { DispatchCandidateMatcherService } from '../../apps/api/dist/delivery/dispatch-candidate-matcher.service.js';
-import { CustomerDeliveryController } from '../../apps/api/dist/delivery/controllers/customer-delivery.controller.js';
+import { after, before, describe, it } from 'node:test';
+import { GoogleMapsGateway } from '../../services/api/dist/common/maps/google-maps.gateway.js';
+import { MapsController } from '../../services/api/dist/common/maps/maps.controller.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { CustomerDeliveryController } from '../../services/api/dist/delivery/controllers/customer-delivery.controller.js';
+import { DispatchCandidateMatcherService } from '../../services/api/dist/delivery/dispatch-candidate-matcher.service.js';
+import { PartnerAvailabilityService } from '../../services/api/dist/delivery/partner-availability.service.js';
 import { InMemoryRedisTestDouble } from '../helpers/test-doubles.ts';
 
 describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
@@ -27,7 +26,7 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
   describe('1. Backend MapsGateway & Redis Caching', () => {
     it('computeRoute should return road route and cache result in Redis', async () => {
       const origin = { latitude: 13.0827, longitude: 80.2707 };
-      const dest = { latitude: 13.0500, longitude: 80.2500 };
+      const dest = { latitude: 13.05, longitude: 80.25 };
 
       const estimate = await mapsGateway.computeRoute(origin, dest, 'TWO_WHEELER');
       assert.ok(estimate.distanceMeters > 0);
@@ -42,8 +41,8 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
     it('computeDistanceMatrix should compute batch matrix and cache items', async () => {
       const origins = [{ latitude: 13.0827, longitude: 80.2707 }];
       const dests = [
-        { latitude: 13.0600, longitude: 80.2600 },
-        { latitude: 13.0400, longitude: 80.2400 },
+        { latitude: 13.06, longitude: 80.26 },
+        { latitude: 13.04, longitude: 80.24 },
       ];
 
       const matrix = await mapsGateway.computeDistanceMatrix(origins, dests);
@@ -80,7 +79,7 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
 
       const route = await controller.computeRoute({
         origin: { latitude: 13.0827, longitude: 80.2707 },
-        destination: { latitude: 13.0400, longitude: 80.2500 },
+        destination: { latitude: 13.04, longitude: 80.25 },
         travelMode: 'TWO_WHEELER',
       });
       assert.ok(route.distanceMeters > 0);
@@ -99,8 +98,8 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
       const mockPartnerAvailability: any = {
         checkEligibility: async () => ({ isEligible: true }),
         getPartnerLastPoint: async (pid: string) => {
-          if (pid === 'partner_near') return { lat: 13.0830, lon: 80.2710 };
-          return { lat: 13.1500, lon: 80.3500 };
+          if (pid === 'partner_near') return { lat: 13.083, lon: 80.271 };
+          return { lat: 13.15, lon: 80.35 };
         },
       };
 
@@ -108,10 +107,12 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
         redis,
         mockAttemptRepo,
         mockPartnerAvailability,
-        mapsGateway
+        mapsGateway,
       );
 
-      const result = await matcher.findEligibleCandidate('job_101', 80.2707, 13.0827, { max_search_radius_meters: 15000 });
+      const result = await matcher.findEligibleCandidate('job_101', 80.2707, 13.0827, {
+        max_search_radius_meters: 15000,
+      });
       assert.strictEqual(result.selectedPartnerId, 'partner_near');
     });
   });
@@ -136,7 +137,7 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
         {} as any,
         redis,
         mockGateway,
-        mockRepo
+        mockRepo,
       );
 
       const res = await partnerService.recordLocation('usr_prt_99', {
@@ -166,19 +167,23 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
       const mockDb: any = {
         query: async (sql: string, params: any[]) => {
           if (sql.includes('SELECT id, customer_id')) {
-            return { rows: [{ id: params[0], customer_id: 'cust_user_1', assigned_partner_id: 'prt_1' }] };
+            return {
+              rows: [{ id: params[0], customer_id: 'cust_user_1', assigned_partner_id: 'prt_1' }],
+            };
           }
           if (sql.includes('FROM delivery_status_events')) {
             return {
-              rows: [{
-                id: 'evt_1',
-                delivery_job_id: params[0],
-                from_status: 'ASSIGNED',
-                to_status: 'IN_TRANSIT',
-                actor_role: 'PARTNER',
-                reason: 'Picked up',
-                created_at: new Date('2026-11-19T10:00:00Z'),
-              }],
+              rows: [
+                {
+                  id: 'evt_1',
+                  delivery_job_id: params[0],
+                  from_status: 'ASSIGNED',
+                  to_status: 'IN_TRANSIT',
+                  actor_role: 'PARTNER',
+                  reason: 'Picked up',
+                  created_at: new Date('2026-11-19T10:00:00Z'),
+                },
+              ],
             };
           }
           return { rows: [] };
@@ -200,7 +205,7 @@ describe('Phase D: Maps, Location and Real-Time Systems Test Suite', () => {
       const result = await controller.syncMissedEvents(
         { user: { userId: 'cust_user_1' } },
         'job_active_1',
-        '2026-11-19T09:50:00Z'
+        '2026-11-19T09:50:00Z',
       );
 
       assert.strictEqual(result.jobId, 'job_active_1');

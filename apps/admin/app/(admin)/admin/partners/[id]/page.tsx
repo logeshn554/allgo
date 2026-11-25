@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { adminApi } from '@/lib/api-client';
-import { StatusBadge } from '@allgo/ui';
 import { PartnerDossierInfo } from '@/components/partners/PartnerDossierInfo';
 import { PartnerServicesApproval } from '@/components/partners/PartnerServicesApproval';
+import { adminApi } from '@/lib/api-client';
+import { StatusBadge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Label } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function PartnerDossierPage() {
   const params = useParams();
@@ -43,7 +43,11 @@ export default function PartnerDossierPage() {
           full_name: 'Murugan S',
           phone: '+919876543210',
           status: 'DOCS_SUBMITTED',
-          vehicle: { vehicle_type: 'MOTORCYCLE', registration_number: 'TN 01 AB 1234', make_model: 'Hero Splendor' },
+          vehicle: {
+            vehicle_type: 'MOTORCYCLE',
+            registration_number: 'TN 01 AB 1234',
+            make_model: 'Hero Splendor',
+          },
           services: [
             { service_type: 'FOOD_DELIVERY', status: 'PENDING' },
             { service_type: 'PARCEL', status: 'PENDING' },
@@ -78,11 +82,16 @@ export default function PartnerDossierPage() {
     setError(null);
     setActionSuccess(null);
     try {
-      await adminApi.updatePartnerServiceStatus(partnerId, serviceType, newStatus, actionReason || undefined);
+      await adminApi.updatePartnerServiceStatus(
+        partnerId,
+        serviceType,
+        newStatus,
+        actionReason || undefined,
+      );
       setActionSuccess(`Service ${serviceType} updated to ${newStatus}`);
       setPartner((prev: any) => {
         const services = (prev?.services || []).map((s: any) =>
-          s.service_type === serviceType ? { ...s, status: newStatus } : s
+          s.service_type === serviceType ? { ...s, status: newStatus } : s,
         );
         return { ...prev, services };
       });
@@ -95,7 +104,11 @@ export default function PartnerDossierPage() {
   }
 
   if (loading) {
-    return <div className="p-10 text-center text-muted-foreground text-sm">Loading partner dossier...</div>;
+    return (
+      <div className="p-10 text-center text-muted-foreground text-sm">
+        Loading partner dossier...
+      </div>
+    );
   }
 
   const services = partner?.services || [
@@ -106,7 +119,10 @@ export default function PartnerDossierPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
-        <Link href="/admin/partners" className="text-primary hover:underline text-sm font-semibold inline-flex items-center gap-1.5">
+        <Link
+          href="/admin/partners"
+          className="text-primary hover:underline text-sm font-semibold inline-flex items-center gap-1.5"
+        >
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 rtl:rotate-180" />
           <span>Back to Partner Queue</span>
         </Link>
@@ -167,10 +183,7 @@ export default function PartnerDossierPage() {
           </div>
 
           <div className="flex gap-2.5 flex-wrap pt-2">
-            <Button
-              disabled={submitting}
-              onClick={() => handlePartnerStatus('APPROVED')}
-            >
+            <Button disabled={submitting} onClick={() => handlePartnerStatus('APPROVED')}>
               Approve Partner Account
             </Button>
             <Button

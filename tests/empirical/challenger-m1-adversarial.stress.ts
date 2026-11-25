@@ -1,23 +1,21 @@
 import 'reflect-metadata';
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
+import { beforeEach, describe, it } from 'node:test';
 import {
   BadRequestException,
-  UnauthorizedException,
-  ForbiddenException,
-  ServiceUnavailableException,
   HttpStatus,
+  ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { HealthService } from '../../apps/api/dist/health/health.service.js';
-import { HealthController } from '../../apps/api/dist/health/health.controller.js';
-import { SendOtpDto } from '../../apps/api/dist/auth/dto/send-otp.dto.js';
-import { VerifyOtpDto } from '../../apps/api/dist/auth/dto/verify-otp.dto.js';
-import { RefreshTokenDto } from '../../apps/api/dist/auth/dto/refresh-token.dto.js';
 import { ValidationPipe } from '@nestjs/common';
+import jwt from 'jsonwebtoken';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { SendOtpDto } from '../../services/api/dist/auth/dto/send-otp.dto.js';
+import { VerifyOtpDto } from '../../services/api/dist/auth/dto/verify-otp.dto.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { HealthController } from '../../services/api/dist/health/health.controller.js';
+import { HealthService } from '../../services/api/dist/health/health.service.js';
 
 describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
   let config: ConfigService;
@@ -36,7 +34,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const rt1 = jwt.sign(
         { userId: testUser.id, type: 'refresh', deviceId: targetDevice },
         config.jwtSecret,
-        { algorithm: 'HS256', expiresIn: '7d' }
+        { algorithm: 'HS256', expiresIn: '7d' },
       );
 
       const mockRedis = {
@@ -66,10 +64,10 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(
             err.message,
-            'Refresh token reuse detected. Session terminated for security.'
+            'Refresh token reuse detected. Session terminated for security.',
           );
           return true;
-        }
+        },
       );
 
       // Verify that device session was deleted from DB
@@ -88,7 +86,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const oldRt = jwt.sign(
         { userId: testUser.id, type: 'refresh', deviceId: targetDevice },
         config.jwtSecret,
-        { algorithm: 'HS256', expiresIn: '7d' }
+        { algorithm: 'HS256', expiresIn: '7d' },
       );
 
       // Redis has no entry (e.g. key expired or evicted)
@@ -105,7 +103,17 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const mockDb = {
         query: async (sql: string, params: any[]) => {
           if (sql.includes('SELECT u.id')) {
-            return { rows: [{ id: testUser.id, phone: testUser.phone, status: 'ACTIVE', default_language: 'en', roles: ['CUSTOMER'] }] };
+            return {
+              rows: [
+                {
+                  id: testUser.id,
+                  phone: testUser.phone,
+                  status: 'ACTIVE',
+                  default_language: 'en',
+                  roles: ['CUSTOMER'],
+                },
+              ],
+            };
           }
           if (sql.includes('SELECT refresh_token_hash FROM devices')) {
             return { rows: [{ refresh_token_hash: newHash }] };
@@ -128,10 +136,10 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(
             err.message,
-            'Refresh token reuse detected. Session terminated for security.'
+            'Refresh token reuse detected. Session terminated for security.',
           );
           return true;
-        }
+        },
       );
 
       assert.strictEqual(deletedUserId, testUser.id);
@@ -143,11 +151,9 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
 
   describe('Target 2: Database and Redis Outage Error Propagation (503 vs 401)', () => {
     it('Scenario 2A: DB connection error during user check MUST throw 503 ServiceUnavailable, NOT 401', async () => {
-      const rt = jwt.sign(
-        { userId: 'u1', type: 'refresh', deviceId: 'dev_1' },
-        config.jwtSecret,
-        { algorithm: 'HS256' }
-      );
+      const rt = jwt.sign({ userId: 'u1', type: 'refresh', deviceId: 'dev_1' }, config.jwtSecret, {
+        algorithm: 'HS256',
+      });
 
       const mockRedis = { get: async () => null };
       const mockDb = {
@@ -163,21 +169,19 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
         (err: any) => {
           assert.ok(
             err instanceof ServiceUnavailableException,
-            `Expected ServiceUnavailableException but got: ${err.constructor.name} (${err.message})`
+            `Expected ServiceUnavailableException but got: ${err.constructor.name} (${err.message})`,
           );
           assert.strictEqual(err.getStatus(), 503);
           assert.ok(err.message.includes('ECONNREFUSED'));
           return true;
-        }
+        },
       );
     });
 
     it('Scenario 2B: Redis connection drop during revocation check MUST throw 503 ServiceUnavailable, NOT 401', async () => {
-      const rt = jwt.sign(
-        { userId: 'u1', type: 'refresh', deviceId: 'dev_1' },
-        config.jwtSecret,
-        { algorithm: 'HS256' }
-      );
+      const rt = jwt.sign({ userId: 'u1', type: 'refresh', deviceId: 'dev_1' }, config.jwtSecret, {
+        algorithm: 'HS256',
+      });
 
       const mockRedis = {
         get: async () => {
@@ -195,7 +199,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
           assert.strictEqual(err.getStatus(), 503);
           assert.ok(err.message.includes('ETIMEDOUT'));
           return true;
-        }
+        },
       );
     });
 
@@ -215,7 +219,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
             assert.ok(err instanceof UnauthorizedException);
             assert.strictEqual(err.getStatus(), 401);
             return true;
-          }
+          },
         );
       }
     });
@@ -226,7 +230,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const rt = jwt.sign(
         { userId: 'u1', type: 'refresh', deviceId: 'authorized_phone_1' },
         config.jwtSecret,
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
 
       const authService = new AuthService(config, {} as any, {} as any, null);
@@ -238,7 +242,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
           assert.strictEqual(err.getStatus(), 400);
           assert.strictEqual(err.message, 'Device ID mismatch');
           return true;
-        }
+        },
       );
     });
 
@@ -246,7 +250,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const rt = jwt.sign(
         { userId: 'u1', type: 'refresh', deviceId: 'authorized_phone_1' },
         config.jwtSecret,
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
 
       const mockRedis = {
@@ -258,7 +262,17 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const mockDb = {
         query: async (sql: string) => {
           if (sql.includes('SELECT u.id')) {
-            return { rows: [{ id: 'u1', phone: '+919876543210', status: 'ACTIVE', default_language: 'en', roles: ['CUSTOMER'] }] };
+            return {
+              rows: [
+                {
+                  id: 'u1',
+                  phone: '+919876543210',
+                  status: 'ACTIVE',
+                  default_language: 'en',
+                  roles: ['CUSTOMER'],
+                },
+              ],
+            };
           }
           if (sql.includes('SELECT refresh_token_hash FROM devices')) {
             return { rows: [{ refresh_token_hash: hash }] };
@@ -280,7 +294,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const rt = jwt.sign(
         { userId: 'u1', type: 'refresh', deviceId: 'token_claimed_device' },
         config.jwtSecret,
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
 
       let queriedDevice = '';
@@ -292,7 +306,17 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const mockDb = {
         query: async (sql: string, params: any[]) => {
           if (sql.includes('SELECT u.id')) {
-            return { rows: [{ id: 'u1', phone: '+919876543210', status: 'ACTIVE', default_language: 'en', roles: ['CUSTOMER'] }] };
+            return {
+              rows: [
+                {
+                  id: 'u1',
+                  phone: '+919876543210',
+                  status: 'ACTIVE',
+                  default_language: 'en',
+                  roles: ['CUSTOMER'],
+                },
+              ],
+            };
           }
           if (sql.includes('SELECT refresh_token_hash FROM devices')) {
             queriedDevice = params[1];
@@ -317,7 +341,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const pipe = new ValidationPipe({ whitelist: true, transform: true });
 
       const maliciousPayload = JSON.parse(
-        '{"phone": "+919876543210", "__proto__": {"polluted": true}, "constructor": {"prototype": {"admin": true}}}'
+        '{"phone": "+919876543210", "__proto__": {"polluted": true}, "constructor": {"prototype": {"admin": true}}}',
       );
 
       const transformed = await pipe.transform(maliciousPayload, {
@@ -334,7 +358,7 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
       const pipe = new ValidationPipe({ whitelist: true, transform: true });
       await assert.rejects(
         () => pipe.transform({ phone: ['+919876543210'] }, { type: 'body', metatype: SendOtpDto }),
-        (err: any) => err instanceof BadRequestException
+        (err: any) => err instanceof BadRequestException,
       );
     });
 
@@ -344,8 +368,12 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
 
       for (const code of badCodes) {
         await assert.rejects(
-          () => pipe.transform({ phone: '+919876543210', code }, { type: 'body', metatype: VerifyOtpDto }),
-          (err: any) => err instanceof BadRequestException
+          () =>
+            pipe.transform(
+              { phone: '+919876543210', code },
+              { type: 'body', metatype: VerifyOtpDto },
+            ),
+          (err: any) => err instanceof BadRequestException,
         );
       }
     });
@@ -369,7 +397,9 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
     }
 
     it('Scenario 5A: DB DOWN & Redis UP -> 503 degraded', async () => {
-      const db = { checkConnection: async () => ({ connected: false, latencyMs: 1, error: 'DB down' }) };
+      const db = {
+        checkConnection: async () => ({ connected: false, latencyMs: 1, error: 'DB down' }),
+      };
       const redis = { checkConnection: async () => ({ connected: true, latencyMs: 1 }) };
       const service = new HealthService(db as any, redis as any);
       const controller = new HealthController(service);
@@ -385,7 +415,9 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
 
     it('Scenario 5B: DB UP & Redis DOWN -> 503 degraded', async () => {
       const db = { checkConnection: async () => ({ connected: true, latencyMs: 1 }) };
-      const redis = { checkConnection: async () => ({ connected: false, latencyMs: 0, error: 'Redis down' }) };
+      const redis = {
+        checkConnection: async () => ({ connected: false, latencyMs: 0, error: 'Redis down' }),
+      };
       const service = new HealthService(db as any, redis as any);
       const controller = new HealthController(service);
 
@@ -399,8 +431,12 @@ describe('Challenger M1 Adversarial Suite (Instance 2)', () => {
     });
 
     it('Scenario 5C: DB DOWN & Redis DOWN -> 503 unhealthy', async () => {
-      const db = { checkConnection: async () => ({ connected: false, latencyMs: 1, error: 'DB down' }) };
-      const redis = { checkConnection: async () => ({ connected: false, latencyMs: 0, error: 'Redis down' }) };
+      const db = {
+        checkConnection: async () => ({ connected: false, latencyMs: 1, error: 'DB down' }),
+      };
+      const redis = {
+        checkConnection: async () => ({ connected: false, latencyMs: 0, error: 'Redis down' }),
+      };
       const service = new HealthService(db as any, redis as any);
       const controller = new HealthController(service);
 

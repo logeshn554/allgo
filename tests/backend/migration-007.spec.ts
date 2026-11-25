@@ -1,12 +1,18 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_PATH = path.join(ROOT_DIR, 'database/migrations/007_phase5_customer_cart_orders_and_payments.sql');
-const ROLLBACK_PATH = path.join(ROOT_DIR, 'database/rollbacks/007_phase5_customer_cart_orders_and_payments_rollback.sql');
+const MIGRATION_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/007_phase5_customer_cart_orders_and_payments.sql',
+);
+const ROLLBACK_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/007_phase5_customer_cart_orders_and_payments_rollback.sql',
+);
 
 describe('Phase 5: Database Migration 007 & Rollback Verification', () => {
   it('should verify migration 007 and rollback 007 files exist and conform to SQL transaction safety', () => {
@@ -30,7 +36,9 @@ describe('Phase 5: Database Migration 007 & Rollback Verification', () => {
     try {
       await adminClient.connect();
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
@@ -68,17 +76,17 @@ describe('Phase 5: Database Migration 007 & Rollback Verification', () => {
 
       // Verify tables and columns created
       const savedAddressesRes = await testClient.query(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = 'customer_saved_addresses';"
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'customer_saved_addresses';",
       );
       assert.strictEqual(savedAddressesRes.rows.length > 0, true);
 
       const payTransRes = await testClient.query(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = 'payment_transactions';"
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'payment_transactions';",
       );
       assert.strictEqual(payTransRes.rows.length > 0, true);
 
       const subOrdersRes = await testClient.query(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = 'sub_orders' AND column_name = 'delivery_fee_inr';"
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'sub_orders' AND column_name = 'delivery_fee_inr';",
       );
       assert.strictEqual(subOrdersRes.rows.length, 1);
 
@@ -87,14 +95,22 @@ describe('Phase 5: Database Migration 007 & Rollback Verification', () => {
       await testClient.query(rollbackSql);
 
       const rolledBackTableRes = await testClient.query(
-        "SELECT table_name FROM information_schema.tables WHERE table_name = 'customer_saved_addresses';"
+        "SELECT table_name FROM information_schema.tables WHERE table_name = 'customer_saved_addresses';",
       );
-      assert.strictEqual(rolledBackTableRes.rows.length, 0, 'customer_saved_addresses should be dropped on rollback');
+      assert.strictEqual(
+        rolledBackTableRes.rows.length,
+        0,
+        'customer_saved_addresses should be dropped on rollback',
+      );
 
       const rolledBackColumnRes = await testClient.query(
-        "SELECT column_name FROM information_schema.columns WHERE table_name = 'sub_orders' AND column_name = 'delivery_fee_inr';"
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'sub_orders' AND column_name = 'delivery_fee_inr';",
       );
-      assert.strictEqual(rolledBackColumnRes.rows.length, 0, 'delivery_fee_inr column should be removed on rollback');
+      assert.strictEqual(
+        rolledBackColumnRes.rows.length,
+        0,
+        'delivery_fee_inr column should be removed on rollback',
+      );
     } finally {
       await testClient.end();
       await adminClient.query(`DROP DATABASE IF EXISTS "${testDbName}";`);

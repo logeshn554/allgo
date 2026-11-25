@@ -1,19 +1,27 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
-const ALL_ROLES = ['CUSTOMER', 'PARTNER', 'MERCHANT', 'ADMIN', 'DRIVER', 'RESTAURANT_OWNER', 'STORE_MANAGER'];
+const ALL_ROLES = [
+  'CUSTOMER',
+  'PARTNER',
+  'MERCHANT',
+  'ADMIN',
+  'DRIVER',
+  'RESTAURANT_OWNER',
+  'STORE_MANAGER',
+];
 
 interface UserRolesCardProps {
   roles: string[];
@@ -81,11 +89,7 @@ export const UserRolesCard: React.FC<UserRolesCardProps> = ({
               </SelectGroup>
             </SelectContent>
           </Select>
-          <Button
-            onClick={onAssignRole}
-            disabled={updating}
-            variant="outline"
-          >
+          <Button onClick={onAssignRole} disabled={updating} variant="outline">
             Assign Role
           </Button>
         </div>

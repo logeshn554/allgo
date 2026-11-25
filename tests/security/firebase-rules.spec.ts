@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 
@@ -29,7 +29,7 @@ class FirestoreRulesEmulatorDouble {
     collection: string,
     docId: string,
     request: RulesRequest,
-    resource: RulesResource
+    resource: RulesResource,
   ): boolean {
     if (!request.auth || !request.auth.uid) {
       return false;
@@ -48,8 +48,7 @@ class FirestoreRulesEmulatorDouble {
 
     if (collection === 'rides') {
       return (
-        resource.data.customerId === request.auth.uid ||
-        resource.data.driverId === request.auth.uid
+        resource.data.customerId === request.auth.uid || resource.data.driverId === request.auth.uid
       );
     }
 
@@ -68,7 +67,7 @@ class FirestoreRulesEmulatorDouble {
     _collection: string,
     _docId: string,
     _request: RulesRequest,
-    _resource?: RulesResource
+    _resource?: RulesResource,
   ): boolean {
     return false;
   }
@@ -85,7 +84,7 @@ class RtdbRulesEmulatorDouble {
     pathSegment: string,
     key: string,
     auth: AuthContext | null,
-    data: Record<string, any>
+    data: Record<string, any>,
   ): boolean {
     if (!auth || !auth.uid) {
       return false;
@@ -104,11 +103,7 @@ class RtdbRulesEmulatorDouble {
     }
 
     if (pathSegment === 'partner_locations') {
-      return (
-        key === auth.uid ||
-        data.activeCustomerId === auth.uid ||
-        data.customerId === auth.uid
-      );
+      return key === auth.uid || data.activeCustomerId === auth.uid || data.customerId === auth.uid;
     }
 
     return false;
@@ -118,15 +113,15 @@ class RtdbRulesEmulatorDouble {
     _pathSegment: string,
     _key: string,
     _auth: AuthContext | null,
-    _data?: Record<string, any>
+    _data?: Record<string, any>,
   ): boolean {
     return false;
   }
 }
 
 describe('A.1: Firestore & RTDB Security Rules Double and Policy Tests', () => {
-  const firestoreRulesPath = path.join(ROOT_DIR, 'firestore.rules');
-  const databaseRulesPath = path.join(ROOT_DIR, 'database.rules.json');
+  const firestoreRulesPath = path.join(ROOT_DIR, 'infrastructure/firebase/firestore.rules');
+  const databaseRulesPath = path.join(ROOT_DIR, 'infrastructure/firebase/database.rules.json');
   const firestoreHarness = new FirestoreRulesEmulatorDouble(firestoreRulesPath);
   const rtdbHarness = new RtdbRulesEmulatorDouble(databaseRulesPath);
 
@@ -146,20 +141,24 @@ describe('A.1: Firestore & RTDB Security Rules Double and Policy Tests', () => {
   it('should deny unauthenticated read and write requests across all paths', () => {
     const unauthenticatedReq: RulesRequest = { auth: null };
     assert.strictEqual(
-      firestoreHarness.evaluateRead('orders', 'ord_123', unauthenticatedReq, { data: { customerId: 'cust_1' } }),
-      false
+      firestoreHarness.evaluateRead('orders', 'ord_123', unauthenticatedReq, {
+        data: { customerId: 'cust_1' },
+      }),
+      false,
     );
     assert.strictEqual(
-      firestoreHarness.evaluateWrite('orders', 'ord_123', unauthenticatedReq, { data: { customerId: 'cust_1' } }),
-      false
+      firestoreHarness.evaluateWrite('orders', 'ord_123', unauthenticatedReq, {
+        data: { customerId: 'cust_1' },
+      }),
+      false,
     );
     assert.strictEqual(
       rtdbHarness.evaluateRead('orders', 'ord_123', null, { customerId: 'cust_1' }),
-      false
+      false,
     );
     assert.strictEqual(
       rtdbHarness.evaluateWrite('orders', 'ord_123', null, { customerId: 'cust_1' }),
-      false
+      false,
     );
   });
 
@@ -167,9 +166,15 @@ describe('A.1: Firestore & RTDB Security Rules Double and Policy Tests', () => {
     const customerReq: RulesRequest = { auth: { uid: 'cust_1' } };
     assert.strictEqual(firestoreHarness.evaluateWrite('orders', 'ord_123', customerReq), false);
     assert.strictEqual(firestoreHarness.evaluateWrite('rides', 'ride_123', customerReq), false);
-    assert.strictEqual(firestoreHarness.evaluateWrite('partner_locations', 'prt_1', customerReq), false);
+    assert.strictEqual(
+      firestoreHarness.evaluateWrite('partner_locations', 'prt_1', customerReq),
+      false,
+    );
     assert.strictEqual(rtdbHarness.evaluateWrite('orders', 'ord_123', { uid: 'cust_1' }), false);
-    assert.strictEqual(rtdbHarness.evaluateWrite('partner_locations', 'prt_1', { uid: 'cust_1' }), false);
+    assert.strictEqual(
+      rtdbHarness.evaluateWrite('partner_locations', 'prt_1', { uid: 'cust_1' }),
+      false,
+    );
   });
 
   it('should allow users to read only their own orders or rides', () => {
@@ -194,12 +199,35 @@ describe('A.1: Firestore & RTDB Security Rules Double and Policy Tests', () => {
     const otherUser: RulesRequest = { auth: { uid: 'cust_other' } };
 
     const locData = { data: { activeCustomerId: 'cust_active', lat: 12.97, lng: 77.59 } };
-    assert.strictEqual(firestoreHarness.evaluateRead('partner_locations', 'prt_100', partner, locData), true);
-    assert.strictEqual(firestoreHarness.evaluateRead('partner_locations', 'prt_100', activeCustomer, locData), true);
-    assert.strictEqual(firestoreHarness.evaluateRead('partner_locations', 'prt_100', otherUser, locData), false);
+    assert.strictEqual(
+      firestoreHarness.evaluateRead('partner_locations', 'prt_100', partner, locData),
+      true,
+    );
+    assert.strictEqual(
+      firestoreHarness.evaluateRead('partner_locations', 'prt_100', activeCustomer, locData),
+      true,
+    );
+    assert.strictEqual(
+      firestoreHarness.evaluateRead('partner_locations', 'prt_100', otherUser, locData),
+      false,
+    );
 
-    assert.strictEqual(rtdbHarness.evaluateRead('partner_locations', 'prt_100', { uid: 'prt_100' }, locData.data), true);
-    assert.strictEqual(rtdbHarness.evaluateRead('partner_locations', 'prt_100', { uid: 'cust_active' }, locData.data), true);
-    assert.strictEqual(rtdbHarness.evaluateRead('partner_locations', 'prt_100', { uid: 'cust_other' }, locData.data), false);
+    assert.strictEqual(
+      rtdbHarness.evaluateRead('partner_locations', 'prt_100', { uid: 'prt_100' }, locData.data),
+      true,
+    );
+    assert.strictEqual(
+      rtdbHarness.evaluateRead(
+        'partner_locations',
+        'prt_100',
+        { uid: 'cust_active' },
+        locData.data,
+      ),
+      true,
+    );
+    assert.strictEqual(
+      rtdbHarness.evaluateRead('partner_locations', 'prt_100', { uid: 'cust_other' }, locData.data),
+      false,
+    );
   });
 });

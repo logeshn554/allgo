@@ -55,23 +55,29 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
+          cache: 'pnpm'
 
-      - name: Install Monorepo Root Dependencies
-        run: npm ci
+      - name: Install Monorepo Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome Lint & Format Check
+        run: pnpm lint
 
       - name: Lint OpenAPI Spec
-        run: npm run lint:openapi
+        run: pnpm run lint:openapi
 
-      - name: Build & Typecheck @allgo/common and @allgo/api
-        run: npm run build:api
+      - name: Build & Typecheck Workspaces (Turborepo)
+        run: pnpm build && pnpm typecheck
 
-      - name: Run All Backend and Integration Tests
-        run: npm test
+      - name: Run Workspace, Security, and Admin Tests
+        run: pnpm test:fast
 
   mobile-apps-validation:
     name: Flutter Analyze, Test & Android Emulator CI (${{ matrix.app.name }})
@@ -87,6 +93,8 @@ jobs:
             path: apps/merchant_mobile
           - name: Driver Partner Mobile
             path: apps/partner_mobile
+          - name: Hub Operations Mobile
+            path: apps/hub_mobile
 
     steps:
       - name: Checkout Repository
@@ -101,7 +109,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.27.x'
           channel: 'stable'
           cache: true
 
@@ -148,6 +156,8 @@ jobs:
             path: apps/merchant_mobile
           - name: Driver Partner Mobile
             path: apps/partner_mobile
+          - name: Hub Operations Mobile
+            path: apps/hub_mobile
 
     steps:
       - name: Checkout Repository
@@ -156,7 +166,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
+          flutter-version: '3.27.x'
           channel: 'stable'
           cache: true
 

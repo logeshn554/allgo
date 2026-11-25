@@ -1,9 +1,9 @@
-import { adminFetch } from './base-client';
-import {
-  ListCatalogProductsResponse,
+import type {
   CreateAdminCategoryDto,
+  ListCatalogProductsResponse,
   UpdateAdminCategoryDto,
 } from '../types';
+import { adminFetch } from './base-client';
 
 export class CatalogApi {
   async listCatalogProducts(

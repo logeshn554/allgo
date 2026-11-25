@@ -1,8 +1,8 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { PaymentService } from '../../apps/api/dist/ordering/services/payment.service.js';
-import { RazorpayPaymentGateway } from '../../apps/api/dist/ordering/gateways/razorpay-payment.gateway.js';
+import { describe, it } from 'node:test';
+import { RazorpayPaymentGateway } from '../../services/api/dist/ordering/gateways/razorpay-payment.gateway.js';
+import { PaymentService } from '../../services/api/dist/ordering/services/payment.service.js';
 
 class MockPaymentGateway {
   public createdOrders: any[] = [];
@@ -64,10 +64,19 @@ class MockDb {
     if (sql.includes('INSERT INTO payment_transactions')) {
       const row = {
         id: `tx_${this.transactions.length + 1}`,
-        order_group_id: params[0], sub_order_id: params[1], customer_id: params[2],
-        gateway_name: params[3], gateway_order_id: params[4], idempotency_key: params[5],
-        payment_method: params[6], amount_inr: params[7], currency: 'INR', status: params[8],
-        gateway_payment_id: null, gateway_signature: null, created_at: new Date(),
+        order_group_id: params[0],
+        sub_order_id: params[1],
+        customer_id: params[2],
+        gateway_name: params[3],
+        gateway_order_id: params[4],
+        idempotency_key: params[5],
+        payment_method: params[6],
+        amount_inr: params[7],
+        currency: 'INR',
+        status: params[8],
+        gateway_payment_id: null,
+        gateway_signature: null,
+        created_at: new Date(),
       };
       this.transactions.push(row);
       return { rows: [row] };
@@ -94,25 +103,40 @@ class MockDb {
 
     if (sql.includes('SELECT pt.*, p.id as canonical_payment_id')) {
       const row = this.transactions.find(
-        (t) => t.sub_order_id === params[0] && (t.status === 'CAPTURED' || t.status === 'AUTHORIZED')
+        (t) =>
+          t.sub_order_id === params[0] && (t.status === 'CAPTURED' || t.status === 'AUTHORIZED'),
       );
       if (row) return { rows: [{ ...row, canonical_payment_id: `canon_${row.id}` }] };
       return { rows: [] };
     }
 
     if (sql.includes('INSERT INTO refunds')) {
-      const row = { id: `rfnd_db_${this.refunds.length + 1}`, payment_id: params[0], sub_order_id: params[1], gateway_refund_id: params[2], destination: params[3], amount_inr: params[4], reason: params[5], status: 'PROCESSED' };
+      const row = {
+        id: `rfnd_db_${this.refunds.length + 1}`,
+        payment_id: params[0],
+        sub_order_id: params[1],
+        gateway_refund_id: params[2],
+        destination: params[3],
+        amount_inr: params[4],
+        reason: params[5],
+        status: 'PROCESSED',
+      };
       this.refunds.push(row);
       return { rows: [row] };
     }
 
     if (sql.includes('INSERT INTO refund_allocations')) {
-      const row = { id: `alloc_${this.refundAllocations.length + 1}`, refund_id: params[0], sub_order_id: params[1], allocated_amount_inr: params[2] };
+      const row = {
+        id: `alloc_${this.refundAllocations.length + 1}`,
+        refund_id: params[0],
+        sub_order_id: params[1],
+        allocated_amount_inr: params[2],
+      };
       this.refundAllocations.push(row);
       return { rows: [row] };
     }
 
-    if (sql.includes('UPDATE payment_transactions') && sql.includes('status = \'CAPTURED\'')) {
+    if (sql.includes('UPDATE payment_transactions') && sql.includes("status = 'CAPTURED'")) {
       const row = this.transactions.find((t) => t.id === params[2]);
       if (row) {
         row.status = 'CAPTURED';
@@ -123,13 +147,13 @@ class MockDb {
       return { rows: row ? [row] : [] };
     }
 
-    if (sql.includes('UPDATE payment_transactions SET status = \'REFUNDED\'')) {
+    if (sql.includes("UPDATE payment_transactions SET status = 'REFUNDED'")) {
       const row = this.transactions.find((t) => t.id === params[0]);
       if (row) row.status = 'REFUNDED';
       return { rows: row ? [row] : [] };
     }
 
-    if (sql.includes('UPDATE payments SET status = \'CAPTURED\'')) {
+    if (sql.includes("UPDATE payments SET status = 'CAPTURED'")) {
       const row = this.payments.find((p) => p.order_group_id === params[2]);
       if (row) {
         row.status = 'CAPTURED';
@@ -159,7 +183,7 @@ describe('Phase B1 & B2: PaymentGateway and Real Razorpay Integration', () => {
       'cust_100',
       'UPI',
       450.0,
-      'idem_key_100'
+      'idem_key_100',
     );
 
     assert.strictEqual(init.gatewayName, 'RAZORPAY');
@@ -174,20 +198,26 @@ describe('Phase B1 & B2: PaymentGateway and Real Razorpay Integration', () => {
     const mockGateway = new MockPaymentGateway();
     const paymentService = new PaymentService(mockDb as any, mockGateway as any);
 
-    const init = await paymentService.initiatePayment('grp_test_101', 'sub_test_101', 'cust_101', 'UPI', 500.0);
+    const init = await paymentService.initiatePayment(
+      'grp_test_101',
+      'sub_test_101',
+      'cust_101',
+      'UPI',
+      500.0,
+    );
     const payId = 'pay_real_999';
-    const validSig = crypto.createHmac('sha256', 'mock_secret_key_123').update(`${init.gatewayOrderId}|${payId}`).digest('hex');
+    const validSig = crypto
+      .createHmac('sha256', 'mock_secret_key_123')
+      .update(`${init.gatewayOrderId}|${payId}`)
+      .digest('hex');
 
     const confirmed = await paymentService.confirmPayment(init.transactionId, payId, validSig);
     assert.strictEqual(confirmed.status, 'CAPTURED');
     assert.strictEqual(confirmed.gateway_payment_id, payId);
 
-    await assert.rejects(
-      async () => {
-        await paymentService.confirmPayment(init.transactionId, payId, 'forged_signature');
-      },
-      /invalid razorpay payment signature/i
-    );
+    await assert.rejects(async () => {
+      await paymentService.confirmPayment(init.transactionId, payId, 'forged_signature');
+    }, /invalid razorpay payment signature/i);
   });
 
   it('should process refunds via Gateway and record refund_allocations per sub_order', async () => {
@@ -195,12 +225,25 @@ describe('Phase B1 & B2: PaymentGateway and Real Razorpay Integration', () => {
     const mockGateway = new MockPaymentGateway();
     const paymentService = new PaymentService(mockDb as any, mockGateway as any);
 
-    const init = await paymentService.initiatePayment('grp_test_102', 'sub_test_102', 'cust_102', 'CARD', 600.0);
+    const init = await paymentService.initiatePayment(
+      'grp_test_102',
+      'sub_test_102',
+      'cust_102',
+      'CARD',
+      600.0,
+    );
     const payId = 'pay_real_888';
-    const validSig = crypto.createHmac('sha256', 'mock_secret_key_123').update(`${init.gatewayOrderId}|${payId}`).digest('hex');
+    const validSig = crypto
+      .createHmac('sha256', 'mock_secret_key_123')
+      .update(`${init.gatewayOrderId}|${payId}`)
+      .digest('hex');
     await paymentService.confirmPayment(init.transactionId, payId, validSig);
 
-    const refund = await paymentService.processRefund('sub_test_102', 600.0, 'Customer cancelled before food prep');
+    const refund = await paymentService.processRefund(
+      'sub_test_102',
+      600.0,
+      'Customer cancelled before food prep',
+    );
     assert.ok(refund);
     assert.strictEqual(refund.status, 'PROCESSED');
     assert.strictEqual(mockGateway.createdRefunds.length, 1);
@@ -216,7 +259,13 @@ describe('Phase B1 & B2: PaymentGateway and Real Razorpay Integration', () => {
     const mockGateway = new MockPaymentGateway();
     const paymentService = new PaymentService(mockDb as any, mockGateway as any);
 
-    const init = await paymentService.initiatePayment('grp_test_103', 'sub_test_103', 'cust_103', 'UPI', 450.0);
+    const init = await paymentService.initiatePayment(
+      'grp_test_103',
+      'sub_test_103',
+      'cust_103',
+      'UPI',
+      450.0,
+    );
     const tx = mockDb.transactions.find((t) => t.id === init.transactionId);
     tx.gateway_payment_id = 'pay_crashed_123';
 

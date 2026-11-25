@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { adminApi, UserSummary } from '@/lib/api-client';
-import { StatusBadge } from '@allgo/ui';
+import { UserDevicesCard } from '@/components/users/UserDevicesCard';
+import { UserIdentitiesCard } from '@/components/users/UserIdentitiesCard';
 import { UserRolesCard } from '@/components/users/UserRolesCard';
 import { UserStatusCard } from '@/components/users/UserStatusCard';
-import { UserIdentitiesCard } from '@/components/users/UserIdentitiesCard';
-import { UserDevicesCard } from '@/components/users/UserDevicesCard';
 import { UserTwoFactorCard } from '@/components/users/UserTwoFactorCard';
+import { type UserSummary, adminApi } from '@/lib/api-client';
+import { StatusBadge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -53,7 +53,9 @@ export default function UserDetailPage() {
     try {
       await adminApi.updateUserStatus(user.id, newStatus);
       setUser({ ...user, status: newStatus as any });
-      setMessage(`Account status successfully updated to ${newStatus}. Immediate Redis revocation enforced.`);
+      setMessage(
+        `Account status successfully updated to ${newStatus}. Immediate Redis revocation enforced.`,
+      );
     } catch (err: any) {
       setError(err.message || 'Status update failed');
     } finally {
@@ -101,9 +103,7 @@ export default function UserDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-10 text-center text-muted-foreground text-sm">
-        Loading user profile...
-      </div>
+      <div className="p-10 text-center text-muted-foreground text-sm">Loading user profile...</div>
     );
   }
 
@@ -134,14 +134,20 @@ export default function UserDetailPage() {
           onClick={() => router.push('/admin/users')}
           className="text-muted-foreground hover:text-foreground text-xs font-semibold flex items-center gap-1.5 -ms-2"
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5 rtl:rotate-180" />
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            strokeWidth={2}
+            className="size-3.5 rtl:rotate-180"
+          />
           <span>Back to Users</span>
         </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground mb-1">{user.fullName || 'User Profile'}</h1>
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            {user.fullName || 'User Profile'}
+          </h1>
           <p className="text-muted-foreground text-xs">ID: {user.id}</p>
         </div>
         <StatusBadge status={user.status} />
@@ -166,15 +172,21 @@ export default function UserDetailPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Email:</span>
-              <div className="font-semibold text-foreground text-sm mt-0.5">{user.email || 'Not provided'}</div>
+              <div className="font-semibold text-foreground text-sm mt-0.5">
+                {user.email || 'Not provided'}
+              </div>
             </div>
             <div>
               <span className="text-muted-foreground">Language Preference:</span>
-              <div className="font-semibold text-foreground text-sm mt-0.5">{user.defaultLanguage.toUpperCase()}</div>
+              <div className="font-semibold text-foreground text-sm mt-0.5">
+                {user.defaultLanguage.toUpperCase()}
+              </div>
             </div>
             <div>
               <span className="text-muted-foreground">Member Since:</span>
-              <div className="font-semibold text-foreground text-sm mt-0.5">{new Date(user.createdAt).toLocaleString()}</div>
+              <div className="font-semibold text-foreground text-sm mt-0.5">
+                {new Date(user.createdAt).toLocaleString()}
+              </div>
             </div>
           </div>
         </CardContent>

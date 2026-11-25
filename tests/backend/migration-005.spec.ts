@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
@@ -18,7 +18,10 @@ describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
 
   it('should verify migration 005 and rollback 005 files exist and conform to SQL transaction safety', () => {
     assert.ok(fs.existsSync(file005), '005_phase4_dispatch_and_delivery.sql must exist');
-    assert.ok(fs.existsSync(fileRollback005), '005_phase4_dispatch_and_delivery_rollback.sql must exist');
+    assert.ok(
+      fs.existsSync(fileRollback005),
+      '005_phase4_dispatch_and_delivery_rollback.sql must exist',
+    );
 
     const sql005 = fs.readFileSync(file005, 'utf8');
     assert.ok(sql005.includes('BEGIN;'), 'Migration 005 must be enclosed in BEGIN');
@@ -30,8 +33,12 @@ describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
   });
 
   it('should apply and rollback migration 005 symmetrically on an isolated disposable database', async () => {
-    const adminUrl = process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
-    const adminClient = new pg.Client({ connectionString: adminUrl, connectionTimeoutMillis: 3000 });
+    const adminUrl =
+      process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+    const adminClient = new pg.Client({
+      connectionString: adminUrl,
+      connectionTimeoutMillis: 3000,
+    });
 
     let connected = false;
     const disposableDbName = `allgo_disp_005_${Date.now()}`;
@@ -39,12 +46,13 @@ describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
       await adminClient.connect();
       connected = true;
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
     try {
-
       // 1. Create disposable database
       await adminClient.query(`CREATE DATABASE ${disposableDbName};`);
 
@@ -117,7 +125,7 @@ describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
             `);
           },
           /chk_job_status/,
-          'Invalid delivery status must violate chk_job_status'
+          'Invalid delivery status must violate chk_job_status',
         );
 
         // 6. Apply Rollback 005
@@ -140,7 +148,11 @@ describe('Phase 4: Database Migration 005 & Rollback Verification', () => {
             'dispatch_configurations'
           );
         `);
-        assert.equal(postRollback.rows.length, 0, 'All Phase 4 tables must be removed after rollback');
+        assert.equal(
+          postRollback.rows.length,
+          0,
+          'All Phase 4 tables must be removed after rollback',
+        );
       } finally {
         await dispClient.end();
       }

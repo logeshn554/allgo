@@ -1,43 +1,34 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  authSettingsApi,
-  AuthSettings,
-  AuthProviderConfig,
-  API_BASE,
-} from '@/data/api';
 import { OAuthProviderIcon } from '@/components/auth';
+import { API_BASE, type AuthProviderConfig, type AuthSettings, authSettingsApi } from '@/data/api';
 import {
-  Button,
-  Label,
-  Switch,
   Badge,
+  Button,
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
+  DialogHeader,
+  DialogTitle,
   HugeiconsIcon,
   Input,
+  Label,
+  Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   toast,
 } from '@allgo/ui';
-import {
-  Shield01Icon,
-  Add01Icon,
-  Delete02Icon,
-  Copy01Icon,
-} from '@hugeicons/core-free-icons';
+import { Add01Icon, Copy01Icon, Delete02Icon, Shield01Icon } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AuthSettingsPage() {
   const [settings, setSettings] = useState<AuthSettings | null>(null);
@@ -84,13 +75,10 @@ export default function AuthSettingsPage() {
 
   useEffect(() => {
     loadData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleToggleSetting = async (
-    key: keyof AuthSettings,
-    value: boolean | number | string,
-  ) => {
+  const handleToggleSetting = async (key: keyof AuthSettings, value: boolean | number | string) => {
     if (!settings) return;
     setSaving(true);
     try {
@@ -137,9 +125,7 @@ export default function AuthSettingsPage() {
         autoLink: providerAutoLink,
         allowSignup: providerAllowSignup,
       });
-      setProviders((prev) =>
-        prev.map((p) => (p.slug === editingProvider.slug ? updated : p)),
-      );
+      setProviders((prev) => prev.map((p) => (p.slug === editingProvider.slug ? updated : p)));
       setEditingProvider(null);
       notify.success(`${updated.displayName} options saved`);
     } catch (err: unknown) {
@@ -285,7 +271,10 @@ export default function AuthSettingsPage() {
                     {/* Status + actions */}
                     <div className="flex items-center justify-between pt-1">
                       <div className="flex gap-2 flex-wrap">
-                        <Badge variant={p.clientId ? 'secondary' : 'outline'} className="text-[10px]">
+                        <Badge
+                          variant={p.clientId ? 'secondary' : 'outline'}
+                          className="text-[10px]"
+                        >
                           {p.clientId ? 'Credentials Set' : 'No Credentials'}
                         </Badge>
                         {p.autoLink && (
@@ -321,7 +310,8 @@ export default function AuthSettingsPage() {
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            💡 OAuth credentials (Client ID &amp; Secret) are configured via environment variables on the API server — not stored here.
+            💡 OAuth credentials (Client ID &amp; Secret) are configured via environment variables
+            on the API server — not stored here.
           </p>
         </TabsContent>
 
@@ -341,7 +331,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Phone Number + SMS OTP</p>
-                      <p className="text-xs text-muted-foreground">Indian E.164 +91 OTP verification</p>
+                      <p className="text-xs text-muted-foreground">
+                        Indian E.164 +91 OTP verification
+                      </p>
                     </div>
                     <Switch
                       checked={settings.phoneOtpEnabled}
@@ -352,7 +344,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Email &amp; Password</p>
-                      <p className="text-xs text-muted-foreground">Scrypt-hashed password authentication</p>
+                      <p className="text-xs text-muted-foreground">
+                        Scrypt-hashed password authentication
+                      </p>
                     </div>
                     <Switch
                       checked={settings.emailPasswordEnabled}
@@ -363,7 +357,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Email OTP (Passwordless)</p>
-                      <p className="text-xs text-muted-foreground">6-digit verification code sent to email</p>
+                      <p className="text-xs text-muted-foreground">
+                        6-digit verification code sent to email
+                      </p>
                     </div>
                     <Switch
                       checked={settings.emailOtpEnabled}
@@ -374,7 +370,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">OAuth / Social Sign-In</p>
-                      <p className="text-xs text-muted-foreground">Allow login via enabled OAuth providers</p>
+                      <p className="text-xs text-muted-foreground">
+                        Allow login via enabled OAuth providers
+                      </p>
                     </div>
                     <Switch
                       checked={settings.oauthEnabled}
@@ -397,7 +395,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Allow Self-Registration</p>
-                      <p className="text-xs text-muted-foreground">Permit new users to sign up automatically</p>
+                      <p className="text-xs text-muted-foreground">
+                        Permit new users to sign up automatically
+                      </p>
                     </div>
                     <Switch
                       checked={settings.allowSelfSignup}
@@ -408,7 +408,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Auto-Link Verified Accounts</p>
-                      <p className="text-xs text-muted-foreground">Merge OAuth logins matching verified email</p>
+                      <p className="text-xs text-muted-foreground">
+                        Merge OAuth logins matching verified email
+                      </p>
                     </div>
                     <Switch
                       checked={settings.autoLinkVerifiedAccounts}
@@ -439,7 +441,9 @@ export default function AuthSettingsPage() {
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm font-medium">Max Devices Per User</p>
-                      <p className="text-xs text-muted-foreground">Concurrent active device sessions</p>
+                      <p className="text-xs text-muted-foreground">
+                        Concurrent active device sessions
+                      </p>
                     </div>
                     <Input
                       type="number"
@@ -470,8 +474,8 @@ export default function AuthSettingsPage() {
               {editingProvider?.displayName} Options
             </DialogTitle>
             <DialogDescription>
-              Toggle linking and registration behaviour for this provider.
-              OAuth credentials are set via server environment variables.
+              Toggle linking and registration behaviour for this provider. OAuth credentials are set
+              via server environment variables.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSaveProviderOptions} className="space-y-4 pt-1">
@@ -511,7 +515,8 @@ export default function AuthSettingsPage() {
           <DialogHeader>
             <DialogTitle>Add Custom OAuth 2.0 / OIDC Provider</DialogTitle>
             <DialogDescription>
-              Register an enterprise SSO or custom OAuth provider. Enter the OAuth endpoints — credentials are added via API server environment variables.
+              Register an enterprise SSO or custom OAuth provider. Enter the OAuth endpoints —
+              credentials are added via API server environment variables.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateCustomProvider} className="space-y-3">
@@ -541,7 +546,11 @@ export default function AuthSettingsPage() {
             </div>
             <div className="space-y-1">
               <Label>Token URL</Label>
-              <Input value={newTokenUrl} onChange={(e) => setNewTokenUrl(e.target.value)} required />
+              <Input
+                value={newTokenUrl}
+                onChange={(e) => setNewTokenUrl(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-1">
               <Label>UserInfo URL</Label>

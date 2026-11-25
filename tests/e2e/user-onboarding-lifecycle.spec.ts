@@ -1,21 +1,16 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { beforeEach, describe, it } from 'node:test';
+import { sendSmsOtp, verifySmsOtpAndLogin } from './legacy-mobile-data/smsAuthLoader.ts';
 import {
-  sendSmsOtp,
-  verifySmsOtpAndLogin,
-} from '../../src/data/smsAuthLoader.ts';
-import {
-  loadAllAccounts,
+  clearActiveSession,
+  getActiveSession,
   saveAllAccounts,
   updateCustomerProfile,
   updateDriverKyc,
   updateMerchantStore,
-  getActiveSession,
-  clearActiveSession,
-  checkAccountExists,
-} from '../../src/data/userRegistrationService.ts';
+} from './legacy-mobile-data/userRegistrationService.ts';
 
 describe('Real-App Phone Authentication & 3-Role Onboarding Lifecycle', () => {
   const rootDir = path.resolve(import.meta.dirname, '../..');
@@ -69,7 +64,11 @@ describe('Real-App Phone Authentication & 3-Role Onboarding Lifecycle', () => {
       assert.strictEqual(initialLogin.isNewUser, true);
 
       // Submit customer profile
-      const updateRes = updateCustomerProfile(customerPhone, 'Anand R', 'Flat 402, Green Glen, Bengaluru');
+      const updateRes = updateCustomerProfile(
+        customerPhone,
+        'Anand R',
+        'Flat 402, Green Glen, Bengaluru',
+      );
       assert.strictEqual(updateRes.success, true);
       assert.strictEqual(updateRes.account?.isProfileComplete, true);
 
@@ -98,7 +97,7 @@ describe('Real-App Phone Authentication & 3-Role Onboarding Lifecycle', () => {
         'Karthik V',
         'DL-KA-01-2022-9876',
         'KA-01-MJ-5432',
-        'Electric Scooter'
+        'Electric Scooter',
       );
       assert.strictEqual(kycRes.success, true);
       assert.strictEqual(kycRes.account?.kycStatus, 'PENDING');
@@ -124,7 +123,7 @@ describe('Real-App Phone Authentication & 3-Role Onboarding Lifecycle', () => {
         'AllGo Fresh Mart Indiranagar',
         '#12 100ft Road, Indiranagar, Bengaluru',
         '10020043000999',
-        '29ABCDE1234F1Z5'
+        '29ABCDE1234F1Z5',
       );
       assert.strictEqual(storeRes.success, true);
       assert.strictEqual(storeRes.account?.merchantStoreName, 'AllGo Fresh Mart Indiranagar');
@@ -139,25 +138,26 @@ describe('Real-App Phone Authentication & 3-Role Onboarding Lifecycle', () => {
   });
 
   describe('6. Screen Implementation & Wiring Audit', () => {
-    it('verifies all 3 onboarding screens and App.tsx state transitions', () => {
-      const customerScreen = path.join(rootDir, 'src/pages/CustomerOnboardingPage.tsx');
-      const partnerScreen = path.join(rootDir, 'src/pages/PartnerKycWizardPage.tsx');
-      const merchantScreen = path.join(rootDir, 'src/pages/MerchantStoreSetupPage.tsx');
-      const appScreen = path.join(rootDir, 'src/App.tsx');
+    it('verifies independent Flutter mobile & Next.js web entrypoints exist for each domain', () => {
+      const mobileApps = [
+        'apps/customer_mobile/lib/main.dart',
+        'apps/partner_mobile/lib/main.dart',
+        'apps/merchant_mobile/lib/main.dart',
+        'apps/hub_mobile/lib/main.dart',
+      ];
+      for (const rel of mobileApps) {
+        assert.ok(fs.existsSync(path.join(rootDir, rel)), `${rel} must exist`);
+      }
 
-      assert.ok(fs.existsSync(customerScreen), 'CustomerOnboardingPage must exist');
-      assert.ok(fs.existsSync(partnerScreen), 'PartnerKycWizardPage must exist');
-      assert.ok(fs.existsSync(merchantScreen), 'MerchantStoreSetupPage must exist');
-      assert.ok(fs.existsSync(appScreen), 'App.tsx must exist');
-
-      const appContent = fs.readFileSync(appScreen, 'utf8');
-      assert.ok(appContent.includes('CustomerOnboardingPage'));
-      assert.ok(appContent.includes('PartnerKycWizardPage'));
-      assert.ok(appContent.includes('MerchantStoreSetupPage'));
-      assert.ok(appContent.includes('handleOtpVerified'));
-      assert.ok(appContent.includes('customer_onboarding'));
-      assert.ok(appContent.includes('partner_kyc'));
-      assert.ok(appContent.includes('merchant_setup'));
+      const webApps = [
+        'apps/customer-web/app/page.tsx',
+        'apps/partner-web/app/page.tsx',
+        'apps/merchant-web/app/page.tsx',
+        'apps/hub-web/app/page.tsx',
+      ];
+      for (const rel of webApps) {
+        assert.ok(fs.existsSync(path.join(rootDir, rel)), `${rel} must exist`);
+      }
     });
   });
 });

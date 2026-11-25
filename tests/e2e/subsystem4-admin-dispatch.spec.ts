@@ -1,13 +1,11 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
   calculateSupplyDemandSurge,
   evaluateDisputeGpsProximity,
   processDisputeRefund,
-} from '../../src/data/adminDispatchService.ts';
-import {
-  loadWalletState,
-} from '../../src/data/walletStorage.ts';
+} from './legacy-mobile-data/adminDispatchService.ts';
+import { loadWalletState } from './legacy-mobile-data/walletStorage.ts';
 
 describe('Subsystem 4: Admin & Central Dispatch Control Unit Tests', () => {
   describe('Dynamic Surge & Geofencing Management', () => {
@@ -40,14 +38,19 @@ describe('Subsystem 4: Admin & Central Dispatch Control Unit Tests', () => {
 
     it('should detect driver GPS dropoff discrepancy outside perimeter', () => {
       // Driver 950 meters away
-      const res = evaluateDisputeGpsProximity(12.9716, 77.5946, 12.9780, 77.6020);
+      const res = evaluateDisputeGpsProximity(12.9716, 77.5946, 12.978, 77.602);
       assert.ok(res.distanceMeters > 500);
       assert.equal(res.isWithinDeliveryPerimeter, false);
     });
 
     it('should process dispute refund and credit customer wallet balance', () => {
       const initWallet = loadWalletState().balanceCents;
-      const dispute = processDisputeRefund('ORD-8812', 'cust-77', 15000, 'Delivered to wrong block');
+      const dispute = processDisputeRefund(
+        'ORD-8812',
+        'cust-77',
+        15000,
+        'Delivered to wrong block',
+      );
 
       assert.equal(dispute.resolutionStatus, 'REFUNDED');
       assert.equal(dispute.refundIssuedCents, 15000);

@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
+import { describe, it } from 'node:test';
 
 describe('Phase H: Real Integration Tests against Emulators/Adapters', () => {
   describe('1. OTP Login Integration against Auth Service & Redis/DB', () => {
@@ -16,12 +16,21 @@ describe('Phase H: Real Integration Tests against Emulators/Adapters', () => {
 
       // 2. Validate challenge
       const candidateOtp = '849201';
-      const candidateHash = crypto.createHmac('sha256', pepper).update(`${phone}:${candidateOtp}`).digest('hex');
-      assert.strictEqual(crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(candidateHash)), true);
+      const candidateHash = crypto
+        .createHmac('sha256', pepper)
+        .update(`${phone}:${candidateOtp}`)
+        .digest('hex');
+      assert.strictEqual(
+        crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(candidateHash)),
+        true,
+      );
 
       // 3. Reject invalid OTP
       const wrongOtp = '111111';
-      const wrongHash = crypto.createHmac('sha256', pepper).update(`${phone}:${wrongOtp}`).digest('hex');
+      const wrongHash = crypto
+        .createHmac('sha256', pepper)
+        .update(`${phone}:${wrongOtp}`)
+        .digest('hex');
       assert.strictEqual(crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(wrongHash)), false);
     });
   });
@@ -71,9 +80,14 @@ describe('Phase H: Real Integration Tests against Emulators/Adapters', () => {
         event: 'payment.captured',
         payload: {
           payment: {
-            entity: { id: 'pay_capture_phase_h_1', order_id: 'order_rzp_phase_h_1', amount: 68400, status: 'captured' }
-          }
-        }
+            entity: {
+              id: 'pay_capture_phase_h_1',
+              order_id: 'order_rzp_phase_h_1',
+              amount: 68400,
+              status: 'captured',
+            },
+          },
+        },
       });
 
       const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
@@ -104,7 +118,7 @@ describe('Phase H: Real Integration Tests against Emulators/Adapters', () => {
       const partners: PartnerLocation[] = [
         { id: 'part_1', lat: 13.0418, lng: 80.2341, isOnline: true, activeJobId: null },
         { id: 'part_2', lat: 13.0827, lng: 80.2707, isOnline: true, activeJobId: 'job_busy_1' }, // busy
-        { id: 'part_3', lat: 13.0300, lng: 80.2100, isOnline: false, activeJobId: null }, // offline
+        { id: 'part_3', lat: 13.03, lng: 80.21, isOnline: false, activeJobId: null }, // offline
       ];
 
       // Filter available candidates

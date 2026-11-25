@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { authApi } from '@/data/api/auth.api';
-import { useAuth } from '@/lib/auth-context';
-import type { TwoFactorStatusResponse } from '@/data/types';
 import { LinkedAccountsCard } from '@/components/auth/LinkedAccountsCard';
 import { LoginDevicesCard } from '@/components/auth/LoginDevicesCard';
+import { authApi } from '@/data/api/auth.api';
+import type { TwoFactorStatusResponse } from '@/data/types';
+import { useAuth } from '@/lib/auth-context';
 import {
   Badge,
   Button,
@@ -31,6 +30,8 @@ import {
   ViewIcon,
   ViewOffIcon,
 } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export default function AccountSecurityPage() {
   const { user, isAdmin, refreshUser } = useAuth();
@@ -233,7 +234,10 @@ export default function AccountSecurityPage() {
       )}
 
       {error && (
-        <div role="alert" className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
+        <div
+          role="alert"
+          className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium"
+        >
           {error}
         </div>
       )}
@@ -401,7 +405,11 @@ export default function AccountSecurityPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                <form onSubmit={handleRegenerateCodes} noValidate className="space-y-2 rounded-xl border p-3">
+                <form
+                  onSubmit={handleRegenerateCodes}
+                  noValidate
+                  className="space-y-2 rounded-xl border p-3"
+                >
                   <Label htmlFor="regen-2fa-code" className="text-xs">
                     Regenerate Backup Codes
                   </Label>
@@ -434,15 +442,18 @@ export default function AccountSecurityPage() {
 
                 {policyRequiresTwoFactor ? (
                   <div className="rounded-xl border bg-muted/30 p-3 flex flex-col justify-center space-y-1">
-                    <p className="text-xs font-medium text-foreground">
-                      2FA Enforced by Policy
-                    </p>
+                    <p className="text-xs font-medium text-foreground">2FA Enforced by Policy</p>
                     <p className="text-[11px] text-muted-foreground">
-                      Your organization policy ({status.policy}) requires two-factor authentication on this account, so it cannot be disabled.
+                      Your organization policy ({status.policy}) requires two-factor authentication
+                      on this account, so it cannot be disabled.
                     </p>
                   </div>
                 ) : (
-                  <form onSubmit={handleDisableTwoFactor} noValidate className="space-y-2 rounded-xl border p-3">
+                  <form
+                    onSubmit={handleDisableTwoFactor}
+                    noValidate
+                    className="space-y-2 rounded-xl border p-3"
+                  >
                     <Label htmlFor="disable-2fa-code" className="text-xs">
                       Disable Two-Factor Authentication
                     </Label>
@@ -494,7 +505,8 @@ export default function AccountSecurityPage() {
             {user?.hasPassword !== false && (
               <div className="space-y-1.5">
                 <Label htmlFor="sec-current-password">
-                  Current Password {user?.hasPassword ? <span className="text-destructive">*</span> : '(if set)'}
+                  Current Password{' '}
+                  {user?.hasPassword ? <span className="text-destructive">*</span> : '(if set)'}
                 </Label>
                 <Input
                   id="sec-current-password"
@@ -505,7 +517,11 @@ export default function AccountSecurityPage() {
                     setCurrentPassword(e.target.value);
                     clearFieldError('currentPassword');
                   }}
-                  placeholder={user?.hasPassword ? 'Enter current password' : 'Leave blank if no password set yet'}
+                  placeholder={
+                    user?.hasPassword
+                      ? 'Enter current password'
+                      : 'Leave blank if no password set yet'
+                  }
                   aria-invalid={Boolean(fieldErrors.currentPassword)}
                   className={cn(
                     fieldErrors.currentPassword &&
@@ -530,7 +546,11 @@ export default function AccountSecurityPage() {
                   onClick={() => setShowPasswords((p) => !p)}
                   className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  <HugeiconsIcon icon={showPasswords ? ViewOffIcon : ViewIcon} strokeWidth={2} className="size-3.5" />
+                  <HugeiconsIcon
+                    icon={showPasswords ? ViewOffIcon : ViewIcon}
+                    strokeWidth={2}
+                    className="size-3.5"
+                  />
                   {showPasswords ? 'Hide' : 'Show'}
                 </button>
               </div>
@@ -585,7 +605,11 @@ export default function AccountSecurityPage() {
               )}
             </div>
             <Button type="submit" disabled={pwdSaving}>
-              {pwdSaving ? 'Saving...' : user?.hasPassword === false ? 'Set Password' : 'Update Password'}
+              {pwdSaving
+                ? 'Saving...'
+                : user?.hasPassword === false
+                  ? 'Set Password'
+                  : 'Update Password'}
             </Button>
           </form>
         </CardContent>

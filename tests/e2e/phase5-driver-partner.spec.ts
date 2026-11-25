@@ -1,40 +1,33 @@
 // E2E / Unit Verification Suite: Phase 5 Driver & Captain Partner Application
 // Tests Multi-Vertical Shifts, 3s/15s GPS Telemetry, 15s Radial Dispatch Modal, 150m Geofence Gating, PoD Gates, CoD Float Limit (₹2,000), and UPI Payouts.
 
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  loadCurrentGpsLocation,
-  calculateDistanceKm,
-  checkGeofenceProximity,
-  startDriverTelemetryStream,
-  type DriverTelemetryPing,
-} from '../../src/data/gpsLoader.ts';
-import {
-  loadDriverVerticalPreferences,
-  saveDriverVerticalPreferences,
-  loadActiveDispatchOffer,
-  acceptDispatchOffer,
-  rejectDispatchOffer,
-  type DriverVertical,
-} from '../../src/data/driverDispatchService.ts';
-import {
-  loadDriverActiveTrip,
-  saveDriverActiveTrip,
-  canArriveAtPickup,
-  canArriveAtDrop,
-  verifyPickupGate,
-  verifyDropPoD,
-  generateGoogleMapsDeepLink,
-  type DriverActiveTrip,
-} from '../../src/data/driverTripExecution.ts';
+import { beforeEach, describe, it } from 'node:test';
 import {
   loadDriverFinancials,
+  requestInstantDriverPayout,
   saveDriverFinancials,
   settleCodFloatViaUpi,
-  requestInstantDriverPayout,
-  MAX_COD_FLOAT_LIMIT_INR,
-} from '../../src/data/driverCodEarningsService.ts';
+} from './legacy-mobile-data/driverCodEarningsService.ts';
+import {
+  acceptDispatchOffer,
+  loadActiveDispatchOffer,
+  loadDriverVerticalPreferences,
+  rejectDispatchOffer,
+  saveDriverVerticalPreferences,
+} from './legacy-mobile-data/driverDispatchService.ts';
+import {
+  generateGoogleMapsDeepLink,
+  loadDriverActiveTrip,
+  saveDriverActiveTrip,
+  verifyDropPoD,
+  verifyPickupGate,
+} from './legacy-mobile-data/driverTripExecution.ts';
+import {
+  type DriverTelemetryPing,
+  checkGeofenceProximity,
+  startDriverTelemetryStream,
+} from './legacy-mobile-data/gpsLoader.ts';
 
 describe('Phase 5: Driver & Captain Partner Application Verification', () => {
   beforeEach(() => {
@@ -123,7 +116,7 @@ describe('Phase 5: Driver & Captain Partner Application Verification', () => {
       assert.ok(closeCheck.distanceMeters <= 150);
 
       // Far away (~5 km away)
-      const farLocation = { lat: 12.9200, lng: 77.6500 };
+      const farLocation = { lat: 12.92, lng: 77.65 };
       const farCheck = checkGeofenceProximity(farLocation, targetPickup, 150);
       assert.equal(farCheck.isInside, false);
       assert.ok(farCheck.distanceMeters > 150);

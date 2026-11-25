@@ -1,5 +1,5 @@
+import type { CreateCouponDto } from '../types';
 import { adminFetch } from './base-client';
-import { CreateCouponDto } from '../types';
 
 export class OrdersApi {
   async listAdminOrders(status?: string, limit?: number): Promise<any[]> {

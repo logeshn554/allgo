@@ -1,6 +1,4 @@
 'use client';
-
-import React from 'react';
 import { Button, HugeiconsIcon } from '@allgo/ui';
 import { ArrowLeft01Icon, UserRemove01Icon } from '@hugeicons/core-free-icons';
 
@@ -26,9 +24,7 @@ export function NoAccountStep({
           <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2} className="size-5" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">
-            No account found
-          </p>
+          <p className="text-sm font-semibold text-foreground">No account found</p>
           <p className="text-xs text-muted-foreground break-all">
             {identifier ? (
               <>
@@ -48,12 +44,7 @@ export function NoAccountStep({
       </div>
 
       {canSignup && onCreateAccount && (
-        <Button
-          type="button"
-          disabled={loading}
-          onClick={onCreateAccount}
-          className="w-full"
-        >
+        <Button type="button" disabled={loading} onClick={onCreateAccount} className="w-full">
           Create Account
         </Button>
       )}

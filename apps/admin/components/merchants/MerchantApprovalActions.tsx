@@ -1,9 +1,9 @@
-import React from 'react';
-import { MerchantApplicationSummary } from '@/lib/api-client';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import type { MerchantApplicationSummary } from '@/lib/api-client';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Label } from '@allgo/ui';
+import type React from 'react';
 
 interface MerchantApprovalActionsProps {
   merchant: MerchantApplicationSummary;
@@ -27,7 +27,8 @@ export const MerchantApprovalActions: React.FC<MerchantApprovalActionsProps> = (
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Approving this merchant activates their store catalog on customer applications and allows them to receive live orders.
+          Approving this merchant activates their store catalog on customer applications and allows
+          them to receive live orders.
         </p>
 
         <div className="space-y-1.5">
@@ -67,10 +68,7 @@ export const MerchantApprovalActions: React.FC<MerchantApprovalActionsProps> = (
           </Button>
 
           {merchant.status === 'SUSPENDED' ? (
-            <Button
-              onClick={() => onStatusChange('APPROVED')}
-              disabled={updating}
-            >
+            <Button onClick={() => onStatusChange('APPROVED')} disabled={updating}>
               {updating ? 'Processing...' : 'Reactivate Suspended Merchant'}
             </Button>
           ) : (

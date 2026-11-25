@@ -1,9 +1,9 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { OtpSecurityService, OtpVerificationStatus } from '@allgo/common';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
+import { beforeEach, describe, it } from 'node:test';
+import { OtpSecurityService } from '@allgo/common';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract Tests)', () => {
@@ -24,12 +24,7 @@ describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract T
 
   describe('Indian Mobile Phone Number Validation', () => {
     it('should accept valid E.164 Indian mobile numbers starting with 6, 7, 8, or 9', () => {
-      const validNumbers = [
-        '+919876543210',
-        '+918765432109',
-        '+917654321098',
-        '+916543210987',
-      ];
+      const validNumbers = ['+919876543210', '+918765432109', '+917654321098', '+916543210987'];
       for (const phone of validNumbers) {
         assert.doesNotThrow(() => authService.validateIndianPhone(phone));
       }
@@ -49,7 +44,7 @@ describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract T
         assert.throws(
           () => authService.validateIndianPhone(phone),
           /Invalid Indian mobile number/i,
-          `Should reject ${phone}`
+          `Should reject ${phone}`,
         );
       }
     });
@@ -77,7 +72,7 @@ describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract T
       // Immediate second request within cooldown must fail
       await assert.rejects(
         async () => authService.sendOtp({ phone }),
-        /wait 60 seconds before requesting another OTP/i
+        /wait 60 seconds before requesting another OTP/i,
       );
     });
 
@@ -109,7 +104,7 @@ describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract T
       await assert.rejects(
         async () => authService.verifyOtp({ phone, code: issuedOtp }),
         /OTP has expired or has already been used/i,
-        'Consumed challenge must be atomically deleted upon first match'
+        'Consumed challenge must be atomically deleted upon first match',
       );
     });
 
@@ -120,26 +115,26 @@ describe('Phase 1 Backend: Phone OTP Authentication Lifecycle (Unit & Contract T
       // Attempt 1: Invalid code
       await assert.rejects(
         async () => authService.verifyOtp({ phone, code: '000000' }),
-        /Invalid OTP code/i
+        /Invalid OTP code/i,
       );
 
       // Attempt 2: Invalid code
       await assert.rejects(
         async () => authService.verifyOtp({ phone, code: '111111' }),
-        /Invalid OTP code/i
+        /Invalid OTP code/i,
       );
 
       // Attempt 3: Invalid code (locks out challenge)
       await assert.rejects(
         async () => authService.verifyOtp({ phone, code: '222222' }),
-        /Maximum verification attempts exceeded/i
+        /Maximum verification attempts exceeded/i,
       );
 
       // Attempt 4: Even if user now presents the real code, challenge is destroyed
       const issuedOtp = otpAdapter.getLastIssuedOtpForDevTesting(phone)!;
       await assert.rejects(
         async () => authService.verifyOtp({ phone, code: issuedOtp }),
-        /OTP has expired or has already been used/i
+        /OTP has expired or has already been used/i,
       );
     });
 

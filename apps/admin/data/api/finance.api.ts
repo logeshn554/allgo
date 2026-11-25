@@ -1,5 +1,5 @@
+import type { ProcessRefundDto } from '../types';
 import { adminFetch } from './base-client';
-import { ProcessRefundDto } from '../types';
 
 export class FinanceApi {
   async getFinancialDashboard(): Promise<any> {
@@ -52,11 +52,7 @@ export class FinanceApi {
     return adminFetch<any[]>('/v1/admin/finance/cod/pending');
   }
 
-  async reconcileCod(
-    id: string,
-    approvedAdjustmentInr?: number,
-    notes?: string,
-  ): Promise<any> {
+  async reconcileCod(id: string, approvedAdjustmentInr?: number, notes?: string): Promise<any> {
     return adminFetch<any>(`/v1/admin/finance/cod/${encodeURIComponent(id)}/reconcile`, {
       method: 'POST',
       body: JSON.stringify({ approvedAdjustmentInr, notes }),

@@ -1,15 +1,15 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { FirebaseAdminAuthService } from '../../apps/api/dist/auth/firebase-auth.service.js';
-import { FirebaseSessionExchangeService } from '../../apps/api/dist/auth/firebase-session-exchange.service.js';
-import { TokenSessionService } from '../../apps/api/dist/auth/token-session.service.js';
-import { AuthRepository } from '../../apps/api/dist/auth/data/auth.repository.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { SmsAbuseProtectionService } from '../../apps/api/dist/auth/sms-abuse-protection.service.js';
-import { IndiaDltSmsGateway } from '../../apps/api/dist/notifications/sms/india-dlt-sms.gateway.js';
-import { DLT_TEMPLATES } from '../../apps/api/dist/notifications/sms/sms-gateway.interface.js';
-import { FirebaseAdminFcmService } from '../../apps/api/dist/notifications/fcm/fcm-push.service.js';
-import { NotificationsService } from '../../apps/api/dist/notifications/notifications.service.js';
+import { beforeEach, describe, it } from 'node:test';
+import { AuthRepository } from '../../services/api/dist/auth/data/auth.repository.js';
+import { FirebaseAdminAuthService } from '../../services/api/dist/auth/firebase-auth.service.js';
+import { FirebaseSessionExchangeService } from '../../services/api/dist/auth/firebase-session-exchange.service.js';
+import { SmsAbuseProtectionService } from '../../services/api/dist/auth/sms-abuse-protection.service.js';
+import { TokenSessionService } from '../../services/api/dist/auth/token-session.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { FirebaseAdminFcmService } from '../../services/api/dist/notifications/fcm/fcm-push.service.js';
+import { NotificationsService } from '../../services/api/dist/notifications/notifications.service.js';
+import { IndiaDltSmsGateway } from '../../services/api/dist/notifications/sms/india-dlt-sms.gateway.js';
+import { DLT_TEMPLATES } from '../../services/api/dist/notifications/sms/sms-gateway.interface.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suite', () => {
@@ -31,16 +31,13 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
     redisService = new InMemoryRedisTestDouble();
     firebaseAuth = new FirebaseAdminAuthService(configService);
     authRepo = new AuthRepository(dbService as any);
-    tokenSessionService = new TokenSessionService(
-      configService,
-      redisService as any,
-      authRepo,
-      { validateIndianPhone: (p: string) => p } as any
-    );
+    tokenSessionService = new TokenSessionService(configService, redisService as any, authRepo, {
+      validateIndianPhone: (p: string) => p,
+    } as any);
     exchangeService = new FirebaseSessionExchangeService(
       firebaseAuth,
       authRepo,
-      tokenSessionService
+      tokenSessionService,
     );
     abuseProtection = new SmsAbuseProtectionService(redisService as any);
     dltGateway = new IndiaDltSmsGateway(configService);
@@ -73,7 +70,7 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
 
       await assert.rejects(
         async () => firebaseAuth.verifyAppCheckToken(''),
-        /App Check token is required/
+        /App Check token is required/,
       );
     });
   });
@@ -119,7 +116,7 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
       const res = await dltGateway.sendCriticalAlert(
         '+919876543210',
         'Your AllGo security code is 889900.',
-        { dltTemplateId: DLT_TEMPLATES.OTP_VERIFICATION }
+        { dltTemplateId: DLT_TEMPLATES.OTP_VERIFICATION },
       );
 
       assert.strictEqual(res.success, true);
@@ -131,12 +128,12 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
     it('should reject invalid non-E.164 phone numbers or missing template ID', async () => {
       await assert.rejects(
         async () => dltGateway.sendCriticalAlert('9876543210', 'test', { dltTemplateId: 'T1' }),
-        /Invalid Indian E.164/
+        /Invalid Indian E.164/,
       );
 
       await assert.rejects(
         async () => dltGateway.sendCriticalAlert('+919876543210', 'test', { dltTemplateId: '' }),
-        /DLT Template ID missing/
+        /DLT Template ID missing/,
       );
     });
   });
@@ -148,7 +145,7 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
         'New Order Received',
         'Order #ORD-123 ready for preparation',
         { orderId: 'ORD-123', isFullScreenAlert: 'true' },
-        { priority: 'high', channelId: 'merchant_orders_channel' }
+        { priority: 'high', channelId: 'merchant_orders_channel' },
       );
       assert.strictEqual(merchantPush.success, true);
       assert.ok(merchantPush.messageId);
@@ -158,7 +155,7 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
         'New Delivery Job Offer',
         'New Food order pickup 1.2km away',
         { jobId: 'JOB-456' },
-        { priority: 'high', channelId: 'partner_jobs_channel' }
+        { priority: 'high', channelId: 'partner_jobs_channel' },
       );
       assert.strictEqual(partnerPush.success, true);
       assert.ok(partnerPush.messageId);
@@ -168,7 +165,7 @@ describe('Phase C: Auth, Firebase App Check, SMS Abuse & Notifications Test Suit
       const res = await fcmService.sendToDevice(
         'mock_invalid_unregistered_token',
         'Test Title',
-        'Test Body'
+        'Test Body',
       );
 
       assert.strictEqual(res.success, false);

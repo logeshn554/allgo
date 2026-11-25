@@ -1,7 +1,7 @@
 export * from "./contracts/index.js";
 export { OrderStatus } from "./enums/order-status.enum.js";
 export * from "./enums/order-status.enum.js";
-export { VerticalType, ALL_VERTICALS, PILOT_LIVE_VERTICALS, GATED_MOBILITY_VERTICALS } from "./enums/vertical.enum.js";
+export { VerticalType, ALL_VERTICALS, PILOT_LIVE_VERTICALS, GATED_MOBILITY_VERTICALS, } from "./enums/vertical.enum.js";
 export { FulfillmentMode } from "./enums/fulfillment-mode.enum.js";
 export * from "./enums/fulfillment-mode.enum.js";
 export * from "./i18n/languages.js";

@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { FinanceOverviewTab } from '@/components/finance/FinanceOverviewTab';
-import { FinanceLedgerTab } from '@/components/finance/FinanceLedgerTab';
-import { FinanceSettlementsTab } from '@/components/finance/FinanceSettlementsTab';
 import { FinanceCodTab } from '@/components/finance/FinanceCodTab';
+import { FinanceLedgerTab } from '@/components/finance/FinanceLedgerTab';
+import { FinanceOverviewTab } from '@/components/finance/FinanceOverviewTab';
 import { FinancePayoutsTab } from '@/components/finance/FinancePayoutsTab';
 import { FinanceRefundsTab } from '@/components/finance/FinanceRefundsTab';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@allgo/ui';
+import { FinanceSettlementsTab } from '@/components/finance/FinanceSettlementsTab';
+import { adminApi } from '@/lib/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function FinanceDashboardPage() {
   const [dashboard, setDashboard] = useState<any>(null);
@@ -19,7 +20,9 @@ export default function FinanceDashboardPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [refunds, setRefunds] = useState<any[]>([]);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'ledger' | 'settlements' | 'cod' | 'payouts' | 'payments'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'ledger' | 'settlements' | 'cod' | 'payouts' | 'payments'
+  >('overview');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -32,7 +35,9 @@ export default function FinanceDashboardPage() {
   // Refund Form State
   const [refundPaymentId, setRefundPaymentId] = useState('');
   const [refundAmount, setRefundAmount] = useState('');
-  const [refundDestination, setRefundDestination] = useState<'WALLET' | 'ORIGINAL_METHOD'>('WALLET');
+  const [refundDestination, setRefundDestination] = useState<'WALLET' | 'ORIGINAL_METHOD'>(
+    'WALLET',
+  );
   const [refundReason, setRefundReason] = useState('');
 
   const fetchDashboardData = async () => {
@@ -135,7 +140,7 @@ export default function FinanceDashboardPage() {
     try {
       await adminApi.processRefund({
         paymentId: refundPaymentId,
-        amountInr: parseFloat(refundAmount),
+        amountInr: Number.parseFloat(refundAmount),
         destination: refundDestination,
         reason: refundReason,
       });
@@ -157,12 +162,11 @@ export default function FinanceDashboardPage() {
             Financial Management & Accounting
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Authoritative double-entry ledger, wallets, settlements, COD reconciliation, payments, and payouts.
+            Authoritative double-entry ledger, wallets, settlements, COD reconciliation, payments,
+            and payouts.
           </p>
         </div>
-        <Button onClick={fetchDashboardData}>
-          Refresh Financials
-        </Button>
+        <Button onClick={fetchDashboardData}>Refresh Financials</Button>
       </div>
 
       {actionSuccess && (
@@ -203,8 +207,10 @@ export default function FinanceDashboardPage() {
         <TabsContent value="settlements">
           <FinanceSettlementsTab
             settlementResult={settlementResult}
-            partnerIdInput={partnerIdInput} setPartnerIdInput={setPartnerIdInput}
-            merchantIdInput={merchantIdInput} setMerchantIdInput={setMerchantIdInput}
+            partnerIdInput={partnerIdInput}
+            setPartnerIdInput={setPartnerIdInput}
+            merchantIdInput={merchantIdInput}
+            setMerchantIdInput={setMerchantIdInput}
             handleGeneratePartnerSettlement={handleGeneratePartnerSettlement}
             handleGenerateMerchantSettlement={handleGenerateMerchantSettlement}
             handleApprovePartnerSettlement={handleApprovePartnerSettlement}
@@ -219,11 +225,16 @@ export default function FinanceDashboardPage() {
         </TabsContent>
         <TabsContent value="payments">
           <FinanceRefundsTab
-            payments={payments} refunds={refunds}
-            refundPaymentId={refundPaymentId} setRefundPaymentId={setRefundPaymentId}
-            refundAmount={refundAmount} setRefundAmount={setRefundAmount}
-            refundDestination={refundDestination} setRefundDestination={setRefundDestination}
-            refundReason={refundReason} setRefundReason={setRefundReason}
+            payments={payments}
+            refunds={refunds}
+            refundPaymentId={refundPaymentId}
+            setRefundPaymentId={setRefundPaymentId}
+            refundAmount={refundAmount}
+            setRefundAmount={setRefundAmount}
+            refundDestination={refundDestination}
+            setRefundDestination={setRefundDestination}
+            refundReason={refundReason}
+            setRefundReason={setRefundReason}
             handleProcessRefund={handleProcessRefund}
           />
         </TabsContent>

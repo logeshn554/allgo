@@ -1,13 +1,13 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { EncryptionService } from '../../apps/api/dist/common/encryption/encryption.service.js';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
-import { MerchantService } from '../../apps/api/dist/merchant/merchant.service.js';
-import { CatalogService } from '../../apps/api/dist/catalog/catalog.service.js';
-import { OperatingHoursService } from '../../apps/api/dist/catalog/operating-hours.service.js';
+import { after, before, describe, it } from 'node:test';
+import { CatalogService } from '../../services/api/dist/catalog/catalog.service.js';
+import { OperatingHoursService } from '../../services/api/dist/catalog/operating-hours.service.js';
+import { EncryptionService } from '../../services/api/dist/common/encryption/encryption.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { MerchantService } from '../../services/api/dist/merchant/merchant.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
 
 describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integration Suite', () => {
   let config: ConfigService;
@@ -36,7 +36,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     await db.onModuleInit();
     await redis.onModuleInit();
     try {
-      await db.query("SELECT 1;");
+      await db.query('SELECT 1;');
       isLiveAvailable = true;
     } catch {
       isLiveAvailable = false;
@@ -45,28 +45,56 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       return;
     }
 
-
     encryptionService = new EncryptionService();
     encryptionService.initializeKeys();
     storageService = new StorageService(db as any);
-    merchantService = new MerchantService(db as any, redis as any, encryptionService, storageService);
+    merchantService = new MerchantService(
+      db as any,
+      redis as any,
+      encryptionService,
+      storageService,
+    );
     catalogService = new CatalogService(db as any);
     operatingHoursService = new OperatingHoursService(db as any);
 
     // Clean previous records
     try {
-      await db.query(`DELETE FROM outlet_item_overrides WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`);
-      await db.query(`DELETE FROM outlet_special_closures WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`);
-      await db.query(`DELETE FROM outlet_operating_hours WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`);
-      await db.query(`DELETE FROM item_options WHERE option_group_id IN (SELECT id FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')))))));`);
-      await db.query(`DELETE FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))))));`);
-      await db.query(`DELETE FROM item_variants WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))))));`);
-      await db.query(`DELETE FROM inventory WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`);
-      await db.query(`DELETE FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')))));`);
-      await db.query(`DELETE FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))));`);
-      await db.query(`DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`);
-      await db.query(`DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'));`);
-      await db.query(`DELETE FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}');`);
+      await db.query(
+        `DELETE FROM outlet_item_overrides WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`,
+      );
+      await db.query(
+        `DELETE FROM outlet_special_closures WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`,
+      );
+      await db.query(
+        `DELETE FROM outlet_operating_hours WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`,
+      );
+      await db.query(
+        `DELETE FROM item_options WHERE option_group_id IN (SELECT id FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')))))));`,
+      );
+      await db.query(
+        `DELETE FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))))));`,
+      );
+      await db.query(
+        `DELETE FROM item_variants WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))))));`,
+      );
+      await db.query(
+        `DELETE FROM inventory WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`,
+      );
+      await db.query(
+        `DELETE FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')))));`,
+      );
+      await db.query(
+        `DELETE FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'))));`,
+      );
+      await db.query(
+        `DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}')));`,
+      );
+      await db.query(
+        `DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}'));`,
+      );
+      await db.query(
+        `DELETE FROM merchants WHERE owner_id IN ('${merchantOwnerId}', '${otherMerchantOwnerId}');`,
+      );
     } catch {}
 
     // Seed users
@@ -91,14 +119,18 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       addressLine1: '12 Cathedral Road',
       postalCode: '600086',
       latitude: 13.0475,
-      longitude: 80.2520,
+      longitude: 80.252,
       phone: '+919876530001',
     } as any);
     testMerchantId = reg1.merchant.id;
     primaryOutletId = reg1.outlet.id;
 
     // Approve merchant and activate primary outlet
-    await merchantService.updateAdminMerchantStatus(testMerchantId, 'APPROVED', 'Phase 3 verified merchant');
+    await merchantService.updateAdminMerchantStatus(
+      testMerchantId,
+      'APPROVED',
+      'Phase 3 verified merchant',
+    );
 
     // Create secondary outlet for merchant 1
     const branch2 = await merchantService.createOutlet(merchantOwnerId, {
@@ -111,7 +143,12 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     });
     secondaryOutletId = branch2.id;
     // Approve secondary branch
-    await merchantService.updateAdminOutletStatus(secondaryOutletId, adminUserId, 'ACTIVE', 'Branch inspected');
+    await merchantService.updateAdminOutletStatus(
+      secondaryOutletId,
+      adminUserId,
+      'ACTIVE',
+      'Branch inspected',
+    );
 
     // Register second merchant for cross-tenant isolation testing
     const reg2 = await merchantService.registerOrUpdate(otherMerchantOwnerId, {
@@ -129,23 +166,51 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       phone: '+919876530002',
     } as any);
     otherOutletId = reg2.outlet.id;
-    await merchantService.updateAdminMerchantStatus(reg2.merchant.id, 'APPROVED', 'Approved grocery');
+    await merchantService.updateAdminMerchantStatus(
+      reg2.merchant.id,
+      'APPROVED',
+      'Approved grocery',
+    );
   });
 
   after(async () => {
-    if (!isLiveAvailable) { return; }
+    if (!isLiveAvailable) {
+      return;
+    }
     try {
-      await db.query(`DELETE FROM outlet_item_overrides WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
-      await db.query(`DELETE FROM outlet_special_closures WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
-      await db.query(`DELETE FROM outlet_operating_hours WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
-      await db.query(`DELETE FROM item_options WHERE option_group_id IN (SELECT id FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}')))));`);
-      await db.query(`DELETE FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'))));`);
-      await db.query(`DELETE FROM item_variants WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'))));`);
-      await db.query(`DELETE FROM inventory WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
-      await db.query(`DELETE FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}')));`);
-      await db.query(`DELETE FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'));`);
-      await db.query(`DELETE FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
-      await db.query(`DELETE FROM outlets WHERE id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`);
+      await db.query(
+        `DELETE FROM outlet_item_overrides WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
+      await db.query(
+        `DELETE FROM outlet_special_closures WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
+      await db.query(
+        `DELETE FROM outlet_operating_hours WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
+      await db.query(
+        `DELETE FROM item_options WHERE option_group_id IN (SELECT id FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}')))));`,
+      );
+      await db.query(
+        `DELETE FROM item_option_groups WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'))));`,
+      );
+      await db.query(
+        `DELETE FROM item_variants WHERE item_id IN (SELECT id FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'))));`,
+      );
+      await db.query(
+        `DELETE FROM inventory WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
+      await db.query(
+        `DELETE FROM items WHERE category_id IN (SELECT id FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}')));`,
+      );
+      await db.query(
+        `DELETE FROM categories WHERE catalog_id IN (SELECT id FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}'));`,
+      );
+      await db.query(
+        `DELETE FROM catalogs WHERE outlet_id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
+      await db.query(
+        `DELETE FROM outlets WHERE id IN ('${primaryOutletId}', '${secondaryOutletId}', '${otherOutletId}');`,
+      );
       await db.query(`DELETE FROM merchants WHERE id = '${testMerchantId}';`);
     } catch {}
     await db.onModuleDestroy();
@@ -160,7 +225,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
 
   it('1. Should create categories and hierarchical subcategories with display ordering', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // 1. Create parent category
@@ -200,7 +265,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
 
   it('2. Should enforce price rules and create product with dietary attributes, images and inventory', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Rule 6: Negative base price rejection
@@ -213,7 +278,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         });
       },
       /non-negative/,
-      'Negative base price must be rejected'
+      'Negative base price must be rejected',
     );
 
     // Rule 7: Sale price > base price rejection
@@ -227,7 +292,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         });
       },
       /cannot exceed base price/,
-      'Sale price > base price must be rejected'
+      'Sale price > base price must be rejected',
     );
 
     // Valid product creation with Phase 3 attributes
@@ -242,7 +307,10 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       isVeg: false,
       isPerishable: true,
       preparationTimeMinutes: 20,
-      images: ['https://cdn.allgo.in/products/hyd-biryani-1.jpg', 'https://cdn.allgo.in/products/hyd-biryani-2.jpg'],
+      images: [
+        'https://cdn.allgo.in/products/hyd-biryani-1.jpg',
+        'https://cdn.allgo.in/products/hyd-biryani-2.jpg',
+      ],
       dietaryFlags: { halal: true, containsNuts: false, glutenFree: true },
       stockQuantity: 40,
       lowStockThreshold: 10,
@@ -258,10 +326,10 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     chickenBiryaniId = product.id;
 
     // Verify inventory persisted in real PostgreSQL
-    const invRes = await db.query('SELECT stock_quantity, is_in_stock FROM inventory WHERE item_id = $1 AND outlet_id = $2;', [
-      chickenBiryaniId,
-      primaryOutletId,
-    ]);
+    const invRes = await db.query(
+      'SELECT stock_quantity, is_in_stock FROM inventory WHERE item_id = $1 AND outlet_id = $2;',
+      [chickenBiryaniId, primaryOutletId],
+    );
     assert.strictEqual(invRes.rows.length, 1);
     assert.strictEqual(invRes.rows[0].stock_quantity, 40);
     assert.strictEqual(invRes.rows[0].is_in_stock, true);
@@ -272,7 +340,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('3. Should strictly prevent cross-merchant modifications (IDOR protection)', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Other merchant attempts to modify merchant 1's product
@@ -283,7 +351,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         });
       },
       /ForbiddenException|access denied|not owned/,
-      'Cross-merchant product update must be forbidden'
+      'Cross-merchant product update must be forbidden',
     );
 
     // Other merchant attempts to delete merchant 1's product
@@ -292,7 +360,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         await catalogService.deleteProduct(otherMerchantOwnerId, chickenBiryaniId);
       },
       /ForbiddenException|access denied|not owned/,
-      'Cross-merchant product deletion must be forbidden'
+      'Cross-merchant product deletion must be forbidden',
     );
   });
 
@@ -301,7 +369,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('4. Should manage product variants and food menu option groups with selection constraints', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // 1. Create Variant: Family Pack
@@ -327,8 +395,14 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     assert.strictEqual(spiceGroup.is_required, true);
 
     // Add Options to Spice Level
-    await catalogService.createOption(merchantOwnerId, spiceGroup.id, { name: 'Medium Spicy', priceInr: 0.0 });
-    await catalogService.createOption(merchantOwnerId, spiceGroup.id, { name: 'Extra Spicy', priceInr: 10.0 });
+    await catalogService.createOption(merchantOwnerId, spiceGroup.id, {
+      name: 'Medium Spicy',
+      priceInr: 0.0,
+    });
+    await catalogService.createOption(merchantOwnerId, spiceGroup.id, {
+      name: 'Extra Spicy',
+      priceInr: 10.0,
+    });
 
     // 3. Create Option Group: Add-on Accompaniments (Multi-select optional)
     const addOnGroup = await catalogService.createOptionGroup(merchantOwnerId, chickenBiryaniId, {
@@ -338,8 +412,14 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       isRequired: false,
       displayOrder: 2,
     });
-    await catalogService.createOption(merchantOwnerId, addOnGroup.id, { name: 'Extra Salna / Gravy', priceInr: 30.0 });
-    await catalogService.createOption(merchantOwnerId, addOnGroup.id, { name: 'Extra Boiled Egg', priceInr: 20.0 });
+    await catalogService.createOption(merchantOwnerId, addOnGroup.id, {
+      name: 'Extra Salna / Gravy',
+      priceInr: 30.0,
+    });
+    await catalogService.createOption(merchantOwnerId, addOnGroup.id, {
+      name: 'Extra Boiled Egg',
+      priceInr: 20.0,
+    });
 
     // 4. Retrieve complete product structure
     const fullProduct = await catalogService.getProductById(chickenBiryaniId, primaryOutletId);
@@ -356,7 +436,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('5. Should support outlet-specific price and availability overrides without affecting global product state', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // In secondary outlet, set custom price 350.0 and override availability
@@ -391,7 +471,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('6. Should prevent negative stock and record auditable stock adjustments', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Negative stock rejected
@@ -402,7 +482,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         });
       },
       /cannot be negative/,
-      'Negative stock must be rejected'
+      'Negative stock must be rejected',
     );
 
     // Valid adjustment to 15
@@ -411,17 +491,17 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       lowStockThreshold: 5,
     });
 
-    const inv = await db.query('SELECT stock_quantity, is_in_stock FROM inventory WHERE item_id = $1 AND outlet_id = $2;', [
-      chickenBiryaniId,
-      primaryOutletId,
-    ]);
+    const inv = await db.query(
+      'SELECT stock_quantity, is_in_stock FROM inventory WHERE item_id = $1 AND outlet_id = $2;',
+      [chickenBiryaniId, primaryOutletId],
+    );
     assert.strictEqual(inv.rows[0].stock_quantity, 15);
     assert.strictEqual(inv.rows[0].is_in_stock, true);
 
     // Verify audit log entry in real PostgreSQL
     const auditRes = await db.query(
       "SELECT * FROM audit_logs WHERE entity_type = 'INVENTORY' AND entity_id = $1 AND action = 'UPDATE_STOCK';",
-      [chickenBiryaniId]
+      [chickenBiryaniId],
     );
     assert.ok(auditRes.rows.length >= 1, 'Stock adjustment must be audited in audit_logs');
   });
@@ -431,7 +511,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('7. Should validate operating hours, detect overlapping intervals, and compute authoritative isOpen status', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // 1. Detect overlapping interval on same day
@@ -443,7 +523,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         ]);
       },
       /Overlapping operating hours detected/,
-      'Overlapping intervals on same day must be rejected'
+      'Overlapping intervals on same day must be rejected',
     );
 
     // 2. Set valid weekly schedule with split shifts and an overnight interval
@@ -463,21 +543,38 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     // 3. Test isOpen on Monday at 12:30 (during lunch shift) -> OPEN
     // 2026-11-16 is a Monday. 12:30:00 IST is 07:00:00 UTC
     const mondayLunchUtc = new Date('2026-11-16T07:00:00Z');
-    const mondayLunchStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, mondayLunchUtc);
+    const mondayLunchStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      mondayLunchUtc,
+    );
     assert.strictEqual(mondayLunchStatus.isOpen, true, 'Monday lunch must be open');
 
     // 4. Test isOpen on Monday at 16:30 (between shifts) -> CLOSED
     // 16:30:00 IST is 11:00:00 UTC
     const mondayAfternoonUtc = new Date('2026-11-16T11:00:00Z');
-    const mondayAfternoonStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, mondayAfternoonUtc);
-    assert.strictEqual(mondayAfternoonStatus.isOpen, false, 'Monday afternoon between shifts must be closed');
+    const mondayAfternoonStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      mondayAfternoonUtc,
+    );
+    assert.strictEqual(
+      mondayAfternoonStatus.isOpen,
+      false,
+      'Monday afternoon between shifts must be closed',
+    );
     assert.strictEqual(mondayAfternoonStatus.reason, 'OUTSIDE_OPERATING_HOURS');
 
     // 5. Test overnight interval: Saturday at 01:15 IST (crosses from Friday overnight 19:00-02:00) -> OPEN
     // 2026-11-21 is Saturday. 01:15:00 IST is Friday 2026-11-20T19:45:00Z
     const satEarlyMorningUtc = new Date('2026-11-20T19:45:00Z');
-    const satEarlyStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, satEarlyMorningUtc);
-    assert.strictEqual(satEarlyStatus.isOpen, true, 'Saturday 01:15 must be open due to Friday overnight shift');
+    const satEarlyStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      satEarlyMorningUtc,
+    );
+    assert.strictEqual(
+      satEarlyStatus.isOpen,
+      true,
+      'Saturday 01:15 must be open due to Friday overnight shift',
+    );
     assert.strictEqual(satEarlyStatus.currentInterval?.isOvernight, true);
 
     // 6. Test special closure / holiday
@@ -487,8 +584,15 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       isFullDay: true,
     });
 
-    const holidayStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, mondayLunchUtc);
-    assert.strictEqual(holidayStatus.isOpen, false, 'Special holiday closure must override regular hours');
+    const holidayStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      mondayLunchUtc,
+    );
+    assert.strictEqual(
+      holidayStatus.isOpen,
+      false,
+      'Special holiday closure must override regular hours',
+    );
     assert.strictEqual(holidayStatus.reason, 'SPECIAL_CLOSURE');
 
     // Clean up special closure
@@ -501,16 +605,30 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
       reason: 'Kitchen equipment repair',
     });
 
-    const tempClosedStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, mondayLunchUtc);
-    assert.strictEqual(tempClosedStatus.isOpen, false, 'Temporary closure must override normal hours');
+    const tempClosedStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      mondayLunchUtc,
+    );
+    assert.strictEqual(
+      tempClosedStatus.isOpen,
+      false,
+      'Temporary closure must override normal hours',
+    );
     assert.strictEqual(tempClosedStatus.reason, 'TEMPORARILY_CLOSED');
 
     // Reopen outlet
     await operatingHoursService.toggleTemporaryClosure(primaryOutletId, {
       isTemporarilyClosed: false,
     });
-    const reopenedStatus = await operatingHoursService.calculateIsOpen(primaryOutletId, mondayLunchUtc);
-    assert.strictEqual(reopenedStatus.isOpen, true, 'Reopened outlet must be open during operating hours');
+    const reopenedStatus = await operatingHoursService.calculateIsOpen(
+      primaryOutletId,
+      mondayLunchUtc,
+    );
+    assert.strictEqual(
+      reopenedStatus.isOpen,
+      true,
+      'Reopened outlet must be open during operating hours',
+    );
   });
 
   // ==========================================
@@ -518,7 +636,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
   // ==========================================
   it('8. Should enforce admin moderation controls and record immutable audit reasons', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Rejection without reason rejected
@@ -530,7 +648,7 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
         });
       },
       /Rejection reason is required/,
-      'Admin rejection without reason must be rejected'
+      'Admin rejection without reason must be rejected',
     );
 
     // Reject product with reason
@@ -545,7 +663,11 @@ describe('Phase 3: Catalog, Food Menus, Operating Hours & Multi-Outlet Integrati
     // In customer view, rejected product must NOT appear!
     const customerProducts = await catalogService.getProducts(primaryOutletId, {}, true);
     const foundInCustomer = customerProducts.items.find((p: any) => p.id === chickenBiryaniId);
-    assert.strictEqual(foundInCustomer, undefined, 'Rejected product must never be visible to customers');
+    assert.strictEqual(
+      foundInCustomer,
+      undefined,
+      'Rejected product must never be visible to customers',
+    );
 
     // Approve product back
     await catalogService.moderateProduct(adminUserId, chickenBiryaniId, {

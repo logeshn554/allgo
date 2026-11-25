@@ -1,14 +1,13 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
-import path from 'node:path';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { EncryptionService } from '../../apps/api/dist/common/encryption/encryption.service.js';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
-import { PartnerService } from '../../apps/api/dist/partner/partner.service.js';
-import { MerchantService } from '../../apps/api/dist/merchant/merchant.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
+import { after, before, describe, it } from 'node:test';
+import { EncryptionService } from '../../services/api/dist/common/encryption/encryption.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { MerchantService } from '../../services/api/dist/merchant/merchant.service.js';
+import { PartnerService } from '../../services/api/dist/partner/partner.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
 
 describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGIS & Redis)', () => {
   let config: ConfigService;
@@ -32,7 +31,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     await db.onModuleInit();
     await redis.onModuleInit();
     try {
-      await db.query("SELECT 1;");
+      await db.query('SELECT 1;');
       isLiveAvailable = true;
     } catch {
       isLiveAvailable = false;
@@ -41,24 +40,44 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
       return;
     }
 
-
     encryptionService = new EncryptionService();
     encryptionService.initializeKeys();
 
     storageService = new StorageService(db as any);
     partnerService = new PartnerService(db as any, encryptionService, storageService);
-    merchantService = new MerchantService(db as any, redis as any, encryptionService, storageService);
+    merchantService = new MerchantService(
+      db as any,
+      redis as any,
+      encryptionService,
+      storageService,
+    );
 
     // Clean previous run records for test users
     try {
-      await db.query(`DELETE FROM document_upload_tickets WHERE uploader_user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}', '${testMerchantUserId}', '${adminUserId}');`);
-      await db.query(`DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}');`);
-      await db.query(`DELETE FROM merchant_documents WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`);
-      await db.query(`DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}'));`);
-      await db.query(`DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`);
+      await db.query(
+        `DELETE FROM document_upload_tickets WHERE uploader_user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}', '${testMerchantUserId}', '${adminUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM merchant_documents WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`,
+      );
       await db.query(`DELETE FROM merchants WHERE owner_id = '${testMerchantUserId}';`);
     } catch {}
 
@@ -75,17 +94,35 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
   });
 
   after(async () => {
-    if (!isLiveAvailable) { return; }
+    if (!isLiveAvailable) {
+      return;
+    }
     // Clean up test records in reverse dependency order
     try {
-      await db.query(`DELETE FROM document_upload_tickets WHERE uploader_user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}', '${testMerchantUserId}', '${adminUserId}');`);
-      await db.query(`DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`);
-      await db.query(`DELETE FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}');`);
-      await db.query(`DELETE FROM merchant_documents WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`);
-      await db.query(`DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}'));`);
-      await db.query(`DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`);
+      await db.query(
+        `DELETE FROM document_upload_tickets WHERE uploader_user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}', '${testMerchantUserId}', '${adminUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM partners WHERE user_id IN ('${testPartnerUserId}', '${otherPartnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM merchant_documents WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM catalogs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}'));`,
+      );
+      await db.query(
+        `DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${testMerchantUserId}');`,
+      );
       await db.query(`DELETE FROM merchants WHERE owner_id = '${testMerchantUserId}';`);
     } catch {}
     await db.onModuleDestroy();
@@ -94,7 +131,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
 
   it('[LIVE DB] 1. Should persist partner with AES-256-GCM encrypted bank account in real PostgreSQL', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const rawBank = '50100999999999';
@@ -112,14 +149,21 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     assert.strictEqual(reg.bankAccountMasked, '**********9999');
 
     // Query real PostgreSQL database row directly
-    const rawPartnerRes = await db.query('SELECT bank_account_number, bank_account_hmac FROM partners WHERE user_id = $1;', [testPartnerUserId]);
+    const rawPartnerRes = await db.query(
+      'SELECT bank_account_number, bank_account_hmac FROM partners WHERE user_id = $1;',
+      [testPartnerUserId],
+    );
     assert.strictEqual(rawPartnerRes.rows.length, 1);
     const row = rawPartnerRes.rows[0];
 
     // Assert bank account is stored encrypted with v1 prefix and not plaintext
     assert.ok(row.bank_account_number.startsWith('v1:'), 'Bank account in DB must be encrypted');
     assert.notStrictEqual(row.bank_account_number, rawBank, 'Plaintext must NEVER be stored in DB');
-    assert.strictEqual(row.bank_account_hmac.length, 64, 'HMAC deduplication blind index must be 64-char hex');
+    assert.strictEqual(
+      row.bank_account_hmac.length,
+      64,
+      'HMAC deduplication blind index must be 64-char hex',
+    );
 
     // Verify decryption
     const decrypted = encryptionService.decrypt(row.bank_account_number);
@@ -128,7 +172,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
 
   it('[LIVE DB] 2. Should persist independent service applications in partner_service_applications table', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const app1 = await partnerService.applyForService(testPartnerUserId, 'FOOD_DELIVERY');
@@ -142,7 +186,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
       `SELECT service_type, status FROM partner_service_applications 
        WHERE partner_id = (SELECT id FROM partners WHERE user_id = $1)
        ORDER BY service_type;`,
-      [testPartnerUserId]
+      [testPartnerUserId],
     );
 
     assert.strictEqual(res.rows.length, 2);
@@ -152,22 +196,34 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
 
   it('[LIVE DB] 3. Should enforce independent service approval and record immutable audit reason in real PostgreSQL', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const pRes = await db.query('SELECT id FROM partners WHERE user_id = $1;', [testPartnerUserId]);
     const partnerId = pRes.rows[0].id;
 
     // Admin approves Food Delivery
-    await partnerService.updateAdminServiceStatus(partnerId, 'FOOD_DELIVERY', adminUserId, 'APPROVED', 'Motorcycle inspection verified');
+    await partnerService.updateAdminServiceStatus(
+      partnerId,
+      'FOOD_DELIVERY',
+      adminUserId,
+      'APPROVED',
+      'Motorcycle inspection verified',
+    );
 
     // Admin rejects Parcel with reason
-    await partnerService.updateAdminServiceStatus(partnerId, 'PARCEL', adminUserId, 'REJECTED', 'Commercial permit required');
+    await partnerService.updateAdminServiceStatus(
+      partnerId,
+      'PARCEL',
+      adminUserId,
+      'REJECTED',
+      'Commercial permit required',
+    );
 
     // Query DB to verify independent statuses
     const res = await db.query(
       'SELECT service_type, status, rejection_reason FROM partner_service_applications WHERE partner_id = $1 ORDER BY service_type;',
-      [partnerId]
+      [partnerId],
     );
 
     assert.strictEqual(res.rows[0].service_type, 'FOOD_DELIVERY');
@@ -180,7 +236,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     // Verify audit log record exists with reason
     const auditRes = await db.query(
       `SELECT * FROM audit_logs WHERE actor_id = $1 AND action = 'ADMIN_PARTNER_SERVICE_STATUS_CHANGE' ORDER BY created_at DESC;`,
-      [adminUserId]
+      [adminUserId],
     );
     assert.ok(auditRes.rows.length >= 2);
     assert.strictEqual(auditRes.rows[0].reason, 'Commercial permit required');
@@ -188,7 +244,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
 
   it('[LIVE DB] 4. Should create multi-outlet hierarchy and enforce independent outlet approval in real PostgreSQL', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // 1. Register merchant with primary outlet
@@ -215,7 +271,7 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
       addressLine1: 'No 200 Bypass Road',
       postalCode: '600042',
       latitude: 12.9815,
-      longitude: 80.2180,
+      longitude: 80.218,
       phone: '+919876520004',
     });
 
@@ -223,30 +279,50 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     assert.strictEqual(branch2.is_open, false);
 
     // 3. Admin approves merchant profile
-    await merchantService.updateAdminMerchantStatus(reg.merchant.id, 'APPROVED', 'Initial onboarding complete');
+    await merchantService.updateAdminMerchantStatus(
+      reg.merchant.id,
+      'APPROVED',
+      'Initial onboarding complete',
+    );
 
     // 4. Verify in real PostgreSQL: primary outlet is active, secondary branch is STILL PENDING_APPROVAL
     const outletsInDb = await db.query(
       'SELECT id, outlet_name, outlet_status, is_open FROM outlets WHERE merchant_id = $1 ORDER BY created_at;',
-      [reg.merchant.id]
+      [reg.merchant.id],
     );
 
     assert.strictEqual(outletsInDb.rows.length, 2);
-    assert.strictEqual(outletsInDb.rows[0].is_open, true, 'Primary outlet opens upon merchant approval');
-    assert.strictEqual(outletsInDb.rows[1].outlet_status, 'PENDING_APPROVAL', 'Secondary branch must stay PENDING_APPROVAL');
+    assert.strictEqual(
+      outletsInDb.rows[0].is_open,
+      true,
+      'Primary outlet opens upon merchant approval',
+    );
+    assert.strictEqual(
+      outletsInDb.rows[1].outlet_status,
+      'PENDING_APPROVAL',
+      'Secondary branch must stay PENDING_APPROVAL',
+    );
     assert.strictEqual(outletsInDb.rows[1].is_open, false, 'Secondary branch must stay closed');
 
     // 5. Admin independently approves secondary branch
-    await merchantService.updateAdminOutletStatus(branch2.id, adminUserId, 'ACTIVE', 'Branch inspection passed');
+    await merchantService.updateAdminOutletStatus(
+      branch2.id,
+      adminUserId,
+      'ACTIVE',
+      'Branch inspection passed',
+    );
 
-    const branchAfter = await db.query('SELECT outlet_status, is_open FROM outlets WHERE id = $1;', [branch2.id]);
+    const branchAfter = await db.query(
+      'SELECT outlet_status, is_open FROM outlets WHERE id = $1;',
+      [branch2.id],
+    );
     assert.strictEqual(branchAfter.rows[0].outlet_status, 'ACTIVE');
     assert.strictEqual(branchAfter.rows[0].is_open, true);
   });
 
   it('[LIVE STORAGE & IDOR] 5. Should persist upload ticket in real PostgreSQL and enforce cross-user IDOR protection', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Partner 1 creates ticket
@@ -257,7 +333,9 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     });
 
     // Verify ticket in real PostgreSQL table document_upload_tickets
-    const ticketRow = await db.query('SELECT * FROM document_upload_tickets WHERE id = $1;', [ticket1.id]);
+    const ticketRow = await db.query('SELECT * FROM document_upload_tickets WHERE id = $1;', [
+      ticket1.id,
+    ]);
     assert.strictEqual(ticketRow.rows.length, 1);
     assert.strictEqual(ticketRow.rows[0].uploader_user_id, testPartnerUserId);
     assert.strictEqual(ticketRow.rows[0].status, 'PENDING_LINK');
@@ -278,6 +356,8 @@ describe('Phase 2 Real Infrastructure Integration Suite (Live PostgreSQL, PostGI
     assert.ok(fs.existsSync(diskPath));
 
     // Clean up file
-    try { fs.unlinkSync(diskPath); } catch {}
+    try {
+      fs.unlinkSync(diskPath);
+    } catch {}
   });
 });

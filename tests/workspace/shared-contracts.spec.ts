@@ -1,17 +1,17 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
+  CartPricingBreakdownSchema,
+  DispatchOfferPayloadSchema,
+  DriverLocationPingSchema,
+  FareQuoteSchema,
+  OrderStatus,
+  OrderStatusSchema,
+  ProofOfDeliverySchema,
   ServiceVertical,
   ServiceVerticalSchema,
   UserRole,
   UserRoleSchema,
-  OrderStatus,
-  OrderStatusSchema,
-  FareQuoteSchema,
-  CartPricingBreakdownSchema,
-  DispatchOfferPayloadSchema,
-  DriverLocationPingSchema,
-  ProofOfDeliverySchema,
 } from '../../packages/common/dist/index.js';
 
 describe('@allgo/common Domain Contracts & Validation Schemas', () => {

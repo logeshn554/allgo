@@ -1,5 +1,5 @@
+import type { DispatchJobFilters, ListDispatchJobsResponse } from '../types';
 import { adminFetch } from './base-client';
-import { DispatchJobFilters, ListDispatchJobsResponse } from '../types';
 
 export class DispatchApi {
   async getDispatchStats(): Promise<any> {
@@ -38,11 +38,7 @@ export class DispatchApi {
     });
   }
 
-  async cancelDispatchJob(
-    jobId: string,
-    reasonCode: string,
-    reasonDetails?: string,
-  ): Promise<any> {
+  async cancelDispatchJob(jobId: string, reasonCode: string, reasonDetails?: string): Promise<any> {
     return adminFetch<any>(`/v1/admin/dispatch/jobs/${jobId}/cancel`, {
       method: 'POST',
       body: JSON.stringify({ reasonCode, reasonDetails }),

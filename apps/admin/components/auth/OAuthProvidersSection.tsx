@@ -1,6 +1,4 @@
 'use client';
-
-import React from 'react';
 import { Button, Separator } from '@allgo/ui';
 import { OAuthProviderIcon } from './OAuthProviderIcon';
 import type { PublicOAuthProvider } from './types';

@@ -1,14 +1,8 @@
-import React from 'react';
-import { CatalogProduct } from './CatalogProductsTable';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
+import type React from 'react';
+import type { CatalogProduct } from './CatalogProductsTable';
 
 interface CatalogRejectModalProps {
   product: CatalogProduct | null;
@@ -31,12 +25,11 @@ export const CatalogRejectModal: React.FC<CatalogRejectModalProps> = ({
     <Dialog open={Boolean(product)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg text-destructive">
-            Reject Catalog Product
-          </DialogTitle>
+          <DialogTitle className="text-lg text-destructive">Reject Catalog Product</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Specify the exact audit reason for rejecting <strong>{product?.name}</strong>. The merchant will receive this reason to rectify the item.
+          Specify the exact audit reason for rejecting <strong>{product?.name}</strong>. The
+          merchant will receive this reason to rectify the item.
         </p>
         <div className="my-2 space-y-2">
           <Textarea

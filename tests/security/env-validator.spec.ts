@@ -1,16 +1,16 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const DOCS_SECURITY_FILE = path.join(ROOT_DIR, 'docs/security/secrets-inventory.md');
 const GITIGNORE_FILE = path.join(ROOT_DIR, '.gitignore');
 
 const ENV_EXAMPLE_FILES = [
-  'apps/api/.env.example',
-  'apps/dispatch/.env.example',
-  'apps/webhooks/.env.example',
+  'services/api/.env.example',
+  'services/dispatch/.env.example',
+  'services/webhooks/.env.example',
   'apps/admin/.env.example',
 ];
 
@@ -36,10 +36,7 @@ function parseEnvKeys(content: string): string[] {
 describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Validation', () => {
   describe('File Existence', () => {
     it('should have secrets inventory documentation at docs/security/secrets-inventory.md', () => {
-      assert.ok(
-        fs.existsSync(DOCS_SECURITY_FILE),
-        'docs/security/secrets-inventory.md must exist'
-      );
+      assert.ok(fs.existsSync(DOCS_SECURITY_FILE), 'docs/security/secrets-inventory.md must exist');
     });
 
     for (const relativePath of ENV_EXAMPLE_FILES) {
@@ -57,10 +54,18 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
 
       // Check required exclusion patterns
       assert.match(gitignore, /^\.env$/m, '.gitignore must ignore .env');
-      assert.match(gitignore, /\.env\..*\.local|\.env\*?\.local/m, '.gitignore must ignore .env.*.local');
+      assert.match(
+        gitignore,
+        /\.env\..*\.local|\.env\*?\.local/m,
+        '.gitignore must ignore .env.*.local',
+      );
       assert.match(gitignore, /\*\.pem/m, '.gitignore must ignore *.pem');
       assert.match(gitignore, /\*\.key/m, '.gitignore must ignore *.key');
-      assert.match(gitignore, /\*service-account\*\.json/m, '.gitignore must ignore *service-account*.json');
+      assert.match(
+        gitignore,
+        /\*service-account\*\.json/m,
+        '.gitignore must ignore *service-account*.json',
+      );
     });
   });
 
@@ -77,28 +82,28 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
         assert.doesNotMatch(
           content,
           /-----BEGIN (?:RSA )?PRIVATE KEY-----\s+[A-Za-z0-9+/]{40,}/,
-          `${relativePath} must not contain a real private key payload`
+          `${relativePath} must not contain a real private key payload`,
         );
 
         // Check for live Razorpay keys
         assert.doesNotMatch(
           content,
           /rzp_live_[A-Za-z0-9]+/,
-          `${relativePath} must not contain live Razorpay API keys`
+          `${relativePath} must not contain live Razorpay API keys`,
         );
 
         // Check for real Google API keys (typically AIzaSy...)
         assert.doesNotMatch(
           content,
           /AIzaSy[A-Za-z0-9_-]{33}/,
-          `${relativePath} must not contain real Google API keys`
+          `${relativePath} must not contain real Google API keys`,
         );
 
         // Check for real live passwords or tokens
         assert.doesNotMatch(
           content,
           /ghp_[A-Za-z0-9]{36}/,
-          `${relativePath} must not contain GitHub personal access tokens`
+          `${relativePath} must not contain GitHub personal access tokens`,
         );
       });
     }
@@ -130,7 +135,7 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
         const regex = new RegExp(`\\b${key}\\b`);
         assert.ok(
           regex.test(inventoryContent),
-          `Environment variable ${key} found in .env.example must be explicitly documented in docs/security/secrets-inventory.md`
+          `Environment variable ${key} found in .env.example must be explicitly documented in docs/security/secrets-inventory.md`,
         );
       }
     });
@@ -161,7 +166,7 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
         assert.match(
           content,
           new RegExp(`\\b${secret}\\b`),
-          `Secrets inventory must include ${secret}`
+          `Secrets inventory must include ${secret}`,
         );
       }
 
@@ -196,14 +201,26 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
       assert.match(content, /Webhook/i, 'Must mention Razorpay Webhook secret configuration');
 
       // Google Maps Platform acquisition & API key restrictions
-      assert.match(content, /Google Maps Platform|Google Cloud Console/i, 'Must cover Google Maps Platform acquisition');
+      assert.match(
+        content,
+        /Google Maps Platform|Google Cloud Console/i,
+        'Must cover Google Maps Platform acquisition',
+      );
       assert.match(content, /SHA-1/i, 'Must document Android SHA-1 fingerprint restriction');
-      assert.match(content, /Bundle ID|bundle identifier/i, 'Must document iOS Bundle ID restriction');
+      assert.match(
+        content,
+        /Bundle ID|bundle identifier/i,
+        'Must document iOS Bundle ID restriction',
+      );
       assert.match(content, /Routes API/i, 'Must document server-side Routes API restrictions');
 
       // Cloud SQL & Redis
       assert.match(content, /Cloud SQL/i, 'Must document Cloud SQL credentials acquisition');
-      assert.match(content, /Memorystore|Redis/i, 'Must document Memorystore Redis connection acquisition');
+      assert.match(
+        content,
+        /Memorystore|Redis/i,
+        'Must document Memorystore Redis connection acquisition',
+      );
     });
   });
 
@@ -216,14 +233,26 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
 
       // JWT dual-key verification
       assert.match(content, /JWT/i, 'Must cover JWT rotation');
-      assert.match(content, /dual[- ]key|grace period|two keys/i, 'Must specify dual-key verification window for JWT');
+      assert.match(
+        content,
+        /dual[- ]key|grace period|two keys/i,
+        'Must specify dual-key verification window for JWT',
+      );
 
       // Razorpay webhook secret rotation
       assert.match(content, /webhook/i, 'Must cover webhook secret rotation');
-      assert.match(content, /dual webhook|rotation window|overlap/i, 'Must specify zero-downtime rotation window for webhooks');
+      assert.match(
+        content,
+        /dual webhook|rotation window|overlap/i,
+        'Must specify zero-downtime rotation window for webhooks',
+      );
 
       // Cloud SQL dual user rotation
-      assert.match(content, /dual user|secondary user|two users/i, 'Must specify dual-user database password rotation');
+      assert.match(
+        content,
+        /dual user|secondary user|two users/i,
+        'Must specify dual-user database password rotation',
+      );
     });
   });
 
@@ -235,10 +264,18 @@ describe('Task 6: Secrets Management, Environment Variables & IAM Inventory Vali
       const content = fs.readFileSync(DOCS_SECURITY_FILE, 'utf-8');
 
       // IAM least privilege role
-      assert.match(content, /roles\/secretmanager\.secretAccessor/, 'Must specify roles/secretmanager.secretAccessor role');
+      assert.match(
+        content,
+        /roles\/secretmanager\.secretAccessor/,
+        'Must specify roles/secretmanager.secretAccessor role',
+      );
 
       // Cloud Run secret mounting
-      assert.match(content, /--set-secrets|Secret Manager/i, 'Must specify Cloud Run Secret Manager mounting');
+      assert.match(
+        content,
+        /--set-secrets|Secret Manager/i,
+        'Must specify Cloud Run Secret Manager mounting',
+      );
 
       // Local development vs Cloud Run
       assert.match(content, /local/i, 'Must contrast local environment with production');

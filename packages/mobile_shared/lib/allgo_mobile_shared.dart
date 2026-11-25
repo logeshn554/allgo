@@ -1,5 +1,8 @@
 library allgo_mobile_shared;
 
+export 'package:forui/forui.dart';
+export 'package:shadcn_ui/shadcn_ui.dart';
+
 // Theme & Tokens
 export 'src/theme/app_colors.dart';
 export 'src/theme/app_typography.dart';

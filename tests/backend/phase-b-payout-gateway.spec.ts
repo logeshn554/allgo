@@ -1,8 +1,8 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { PayoutService } from '../../apps/api/dist/finance/payout/payout.service.js';
-import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
-import { RazorpayXPayoutGateway } from '../../apps/api/dist/finance/gateways/razorpayx-payout.gateway.js';
+import { describe, it } from 'node:test';
+import { RazorpayXPayoutGateway } from '../../services/api/dist/finance/gateways/razorpayx-payout.gateway.js';
+import { LedgerService } from '../../services/api/dist/finance/ledger/ledger.service.js';
+import { PayoutService } from '../../services/api/dist/finance/payout/payout.service.js';
 
 class MockPayoutGateway {
   public payouts: any[] = [];
@@ -63,10 +63,18 @@ class MockDb {
     if (sql.includes('INSERT INTO payouts')) {
       const row = {
         id: `po_${this.payouts.length + 1}`,
-        recipient_type: params[0], recipient_id: params[1], payout_channel: 'RAZORPAYX',
-        gross_amount_inr: params[2], net_amount_inr: params[2], status: 'SCHEDULED',
-        destination_reference: params[3], settlement_id: params[4], approved_by_admin_id: params[5],
-        idempotency_key: params[6], razorpayx_payout_id: null, created_at: new Date(),
+        recipient_type: params[0],
+        recipient_id: params[1],
+        payout_channel: 'RAZORPAYX',
+        gross_amount_inr: params[2],
+        net_amount_inr: params[2],
+        status: 'SCHEDULED',
+        destination_reference: params[3],
+        settlement_id: params[4],
+        approved_by_admin_id: params[5],
+        idempotency_key: params[6],
+        razorpayx_payout_id: null,
+        created_at: new Date(),
       };
       this.payouts.push(row);
       return { rows: [row] };
@@ -92,13 +100,13 @@ class MockDb {
       return { rows: row ? [row] : [] };
     }
 
-    if (sql.includes('UPDATE payouts SET status = \'SUCCESS\'')) {
+    if (sql.includes("UPDATE payouts SET status = 'SUCCESS'")) {
       const row = this.payouts.find((p) => p.id === params[0]);
       if (row) row.status = 'SUCCESS';
       return { rows: row ? [row] : [] };
     }
 
-    if (sql.includes('UPDATE payouts SET status = \'FAILED\'')) {
+    if (sql.includes("UPDATE payouts SET status = 'FAILED'")) {
       const row = this.payouts.find((p) => p.id === params[1]);
       if (row) {
         row.status = 'FAILED';
@@ -108,7 +116,11 @@ class MockDb {
     }
 
     // Ledger queries
-    if (sql.includes('SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1')) {
+    if (
+      sql.includes(
+        'SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1',
+      )
+    ) {
       const row = this.ledgerEntries.find((e) => e.transaction_reference === params[0]);
       return { rows: row ? [row] : [] };
     }
@@ -116,9 +128,14 @@ class MockDb {
     if (sql.includes('INSERT INTO ledger_entries')) {
       const entry = {
         id: `entry_${this.ledgerEntries.length + 1}`,
-        partner_id: params[5], merchant_id: params[6], ledger_transaction_id: params[7],
-        transaction_reference: params[8], account_type: params[9], direction: params[10],
-        amount_inr: params[11], description: params[13],
+        partner_id: params[5],
+        merchant_id: params[6],
+        ledger_transaction_id: params[7],
+        transaction_reference: params[8],
+        account_type: params[9],
+        direction: params[10],
+        amount_inr: params[11],
+        description: params[13],
       };
       this.ledgerEntries.push(entry);
       return { rows: [entry] };
@@ -223,7 +240,9 @@ describe('Phase B3: PayoutGateway and RazorpayX Payout Lifecycle', () => {
     assert.strictEqual(inDb.failure_reason, 'Account frozen');
 
     // Verify reversal ledger transaction was posted
-    const revEntries = mockDb.ledgerEntries.filter((e) => e.transaction_reference.startsWith('REV-PAYOUT-'));
+    const revEntries = mockDb.ledgerEntries.filter((e) =>
+      e.transaction_reference.startsWith('REV-PAYOUT-'),
+    );
     assert.strictEqual(revEntries.length, 2);
     const escrowDebit = revEntries.find((e) => e.account_type === 'GATEWAY_ESCROW');
     const partnerCredit = revEntries.find((e) => e.account_type === 'PARTNER_EARNINGS');

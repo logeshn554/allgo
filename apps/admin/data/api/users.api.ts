@@ -1,5 +1,5 @@
+import type { ListUsersResponse, UserOperationResponse, UserSummary } from '../types';
 import { adminFetch } from './base-client';
-import { UserSummary, ListUsersResponse, UserOperationResponse } from '../types';
 
 export class UsersApi {
   async listUsers(page = 1, limit = 20, status?: string): Promise<ListUsersResponse> {

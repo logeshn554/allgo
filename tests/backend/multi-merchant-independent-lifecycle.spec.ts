@@ -1,14 +1,28 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { InventoryReservationService } from '../../apps/api/dist/ordering/services/inventory-reservation.service.js';
-import { OrderMerchantLifecycleService } from '../../apps/api/dist/ordering/services/order-merchant-lifecycle.service.js';
-import { OrderCancellationService } from '../../apps/api/dist/ordering/services/order-cancellation.service.js';
+import { describe, it } from 'node:test';
+import { InventoryReservationService } from '../../services/api/dist/ordering/services/inventory-reservation.service.js';
+import { OrderCancellationService } from '../../services/api/dist/ordering/services/order-cancellation.service.js';
+import { OrderMerchantLifecycleService } from '../../services/api/dist/ordering/services/order-merchant-lifecycle.service.js';
 
 describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
   class MockDb {
     inventory = [
-      { id: 'inv_biryani', outlet_id: 'outlet_food', item_id: 'item_biryani', stock_quantity: 10, reserved_quantity: 0, is_in_stock: true },
-      { id: 'inv_milk', outlet_id: 'outlet_grocery', item_id: 'item_milk', stock_quantity: 20, reserved_quantity: 0, is_in_stock: true },
+      {
+        id: 'inv_biryani',
+        outlet_id: 'outlet_food',
+        item_id: 'item_biryani',
+        stock_quantity: 10,
+        reserved_quantity: 0,
+        is_in_stock: true,
+      },
+      {
+        id: 'inv_milk',
+        outlet_id: 'outlet_grocery',
+        item_id: 'item_milk',
+        stock_quantity: 20,
+        reserved_quantity: 0,
+        is_in_stock: true,
+      },
     ];
     reservations: any[] = [];
     subOrders: any[] = [];
@@ -46,10 +60,16 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
         this.reservations.push(res);
         return { rows: [res] };
       }
-      if (s.includes('FROM inventory_reservations') && s.includes('status = \'RESERVED\'') && s.includes('SELECT')) {
+      if (
+        s.includes('FROM inventory_reservations') &&
+        s.includes("status = 'RESERVED'") &&
+        s.includes('SELECT')
+      ) {
         const sessionId = params[0];
         const outletId = params[1];
-        let matched = this.reservations.filter((r) => r.checkout_session_id === sessionId && r.status === 'RESERVED');
+        let matched = this.reservations.filter(
+          (r) => r.checkout_session_id === sessionId && r.status === 'RESERVED',
+        );
         if (outletId) {
           matched = matched.filter((r) => r.outlet_id === outletId);
         }
@@ -77,21 +97,29 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
         }
         return { rows: [row] };
       }
-      if (s.includes('inventory_reservations') && s.includes('SET status = \'COMMITTED\'')) {
+      if (s.includes('inventory_reservations') && s.includes("SET status = 'COMMITTED'")) {
         const sessionId = params[0];
         const outletId = params[1];
         for (const r of this.reservations) {
-          if (r.checkout_session_id === sessionId && (!outletId || r.outlet_id === outletId) && r.status === 'RESERVED') {
+          if (
+            r.checkout_session_id === sessionId &&
+            (!outletId || r.outlet_id === outletId) &&
+            r.status === 'RESERVED'
+          ) {
             r.status = 'COMMITTED';
           }
         }
         return { rows: [] };
       }
-      if (s.includes('inventory_reservations') && s.includes('SET status = \'RELEASED\'')) {
+      if (s.includes('inventory_reservations') && s.includes("SET status = 'RELEASED'")) {
         const sessionId = params[0];
         const outletId = params[1];
         for (const r of this.reservations) {
-          if (r.checkout_session_id === sessionId && (!outletId || r.outlet_id === outletId) && r.status === 'RESERVED') {
+          if (
+            r.checkout_session_id === sessionId &&
+            (!outletId || r.outlet_id === outletId) &&
+            r.status === 'RESERVED'
+          ) {
             r.status = 'RELEASED';
           }
         }
@@ -140,7 +168,7 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
     const db = new MockDb();
     const inventoryService = new InventoryReservationService(db as any);
 
-    let subOrders = [
+    const subOrders = [
       {
         id: 'sub_food_1',
         order_group_id: 'grp_multi',
@@ -189,7 +217,7 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
       mockCancellationRepo,
       inventoryService,
       mockPaymentService,
-      mockDeliveryService
+      mockDeliveryService,
     );
 
     // Merchant Food accepts sub_food_1
@@ -201,7 +229,11 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
     assert.strictEqual(grocSub.status, 'PLACED');
 
     // Merchant Grocery rejects sub_groc_2
-    const rejected = await merchantLifecycle.merchantRejectOrder('sub_groc_2', 'user_store', 'Item unavailable');
+    const rejected = await merchantLifecycle.merchantRejectOrder(
+      'sub_groc_2',
+      'user_store',
+      'Item unavailable',
+    );
     assert.strictEqual(rejected.status, 'CANCELLED');
 
     // Sub-order food remains MERCHANT_ACCEPTED
@@ -213,7 +245,7 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
     const db = new MockDb();
     const inventoryService = new InventoryReservationService(db as any);
 
-    let subOrders = [
+    const subOrders = [
       {
         id: 'sub_a',
         order_group_id: 'grp_multi',
@@ -265,11 +297,16 @@ describe('Priority 2: Multi-Merchant Independent Sub-Order Lifecycle', () => {
       mockCancellationRepo,
       inventoryService,
       mockPaymentService,
-      mockDeliveryService
+      mockDeliveryService,
     );
 
     // Cancel sub_a only
-    const cancelled = await cancellationService.cancelOrder('sub_a', 'cust_1', 'CUSTOMER', 'Changed my mind');
+    const cancelled = await cancellationService.cancelOrder(
+      'sub_a',
+      'cust_1',
+      'CUSTOMER',
+      'Changed my mind',
+    );
     assert.strictEqual(cancelled.status, 'CANCELLED');
     assert.strictEqual(refundedSubOrder, 'sub_a');
     assert.strictEqual(refundedAmount, 300.0);

@@ -1,39 +1,39 @@
 // E2E / Unit Verification Suite: Phase 3 Customer App Production Features
 // Tests Data Layer, Ride-Hailing, Instant Grocery, Parcel Delivery, and Unified Wallet flows.
 
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { beforeEach, describe, it } from 'node:test';
 import {
-  saveActiveCart,
-  loadActiveCart,
-  clearActiveCart,
-  saveSavedAddress,
-  getSavedAddresses,
-  saveActiveOrderRecovery,
-  loadActiveOrderRecovery,
-  clearActiveOrderRecovery,
-} from '../../src/data/localCache.ts';
+  buildHeaders,
+  clearAuthTokens,
+  getAuthTokens,
+  setAuthTokens,
+} from './legacy-mobile-data/apiClient.ts';
 import {
   computeBearingDegrees,
   subscribeToOrderUpdates,
-} from '../../src/data/liveOrderStream.ts';
+} from './legacy-mobile-data/liveOrderStream.ts';
 import {
-  getAuthTokens,
-  setAuthTokens,
-  clearAuthTokens,
-  buildHeaders,
-} from '../../src/data/apiClient.ts';
-import {
-  sendSmsOtp,
-  verifySmsOtpAndLogin,
-  getRemainingOtpCooldown,
-  OTP_COOLDOWN_SECONDS,
-} from '../../src/data/smsAuthLoader.ts';
+  clearActiveCart,
+  clearActiveOrderRecovery,
+  getSavedAddresses,
+  loadActiveCart,
+  loadActiveOrderRecovery,
+  saveActiveCart,
+  saveActiveOrderRecovery,
+  saveSavedAddress,
+} from './legacy-mobile-data/localCache.ts';
 import {
   createServerPaymentIntent,
   pollWebhookPaymentStatus,
   processOrderPayment,
-} from '../../src/data/paymentGateway.ts';
+} from './legacy-mobile-data/paymentGateway.ts';
+import {
+  OTP_COOLDOWN_SECONDS,
+  getRemainingOtpCooldown,
+  sendSmsOtp,
+  verifySmsOtpAndLogin,
+} from './legacy-mobile-data/smsAuthLoader.ts';
 
 describe('Phase 3: Customer App Production Verification', () => {
   beforeEach(() => {
@@ -89,19 +89,19 @@ describe('Phase 3: Customer App Production Verification', () => {
   describe('3. Telemetry: Bearing Calculation & Live Tracking Azimuth', () => {
     it('should calculate accurate directional bearing degrees between GPS coordinates', () => {
       // Due North: same longitude, increasing latitude
-      const north = computeBearingDegrees(12.9700, 77.5900, 12.9800, 77.5900);
+      const north = computeBearingDegrees(12.97, 77.59, 12.98, 77.59);
       assert.ok(Math.abs(north - 0) < 1.0 || Math.abs(north - 360) < 1.0);
 
       // Due East: same latitude, increasing longitude
-      const east = computeBearingDegrees(12.9700, 77.5900, 12.9700, 77.6000);
+      const east = computeBearingDegrees(12.97, 77.59, 12.97, 77.6);
       assert.ok(Math.abs(east - 90) < 1.5);
 
       // Due South: same longitude, decreasing latitude
-      const south = computeBearingDegrees(12.9800, 77.5900, 12.9700, 77.5900);
+      const south = computeBearingDegrees(12.98, 77.59, 12.97, 77.59);
       assert.ok(Math.abs(south - 180) < 1.5);
 
       // Due West: same latitude, decreasing longitude
-      const west = computeBearingDegrees(12.9700, 77.6000, 12.9700, 77.5900);
+      const west = computeBearingDegrees(12.97, 77.6, 12.97, 77.59);
       assert.ok(Math.abs(west - 270) < 1.5);
     });
 
@@ -198,7 +198,9 @@ describe('Phase 3: Customer App Production Verification', () => {
   describe('6. Domain Calculations: Volumetric Weight & Bill Breakdown', () => {
     it('should calculate IATA volumetric parcel weight correctly', () => {
       // 40cm x 30cm x 20cm / 5000 = 4.8 kg
-      const l = 40, w = 30, h = 20;
+      const l = 40,
+        w = 30,
+        h = 20;
       const volumetricKg = (l * w * h) / 5000;
       assert.equal(volumetricKg, 4.8);
 
@@ -214,7 +216,8 @@ describe('Phase 3: Customer App Production Verification', () => {
       const deliveryFeeCents = 3000; // ₹30 delivery
       const taxCents = Math.round(subtotalCents * 0.05); // 5% GST = ₹9
 
-      const totalCents = subtotalCents + smallCartFeeCents + surgeCents + deliveryFeeCents + taxCents;
+      const totalCents =
+        subtotalCents + smallCartFeeCents + surgeCents + deliveryFeeCents + taxCents;
 
       assert.equal(smallCartFeeCents, 2500);
       assert.equal(taxCents, 900);

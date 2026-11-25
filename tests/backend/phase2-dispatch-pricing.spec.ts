@@ -1,11 +1,11 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { GeoDispatchEngine } from '../../apps/api/dist/services/geoDispatch.js';
-import { PricingEngine } from '../../apps/api/dist/services/pricingEngine.js';
-import { PaymentWebhookService } from '../../apps/api/dist/services/paymentWebhook.js';
-import { MockDatabaseService, InMemoryRedisTestDouble } from '../helpers/test-doubles.ts';
+import { beforeEach, describe, it } from 'node:test';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { GeoDispatchEngine } from '../../services/api/dist/services/geoDispatch.js';
+import { PaymentWebhookService } from '../../services/api/dist/services/paymentWebhook.js';
+import { PricingEngine } from '../../services/api/dist/services/pricingEngine.js';
+import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () => {
   let mockDb: MockDatabaseService;
@@ -43,7 +43,7 @@ describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () 
           latitude: outletLat + 0.005, // ~550m away
           longitude: outletLon + 0.005,
         },
-        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 200, maxCodLimitInr: 1500 }
+        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 200, maxCodLimitInr: 1500 },
       );
 
       const heartbeat = await mockRedis.get(`driver:heartbeat:${driverId}`);
@@ -58,19 +58,34 @@ describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () 
 
     it('should perform wave-based radial search and enforce 15s driver offer lock', async () => {
       const driverNear = 'drv_wave_near'; // ~800m away (in 1.5km ring)
-      const driverFar = 'drv_wave_far';   // ~2.5km away (in 3km ring)
+      const driverFar = 'drv_wave_far'; // ~2.5km away (in 3km ring)
 
       await dispatchEngine.ingestDriverTelemetry(
-        { driverId: driverNear, vertical: 'INSTANT_GROCERY', latitude: outletLat + 0.007, longitude: outletLon + 0.007 },
-        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 100 }
+        {
+          driverId: driverNear,
+          vertical: 'INSTANT_GROCERY',
+          latitude: outletLat + 0.007,
+          longitude: outletLon + 0.007,
+        },
+        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 100 },
       );
       await dispatchEngine.ingestDriverTelemetry(
-        { driverId: driverFar, vertical: 'INSTANT_GROCERY', latitude: outletLat + 0.02, longitude: outletLon + 0.02 },
-        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 100 }
+        {
+          driverId: driverFar,
+          vertical: 'INSTANT_GROCERY',
+          latitude: outletLat + 0.02,
+          longitude: outletLon + 0.02,
+        },
+        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 100 },
       );
 
       const orderId = 'ord_wave_01';
-      const offer = await dispatchEngine.dispatchWave(orderId, 'INSTANT_GROCERY', outletLat, outletLon);
+      const offer = await dispatchEngine.dispatchWave(
+        orderId,
+        'INSTANT_GROCERY',
+        outletLat,
+        outletLon,
+      );
       assert.ok(offer);
       assert.strictEqual(offer.driverId, driverNear);
       assert.strictEqual(offer.radiusRingMeters, 1500);
@@ -79,7 +94,12 @@ describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () 
       const lockVal = await mockRedis.get(`driver:lock:${driverNear}`);
       assert.strictEqual(lockVal, orderId);
 
-      const secondOrderOffer = await dispatchEngine.dispatchWave('ord_wave_02', 'INSTANT_GROCERY', outletLat, outletLon);
+      const secondOrderOffer = await dispatchEngine.dispatchWave(
+        'ord_wave_02',
+        'INSTANT_GROCERY',
+        outletLat,
+        outletLon,
+      );
       assert.ok(secondOrderOffer);
       assert.strictEqual(secondOrderOffer.driverId, driverFar); // driverNear is locked, skipped to driverFar!
     });
@@ -89,36 +109,64 @@ describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () 
       const highCodDriver = 'drv_high_cod';
 
       await dispatchEngine.ingestDriverTelemetry(
-        { driverId: sedanDriver, vertical: 'RIDE_HAILING', latitude: outletLat + 0.004, longitude: outletLon + 0.004 },
-        { vehicleType: 'SEDAN', currentCodFloatInr: 0, maxCodLimitInr: 1500 }
+        {
+          driverId: sedanDriver,
+          vertical: 'RIDE_HAILING',
+          latitude: outletLat + 0.004,
+          longitude: outletLon + 0.004,
+        },
+        { vehicleType: 'SEDAN', currentCodFloatInr: 0, maxCodLimitInr: 1500 },
       );
       await dispatchEngine.ingestDriverTelemetry(
-        { driverId: highCodDriver, vertical: 'RIDE_HAILING', latitude: outletLat + 0.003, longitude: outletLon + 0.003 },
-        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 1400, maxCodLimitInr: 1500 }
+        {
+          driverId: highCodDriver,
+          vertical: 'RIDE_HAILING',
+          latitude: outletLat + 0.003,
+          longitude: outletLon + 0.003,
+        },
+        { vehicleType: 'MOTORCYCLE', currentCodFloatInr: 1400, maxCodLimitInr: 1500 },
       );
 
       const orderId = 'ord_filter_01';
 
       // 1. CoD float filter test: ₹300 order exceeds max float (1400 + 300 > 1500)
-      const codOffer = await dispatchEngine.dispatchWave(orderId, 'RIDE_HAILING', outletLat, outletLon, {
-        isCod: true,
-        codAmountInr: 300,
-        requiredVehicleType: 'MOTORCYCLE',
-      });
+      const codOffer = await dispatchEngine.dispatchWave(
+        orderId,
+        'RIDE_HAILING',
+        outletLat,
+        outletLon,
+        {
+          isCod: true,
+          codAmountInr: 300,
+          requiredVehicleType: 'MOTORCYCLE',
+        },
+      );
       assert.strictEqual(codOffer, null); // highCodDriver exceeded float, skipped!
 
       // 2. Vehicle capability filter test
-      const sedanOffer = await dispatchEngine.dispatchWave(orderId, 'RIDE_HAILING', outletLat, outletLon, {
-        requiredVehicleType: 'SEDAN',
-      });
+      const sedanOffer = await dispatchEngine.dispatchWave(
+        orderId,
+        'RIDE_HAILING',
+        outletLat,
+        outletLon,
+        {
+          requiredVehicleType: 'SEDAN',
+        },
+      );
       assert.ok(sedanOffer);
       assert.strictEqual(sedanOffer.driverId, sedanDriver);
 
       // 3. Driver rejects offer -> test preventing re-pinging
       await dispatchEngine.recordDriverRejection(orderId, sedanDriver, 'Too far away');
-      const retryOffer = await dispatchEngine.dispatchWave(orderId, 'RIDE_HAILING', outletLat, outletLon, {
-        requiredVehicleType: 'SEDAN',
-      });
+      const retryOffer = await dispatchEngine.dispatchWave(
+        orderId,
+        'RIDE_HAILING',
+        outletLat,
+        outletLon,
+        {
+          requiredVehicleType: 'SEDAN',
+        },
+      );
       assert.strictEqual(retryOffer, null); // Driver previously rejected order, skipped!
     });
   });
@@ -232,17 +280,23 @@ describe('Phase 2: Redis Geospatial Dispatch & Zero-Trust Pricing/Webhooks', () 
         },
       });
 
-      const validSignature = crypto.createHmac('sha256', webhookSecret).update(webhookPayload).digest('hex');
+      const validSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(webhookPayload)
+        .digest('hex');
 
       // Invalid signature is rejected
-      assert.strictEqual(paymentService.verifyWebhookSignature(webhookPayload, 'invalid_sig', webhookSecret), false);
+      assert.strictEqual(
+        paymentService.verifyWebhookSignature(webhookPayload, 'invalid_sig', webhookSecret),
+        false,
+      );
 
       // Valid signature processes and releases inventory lock
       const webhookResult = await paymentService.handleWebhook(
         webhookPayload,
         validSignature,
         JSON.parse(webhookPayload),
-        webhookSecret
+        webhookSecret,
       );
       assert.strictEqual(webhookResult.status, 'SUCCESS');
 

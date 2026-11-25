@@ -1,12 +1,18 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_PATH = path.join(ROOT_DIR, 'database/migrations/008_phase6_search_zones_pricing_and_promotions.sql');
-const ROLLBACK_PATH = path.join(ROOT_DIR, 'database/rollbacks/008_phase6_search_zones_pricing_and_promotions_rollback.sql');
+const MIGRATION_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/008_phase6_search_zones_pricing_and_promotions.sql',
+);
+const ROLLBACK_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/008_phase6_search_zones_pricing_and_promotions_rollback.sql',
+);
 
 describe('Phase 6: Database Migration 008 & Rollback Verification', () => {
   it('should verify migration 008 and rollback 008 files exist and conform to SQL transaction safety', () => {
@@ -30,7 +36,9 @@ describe('Phase 6: Database Migration 008 & Rollback Verification', () => {
     try {
       await adminClient.connect();
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
@@ -89,14 +97,22 @@ describe('Phase 6: Database Migration 008 & Rollback Verification', () => {
         WHERE table_schema = 'public' 
           AND table_name IN ('zone_service_settings', 'outlet_zone_assignments', 'customer_search_history', 'promotion_pricing_audit_logs');
       `);
-      assert.strictEqual(postRollbackTables.rows.length, 0, 'Phase 6 tables must be dropped after rollback');
+      assert.strictEqual(
+        postRollbackTables.rows.length,
+        0,
+        'Phase 6 tables must be dropped after rollback',
+      );
 
       // Verify extended columns removed
       const postRollbackCols = await testClient.query(`
         SELECT column_name FROM information_schema.columns 
         WHERE table_name = 'coupons' AND column_name IN ('is_auto_applied', 'new_customer_only', 'max_total_redemptions', 'total_redeemed_count');
       `);
-      assert.strictEqual(postRollbackCols.rows.length, 0, 'Promotional columns in coupons must be dropped after rollback');
+      assert.strictEqual(
+        postRollbackCols.rows.length,
+        0,
+        'Promotional columns in coupons must be dropped after rollback',
+      );
     } finally {
       await testClient.end();
       await adminClient.query(`DROP DATABASE IF EXISTS "${testDbName}";`);

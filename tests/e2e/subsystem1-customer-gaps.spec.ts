@@ -1,38 +1,32 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  saveAddress,
-  loadSavedAddresses,
-  reverseGeocode,
-  getActiveAddress,
-} from '../../src/data/geocodingService.ts';
-import {
-  loadWalletState,
-  creditWallet,
-  debitWallet,
-  calculatePaymentSplit,
-} from '../../src/data/walletStorage.ts';
-import {
-  calculateDynamicEta,
-  generateRoutePolyline,
-} from '../../src/data/dynamicEtaService.ts';
+import { describe, it } from 'node:test';
 import {
   createMaskedCallSession,
   getChatMessages,
   sendChatMessage,
-} from '../../src/data/communicationMasking.ts';
+} from './legacy-mobile-data/communicationMasking.ts';
 import {
-  saveNewOrder,
-  loadOrderById,
-} from '../../src/data/orderStorage.ts';
+  calculateDynamicEta,
+  generateRoutePolyline,
+} from './legacy-mobile-data/dynamicEtaService.ts';
 import {
-  verifyDeliveryPin,
-} from '../../src/data/otpVerifier.ts';
+  getActiveAddress,
+  reverseGeocode,
+  saveAddress,
+} from './legacy-mobile-data/geocodingService.ts';
 import {
-  recordOrderCreatedAt,
-  getOrderGracePeriodStatus,
   cancelOrderWithinGracePeriod,
-} from '../../src/data/orderModificationService.ts';
+  getOrderGracePeriodStatus,
+  recordOrderCreatedAt,
+} from './legacy-mobile-data/orderModificationService.ts';
+import { loadOrderById, saveNewOrder } from './legacy-mobile-data/orderStorage.ts';
+import { verifyDeliveryPin } from './legacy-mobile-data/otpVerifier.ts';
+import {
+  calculatePaymentSplit,
+  creditWallet,
+  debitWallet,
+  loadWalletState,
+} from './legacy-mobile-data/walletStorage.ts';
 
 describe('Subsystem 1: Customer-Facing Gaps Unit Tests', () => {
   describe('Geocoding & Structured Address Management', () => {
@@ -67,7 +61,7 @@ describe('Subsystem 1: Customer-Facing Gaps Unit Tests', () => {
 
   describe('Real-Time Telematics & Dynamic ETA', () => {
     it('should calculate dynamic ETA countdown and route progress', () => {
-      const driver = { latitude: 12.975, longitude: 77.600 };
+      const driver = { latitude: 12.975, longitude: 77.6 };
       const dest = { latitude: 12.9716, longitude: 77.5946 };
       const eta = calculateDynamicEta(driver, dest, 2000, 1.2);
 
@@ -80,7 +74,7 @@ describe('Subsystem 1: Customer-Facing Gaps Unit Tests', () => {
 
     it('should generate multi-step route polyline between origin and destination', () => {
       const origin = { latitude: 12.9716, longitude: 77.5946 };
-      const dest = { latitude: 12.9800, longitude: 77.6400 };
+      const dest = { latitude: 12.98, longitude: 77.64 };
       const polyline = generateRoutePolyline(origin, dest, 6);
 
       assert.equal(polyline.length, 7);

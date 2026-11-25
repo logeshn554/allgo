@@ -13,10 +13,7 @@ export function verifyGatewayWebhookSignature(options) {
     const rawBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody, 'utf8');
     switch (gateway) {
         case 'razorpay': {
-            const expectedSignature = crypto
-                .createHmac('sha256', secret)
-                .update(rawBuffer)
-                .digest('hex');
+            const expectedSignature = crypto.createHmac('sha256', secret).update(rawBuffer).digest('hex');
             const sigBuf = Buffer.from(signatureHeader.trim(), 'utf8');
             const expBuf = Buffer.from(expectedSignature, 'utf8');
             if (sigBuf.length !== expBuf.length)
@@ -36,7 +33,7 @@ export function verifyGatewayWebhookSignature(options) {
             if (!timestamp || !v1Sig)
                 return false;
             // Anti-replay check
-            const tsNum = parseInt(timestamp, 10);
+            const tsNum = Number.parseInt(timestamp, 10);
             const nowSec = Math.floor(Date.now() / 1000);
             if (Math.abs(nowSec - tsNum) > toleranceSeconds) {
                 return false;

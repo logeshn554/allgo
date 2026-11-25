@@ -1,17 +1,20 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import jwt from 'jsonwebtoken';
+import { beforeEach, describe, it } from 'node:test';
 import { OrderStatus } from '@allgo/common';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { TokenSessionService } from '../../apps/api/dist/auth/token-session.service.js';
-import { AuthRepository } from '../../apps/api/dist/auth/data/auth.repository.js';
-import { OtpService } from '../../apps/api/dist/auth/otp.service.js';
-import { createAuthMiddleware } from '../../apps/api/dist/middleware/auth.middleware.js';
-import { requireRole } from '../../apps/api/dist/middleware/rbac.middleware.js';
-import { requireOwnership } from '../../apps/api/dist/middleware/ownership.middleware.js';
-import { OrderFsmService } from '../../apps/api/dist/services/orderFsm.js';
-import { InvalidTransitionError, OtpVerificationError } from '../../apps/api/dist/services/fsmTypes.js';
-import { MockDatabaseService, InMemoryRedisTestDouble } from '../helpers/test-doubles.ts';
+import jwt from 'jsonwebtoken';
+import { AuthRepository } from '../../services/api/dist/auth/data/auth.repository.js';
+import { OtpService } from '../../services/api/dist/auth/otp.service.js';
+import { TokenSessionService } from '../../services/api/dist/auth/token-session.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { createAuthMiddleware } from '../../services/api/dist/middleware/auth.middleware.js';
+import { requireOwnership } from '../../services/api/dist/middleware/ownership.middleware.js';
+import { requireRole } from '../../services/api/dist/middleware/rbac.middleware.js';
+import {
+  InvalidTransitionError,
+  OtpVerificationError,
+} from '../../services/api/dist/services/fsmTypes.js';
+import { OrderFsmService } from '../../services/api/dist/services/orderFsm.js';
+import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', () => {
   let mockDb: MockDatabaseService;
@@ -32,14 +35,39 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
 
     const authRepo = new AuthRepository(mockDb as any);
     const otpService = new OtpService(configService, mockRedis as any, {} as any);
-    tokenSessionService = new TokenSessionService(configService, mockRedis as any, authRepo, otpService);
+    tokenSessionService = new TokenSessionService(
+      configService,
+      mockRedis as any,
+      authRepo,
+      otpService,
+    );
     orderFsm = new OrderFsmService(mockDb as any, mockRedis as any);
 
     // Seed test users
-    mockDb.users.set(customerId, { id: customerId, phone: '+919876543210', status: 'ACTIVE', roles: ['CUSTOMER'] });
-    mockDb.users.set(driverId, { id: driverId, phone: '+919876543211', status: 'ACTIVE', roles: ['DRIVER'] });
-    mockDb.users.set(merchantId, { id: merchantId, phone: '+919876543212', status: 'ACTIVE', roles: ['MERCHANT'] });
-    mockDb.users.set(adminId, { id: adminId, phone: '+919876543213', status: 'ACTIVE', roles: ['ADMIN'] });
+    mockDb.users.set(customerId, {
+      id: customerId,
+      phone: '+919876543210',
+      status: 'ACTIVE',
+      roles: ['CUSTOMER'],
+    });
+    mockDb.users.set(driverId, {
+      id: driverId,
+      phone: '+919876543211',
+      status: 'ACTIVE',
+      roles: ['DRIVER'],
+    });
+    mockDb.users.set(merchantId, {
+      id: merchantId,
+      phone: '+919876543212',
+      status: 'ACTIVE',
+      roles: ['MERCHANT'],
+    });
+    mockDb.users.set(adminId, {
+      id: adminId,
+      phone: '+919876543213',
+      status: 'ACTIVE',
+      roles: ['ADMIN'],
+    });
   });
 
   describe('1. Authentication & RBAC Middleware', () => {
@@ -67,7 +95,9 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
       const res: any = { status: (c: number) => ({ json: (b: any) => ({ c, b }) }) };
       let calledNext = false;
 
-      await middleware(req, res, () => { calledNext = true; });
+      await middleware(req, res, () => {
+        calledNext = true;
+      });
 
       assert.strictEqual(calledNext, true);
       assert.strictEqual(req.user?.userId, customerId);
@@ -80,14 +110,24 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
       const driverReq: any = { user: { userId: driverId, roles: ['PARTNER'] }, headers: {} };
 
       let deniedCode = 0;
-      const res: any = { status: (c: number) => ({ json: () => { deniedCode = c; } }) };
+      const res: any = {
+        status: (c: number) => ({
+          json: () => {
+            deniedCode = c;
+          },
+        }),
+      };
 
       let nextCalled = false;
-      driverGuard(customerReq, res, () => { nextCalled = true; });
+      driverGuard(customerReq, res, () => {
+        nextCalled = true;
+      });
       assert.strictEqual(deniedCode, 403);
       assert.strictEqual(nextCalled, false);
 
-      driverGuard(driverReq, res, () => { nextCalled = true; });
+      driverGuard(driverReq, res, () => {
+        nextCalled = true;
+      });
       assert.strictEqual(nextCalled, true);
     });
 
@@ -103,18 +143,34 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
 
       const ownershipGuard = requireOwnership(mockDb as any, 'order');
       let statusResult = 0;
-      const res: any = { status: (c: number) => ({ json: () => { statusResult = c; } }) };
+      const res: any = {
+        status: (c: number) => ({
+          json: () => {
+            statusResult = c;
+          },
+        }),
+      };
 
       // Legitimate customer accesses order
       let nextCalled = false;
-      const ownerReq: any = { user: { userId: customerId, roles: ['CUSTOMER'] }, params: { id: orderId } };
-      await ownershipGuard(ownerReq, res, () => { nextCalled = true; });
+      const ownerReq: any = {
+        user: { userId: customerId, roles: ['CUSTOMER'] },
+        params: { id: orderId },
+      };
+      await ownershipGuard(ownerReq, res, () => {
+        nextCalled = true;
+      });
       assert.strictEqual(nextCalled, true);
 
       // Unrelated customer tries to access order (IDOR attempt)
       let attackerNext = false;
-      const attackerReq: any = { user: { userId: 'usr_attacker_666', roles: ['CUSTOMER'] }, params: { id: orderId } };
-      await ownershipGuard(attackerReq, res, () => { attackerNext = true; });
+      const attackerReq: any = {
+        user: { userId: 'usr_attacker_666', roles: ['CUSTOMER'] },
+        params: { id: orderId },
+      };
+      await ownershipGuard(attackerReq, res, () => {
+        attackerNext = true;
+      });
       assert.strictEqual(attackerNext, false);
       assert.strictEqual(statusResult, 403);
     });
@@ -136,15 +192,42 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
       orderFsm.liveOrderStream.on('order:status_changed', (evt) => eventsEmitted.push(evt));
 
       // CREATED -> CONFIRMED -> DISPATCHING -> DRIVER_ASSIGNED -> ARRIVED_AT_PICKUP
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.CONFIRMED, actorId: customerId, actorRole: 'CUSTOMER' });
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.DISPATCHING, actorId: 'system', actorRole: 'SYSTEM' });
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.DRIVER_ASSIGNED, actorId: 'dispatch', actorRole: 'SYSTEM' });
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.ARRIVED_AT_PICKUP, actorId: driverId, actorRole: 'DRIVER' });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.CONFIRMED,
+        actorId: customerId,
+        actorRole: 'CUSTOMER',
+      });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.DISPATCHING,
+        actorId: 'system',
+        actorRole: 'SYSTEM',
+      });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.DRIVER_ASSIGNED,
+        actorId: 'dispatch',
+        actorRole: 'SYSTEM',
+      });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.ARRIVED_AT_PICKUP,
+        actorId: driverId,
+        actorRole: 'DRIVER',
+      });
 
       // Rejects PICKED_UP with invalid OTP
       await assert.rejects(
-        () => orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.PICKED_UP, actorId: driverId, actorRole: 'DRIVER', otp: '9999' }),
-        OtpVerificationError
+        () =>
+          orderFsm.transition({
+            orderId: rideId,
+            targetStatus: OrderStatus.PICKED_UP,
+            actorId: driverId,
+            actorRole: 'DRIVER',
+            otp: '9999',
+          }),
+        OtpVerificationError,
       );
 
       // Accepts PICKED_UP with valid 4-digit OTP
@@ -158,9 +241,24 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
       assert.strictEqual(pickedUp.newStatus, OrderStatus.PICKED_UP);
 
       // IN_TRANSIT -> ARRIVED_AT_DROP -> COMPLETED
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.IN_TRANSIT, actorId: driverId, actorRole: 'DRIVER' });
-      await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.ARRIVED_AT_DROP, actorId: driverId, actorRole: 'DRIVER' });
-      const completed = await orderFsm.transition({ orderId: rideId, targetStatus: OrderStatus.COMPLETED, actorId: driverId, actorRole: 'DRIVER' });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.IN_TRANSIT,
+        actorId: driverId,
+        actorRole: 'DRIVER',
+      });
+      await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.ARRIVED_AT_DROP,
+        actorId: driverId,
+        actorRole: 'DRIVER',
+      });
+      const completed = await orderFsm.transition({
+        orderId: rideId,
+        targetStatus: OrderStatus.COMPLETED,
+        actorId: driverId,
+        actorRole: 'DRIVER',
+      });
 
       assert.strictEqual(completed.newStatus, OrderStatus.COMPLETED);
       assert.strictEqual(eventsEmitted.length, 8);
@@ -179,15 +277,33 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
 
       // Illegal skip from CREATED directly to DELIVERED
       await assert.rejects(
-        () => orderFsm.transition({ orderId, targetStatus: OrderStatus.DELIVERED, actorId: driverId, actorRole: 'DRIVER', otp: '3344' }),
-        InvalidTransitionError
+        () =>
+          orderFsm.transition({
+            orderId,
+            targetStatus: OrderStatus.DELIVERED,
+            actorId: driverId,
+            actorRole: 'DRIVER',
+            otp: '3344',
+          }),
+        InvalidTransitionError,
       );
 
       // Cancel order and attempt to revive
-      await orderFsm.transition({ orderId, targetStatus: OrderStatus.CANCELLED, actorId: customerId, actorRole: 'CUSTOMER' });
+      await orderFsm.transition({
+        orderId,
+        targetStatus: OrderStatus.CANCELLED,
+        actorId: customerId,
+        actorRole: 'CUSTOMER',
+      });
       await assert.rejects(
-        () => orderFsm.transition({ orderId, targetStatus: OrderStatus.CONFIRMED, actorId: customerId, actorRole: 'CUSTOMER' }),
-        InvalidTransitionError
+        () =>
+          orderFsm.transition({
+            orderId,
+            targetStatus: OrderStatus.CONFIRMED,
+            actorId: customerId,
+            actorRole: 'CUSTOMER',
+          }),
+        InvalidTransitionError,
       );
     });
 
@@ -202,11 +318,21 @@ describe('Phase 2: Authentication, RBAC Middleware & Deterministic Order FSM', (
       });
 
       // Transition to CONFIRMED
-      const res1 = await orderFsm.transition({ orderId, targetStatus: OrderStatus.CONFIRMED, actorId: customerId, actorRole: 'CUSTOMER' });
+      const res1 = await orderFsm.transition({
+        orderId,
+        targetStatus: OrderStatus.CONFIRMED,
+        actorId: customerId,
+        actorRole: 'CUSTOMER',
+      });
       assert.strictEqual(res1.newStatus, OrderStatus.CONFIRMED);
 
       // Attempting duplicate transition to same state returns safely
-      const res2 = await orderFsm.transition({ orderId, targetStatus: OrderStatus.DISPATCHING, actorId: 'system', actorRole: 'SYSTEM' });
+      const res2 = await orderFsm.transition({
+        orderId,
+        targetStatus: OrderStatus.DISPATCHING,
+        actorId: 'system',
+        actorRole: 'SYSTEM',
+      });
       assert.strictEqual(res2.newStatus, OrderStatus.DISPATCHING);
       assert.strictEqual(mockDb.orders.get(orderId).status, OrderStatus.DISPATCHING);
     });

@@ -1,16 +1,16 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import jwt from 'jsonwebtoken';
+import { beforeEach, describe, it } from 'node:test';
 import {
   BadRequestException,
-  UnauthorizedException,
-  ServiceUnavailableException,
   ForbiddenException,
+  ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import jwt from 'jsonwebtoken';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
@@ -37,12 +37,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
     mockDb.users.set(testUser.id, { ...testUser });
     mockDb.userRoles.set(testUser.id, new Set(['CUSTOMER']));
 
-    authService = new AuthService(
-      config,
-      mockDb as any,
-      mockRedis as any,
-      otpAdapter
-    );
+    authService = new AuthService(config, mockDb as any, mockRedis as any, otpAdapter);
   });
 
   function mintTokenPair(user: any, deviceId?: string) {
@@ -56,7 +51,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         jti: crypto.randomUUID(),
       },
       config.jwtSecret,
-      { algorithm: 'HS256', expiresIn: '1h' }
+      { algorithm: 'HS256', expiresIn: '1h' },
     );
 
     const refreshToken = jwt.sign(
@@ -67,7 +62,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         jti: crypto.randomUUID(),
       },
       config.jwtSecret,
-      { algorithm: 'HS256', expiresIn: '30d' }
+      { algorithm: 'HS256', expiresIn: '30d' },
     );
 
     const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
@@ -103,10 +98,10 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(
             err.message,
-            'Refresh token reuse detected. Session terminated for security.'
+            'Refresh token reuse detected. Session terminated for security.',
           );
           return true;
-        }
+        },
       );
 
       // EMPIRICAL VERIFICATION: Active device session MUST be deleted from devices table
@@ -114,7 +109,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       assert.strictEqual(
         sessionAfterReplay,
         undefined,
-        'CRITICAL RFC 6819 VIOLATION: Device session was NOT deleted from DB on replay!'
+        'CRITICAL RFC 6819 VIOLATION: Device session was NOT deleted from DB on replay!',
       );
     });
 
@@ -131,15 +126,19 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(
             err.message,
-            'Refresh token reuse detected. Session terminated for security.'
+            'Refresh token reuse detected. Session terminated for security.',
           );
           return true;
-        }
+        },
       );
 
       // Session must still be deleted
       const session = mockDb.devices.get(`${testUser.id}:dev_samsung_s24`);
-      assert.strictEqual(session, undefined, 'Session for JWT deviceId must be purged even if body omitted deviceId');
+      assert.strictEqual(
+        session,
+        undefined,
+        'Session for JWT deviceId must be purged even if body omitted deviceId',
+      );
     });
 
     it('CHALLENGE 1.3: Replay detection via DB hash mismatch (when Redis blocklist expired/evicted) MUST purge session', async () => {
@@ -161,10 +160,10 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(
             err.message,
-            'Refresh token reuse detected. Session terminated for security.'
+            'Refresh token reuse detected. Session terminated for security.',
           );
           return true;
-        }
+        },
       );
 
       // EMPIRICAL VERIFICATION: DB session must be purged!
@@ -172,7 +171,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       assert.strictEqual(
         session,
         undefined,
-        'DB-level reuse detection MUST purge device session even if Redis blocklist is cold'
+        'DB-level reuse detection MUST purge device session even if Redis blocklist is cold',
       );
 
       // Also verify rt1 was re-added to Redis blocklist
@@ -191,7 +190,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       // Replay old phone token
       await assert.rejects(
         () => authService.refreshToken(phonePair.refreshToken, 'dev_phone'),
-        UnauthorizedException
+        UnauthorizedException,
       );
 
       // Phone session must be deleted
@@ -199,7 +198,10 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
 
       // Tablet session MUST remain intact!
       const tabletSession = mockDb.devices.get(`${testUser.id}:dev_tablet`);
-      assert.ok(tabletSession, 'Legitimate tablet session must NOT be wiped by phone token compromise');
+      assert.ok(
+        tabletSession,
+        'Legitimate tablet session must NOT be wiped by phone token compromise',
+      );
       assert.strictEqual(tabletSession.refresh_token_hash, tabletPair.hash);
     });
   });
@@ -218,19 +220,19 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         (err: any) => {
           assert.ok(
             err instanceof ServiceUnavailableException,
-            `Expected ServiceUnavailableException but got: ${err?.constructor?.name} (${err?.message})`
+            `Expected ServiceUnavailableException but got: ${err?.constructor?.name} (${err?.message})`,
           );
           assert.strictEqual(err.getStatus(), 503, 'HTTP status must be 503');
           assert.ok(
             err.message.includes('service is unavailable'),
-            `Unexpected error message: ${err.message}`
+            `Unexpected error message: ${err.message}`,
           );
           assert.ok(
             err.message.includes('FATAL: connection to PostgreSQL server lost'),
-            'Should include upstream error details'
+            'Should include upstream error details',
           );
           return true;
-        }
+        },
       );
     });
 
@@ -247,15 +249,15 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         (err: any) => {
           assert.ok(
             err instanceof ServiceUnavailableException,
-            `Expected ServiceUnavailableException but got: ${err?.constructor?.name}`
+            `Expected ServiceUnavailableException but got: ${err?.constructor?.name}`,
           );
           assert.strictEqual(err.getStatus(), 503, 'HTTP status must be 503');
           assert.ok(
             err.message.includes('CLUSTERDOWN: Redis node is unreachable'),
-            `Expected Redis error details, got: ${err.message}`
+            `Expected Redis error details, got: ${err.message}`,
           );
           return true;
-        }
+        },
       );
     });
 
@@ -268,7 +270,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(err.message, 'Invalid or expired refresh token');
           return true;
-        }
+        },
       );
     });
 
@@ -284,7 +286,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 503);
           assert.ok(err.message.includes('Connection pool exhausted'));
           return true;
-        }
+        },
       );
     });
 
@@ -300,7 +302,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 503);
           assert.ok(err.message.includes('PostgreSQL socket disconnected'));
           return true;
-        }
+        },
       );
     });
   });
@@ -315,12 +317,12 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         (err: any) => {
           assert.ok(
             err instanceof BadRequestException,
-            `Expected BadRequestException but got ${err?.constructor?.name}: ${err?.message}`
+            `Expected BadRequestException but got ${err?.constructor?.name}: ${err?.message}`,
           );
           assert.strictEqual(err.getStatus(), 400);
           assert.strictEqual(err.message, 'Device ID mismatch');
           return true;
-        }
+        },
       );
     });
 
@@ -337,7 +339,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 400);
           assert.strictEqual(err.message, 'Device ID mismatch');
           return true;
-        }
+        },
       );
     });
 
@@ -348,7 +350,11 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       assert.ok(rotated.accessToken);
 
       const decodedAccess: any = jwt.decode(rotated.accessToken);
-      assert.strictEqual(decodedAccess.deviceId, 'dev_authorized', 'Issued token must retain authoritative deviceId');
+      assert.strictEqual(
+        decodedAccess.deviceId,
+        'dev_authorized',
+        'Issued token must retain authoritative deviceId',
+      );
 
       const decodedRefresh: any = jwt.decode(rotated.refreshToken);
       assert.strictEqual(decodedRefresh.deviceId, 'dev_authorized');
@@ -375,7 +381,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 403);
           assert.strictEqual(err.message, 'Account is blocked');
           return true;
-        }
+        },
       );
     });
 
@@ -390,7 +396,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 403);
           assert.strictEqual(err.message, 'Account is suspended');
           return true;
-        }
+        },
       );
     });
 
@@ -405,7 +411,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(err.message, 'User not found');
           return true;
-        }
+        },
       );
     });
   });
@@ -415,7 +421,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       // Create token header with alg: 'none'
       const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
       const payload = Buffer.from(
-        JSON.stringify({ userId: testUser.id, type: 'refresh', deviceId: 'dev_pixel_9' })
+        JSON.stringify({ userId: testUser.id, type: 'refresh', deviceId: 'dev_pixel_9' }),
       ).toString('base64url');
       const forgedNoneToken = `${header}.${payload}.`;
 
@@ -426,7 +432,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(err.message, 'Invalid or expired refresh token');
           return true;
-        }
+        },
       );
     });
 
@@ -434,12 +440,12 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       const accessClaimToken = jwt.sign(
         { userId: testUser.id, type: 'access', deviceId: 'dev_pixel_9' },
         config.jwtSecret,
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
       const upperCaseToken = jwt.sign(
         { userId: testUser.id, type: 'REFRESH', deviceId: 'dev_pixel_9' },
         config.jwtSecret,
-        { algorithm: 'HS256' }
+        { algorithm: 'HS256' },
       );
 
       await assert.rejects(
@@ -449,7 +455,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(err.message, 'Invalid token type');
           return true;
-        }
+        },
       );
 
       await assert.rejects(
@@ -459,7 +465,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 401);
           assert.strictEqual(err.message, 'Invalid token type');
           return true;
-        }
+        },
       );
     });
 
@@ -481,7 +487,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
           assert.strictEqual(err.getStatus(), 503);
           assert.ok(err.message.includes('Deadlock detected in devices table'));
           return true;
-        }
+        },
       );
     });
 
@@ -496,7 +502,7 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
         authService
           .refreshToken(rt1, 'dev_pixel_9')
           .then(() => 'RESOLVED')
-          .catch((err) => ({ status: err.getStatus(), message: err.message }))
+          .catch((err) => ({ status: err.getStatus(), message: err.message })),
       );
 
       const results = await Promise.all(promises);
@@ -505,7 +511,10 @@ describe('Adversarial Challenger M1 Iteration 2 Stress Suite', () => {
       for (const res of results) {
         assert.notStrictEqual(res, 'RESOLVED', 'Replay must NEVER succeed');
         assert.strictEqual((res as any).status, 401);
-        assert.strictEqual((res as any).message, 'Refresh token reuse detected. Session terminated for security.');
+        assert.strictEqual(
+          (res as any).message,
+          'Refresh token reuse detected. Session terminated for security.',
+        );
       }
 
       // Session must be completely deleted

@@ -1,6 +1,4 @@
 'use client';
-
-import React from 'react';
 import {
   Card,
   CardContent,
@@ -58,8 +56,7 @@ export function LoginCard({
   })();
 
   const hasOAuthProviders = flow.methods.oauth && flow.oauthProviders.length > 0;
-  const noMethodsEnabled =
-    flow.providersLoaded && !flow.hasIdentifierMethod && !hasOAuthProviders;
+  const noMethodsEnabled = flow.providersLoaded && !flow.hasIdentifierMethod && !hasOAuthProviders;
 
   if (flow.oauthPending) {
     return (
@@ -84,9 +81,7 @@ export function LoginCard({
           <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-xl">
             {brandInitial}
           </div>
-          <CardTitle className="text-xl font-semibold tracking-tight">
-            {title}
-          </CardTitle>
+          <CardTitle className="text-xl font-semibold tracking-tight">{title}</CardTitle>
           <CardDescription>{subtitle}</CardDescription>
           {flow.isAddAccount && (
             <div className="pt-2">
@@ -254,15 +249,14 @@ export function LoginCard({
             />
           )}
 
-          {(flow.step === 'IDENTIFIER' || flow.step === 'NO_ACCOUNT') &&
-            flow.methods.oauth && (
-              <OAuthProvidersSection
-                providers={flow.oauthProviders}
-                loading={flow.loading}
-                showDivider={flow.hasIdentifierMethod}
-                onSelectProvider={flow.startOAuth}
-              />
-            )}
+          {(flow.step === 'IDENTIFIER' || flow.step === 'NO_ACCOUNT') && flow.methods.oauth && (
+            <OAuthProvidersSection
+              providers={flow.oauthProviders}
+              loading={flow.loading}
+              showDivider={flow.hasIdentifierMethod}
+              onSelectProvider={flow.startOAuth}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

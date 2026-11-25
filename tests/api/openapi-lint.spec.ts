@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const OPENAPI_FILE = path.join(ROOT_DIR, 'docs/api/openapi.yaml');
@@ -13,7 +13,10 @@ function getOpenApiContent(): string {
 }
 
 function getWsDocContent(): string {
-  assert.ok(fs.existsSync(WEBSOCKET_DOC_FILE), `docs/api/websocket-events.md must exist at ${WEBSOCKET_DOC_FILE}`);
+  assert.ok(
+    fs.existsSync(WEBSOCKET_DOC_FILE),
+    `docs/api/websocket-events.md must exist at ${WEBSOCKET_DOC_FILE}`,
+  );
   return fs.readFileSync(WEBSOCKET_DOC_FILE, 'utf-8');
 }
 
@@ -34,7 +37,9 @@ function validateYamlFormatting(content: string, filePath: string): void {
     // Check forbidden tabs in indentation
     const leadingSpacesMatch = line.match(/^[\t ]+/);
     if (leadingSpacesMatch && leadingSpacesMatch[0].includes('\t')) {
-      assert.fail(`File ${filePath} contains forbidden tab character in indentation at line ${lineIndex + 1}`);
+      assert.fail(
+        `File ${filePath} contains forbidden tab character in indentation at line ${lineIndex + 1}`,
+      );
     }
 
     // Scan characters outside quotes and comments
@@ -143,7 +148,11 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
       const sections = extractTopLevelSections(content);
 
       // Verify OpenAPI 3.1.0
-      assert.match(content, /^openapi:\s*['"]?3\.1\.\d+['"]?/m, 'Must specify openapi version 3.1.x');
+      assert.match(
+        content,
+        /^openapi:\s*['"]?3\.1\.\d+['"]?/m,
+        'Must specify openapi version 3.1.x',
+      );
 
       // Verify required top-level sections
       assert.ok('info' in sections, 'Must define info block');
@@ -161,49 +170,117 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
   describe('REST Endpoints Specification Coverage', () => {
     it('should specify POST /v1/auth/session for Firebase authentication exchange', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/auth\/session['"]?:/, 'Must define /v1/auth/session path');
-      assert.match(openapiContent, /firebase_token/i, 'Session exchange must accept firebase_token');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/auth\/session['"]?:/,
+        'Must define /v1/auth/session path',
+      );
+      assert.match(
+        openapiContent,
+        /firebase_token/i,
+        'Session exchange must accept firebase_token',
+      );
       assert.match(openapiContent, /access_token/i, 'Session exchange must return access_token');
       assert.match(openapiContent, /refresh_token/i, 'Session exchange must return refresh_token');
     });
 
     it('should specify GET /v1/zones/serviceable for active service zones', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/zones\/serviceable['"]?:/, 'Must define /v1/zones/serviceable path');
-      assert.match(openapiContent, /polygon|coordinates|latitude|longitude/i, 'Zone definition must include spatial coordinates');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/zones\/serviceable['"]?:/,
+        'Must define /v1/zones/serviceable path',
+      );
+      assert.match(
+        openapiContent,
+        /polygon|coordinates|latitude|longitude/i,
+        'Zone definition must include spatial coordinates',
+      );
     });
 
     it('should specify GET /v1/merchants/{id}/catalog with Accept-Language header support', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/merchants\/\{id\}\/catalog['"]?:/, 'Must define /v1/merchants/{id}/catalog path');
-      assert.match(openapiContent, /Accept-Language/i, 'Catalog endpoint must specify Accept-Language header');
-      assert.match(openapiContent, /ta/i, 'Catalog endpoint must document Tamil (ta) language support');
-      assert.match(openapiContent, /en/i, 'Catalog endpoint must document English (en) language support');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/merchants\/\{id\}\/catalog['"]?:/,
+        'Must define /v1/merchants/{id}/catalog path',
+      );
+      assert.match(
+        openapiContent,
+        /Accept-Language/i,
+        'Catalog endpoint must specify Accept-Language header',
+      );
+      assert.match(
+        openapiContent,
+        /ta/i,
+        'Catalog endpoint must document Tamil (ta) language support',
+      );
+      assert.match(
+        openapiContent,
+        /en/i,
+        'Catalog endpoint must document English (en) language support',
+      );
     });
 
     it('should specify Section 5A POST /v1/checkout/quote with 10m TTL and fulfillment options', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/checkout\/quote['"]?:/, 'Must define /v1/checkout/quote path');
-      assert.match(openapiContent, /ttl|expires_at/i, 'Quote must specify TTL or expiration timestamp');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/checkout\/quote['"]?:/,
+        'Must define /v1/checkout/quote path',
+      );
+      assert.match(
+        openapiContent,
+        /ttl|expires_at/i,
+        'Quote must specify TTL or expiration timestamp',
+      );
       assert.match(openapiContent, /SEPARATE/i, 'Quote must support Mode A (SEPARATE) fulfillment');
-      assert.match(openapiContent, /DELIVER_TOGETHER/i, 'Quote must support Mode B (DELIVER_TOGETHER) fulfillment');
+      assert.match(
+        openapiContent,
+        /DELIVER_TOGETHER/i,
+        'Quote must support Mode B (DELIVER_TOGETHER) fulfillment',
+      );
       assert.match(openapiContent, /platform_fee/i, 'Quote breakdown must include platform fee');
       assert.match(openapiContent, /packaging_fee/i, 'Quote breakdown must include packaging fee');
     });
 
     it('should specify Section 5A POST /v1/checkout/pay with Idempotency-Key and Razorpay payment order', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/checkout\/pay['"]?:/, 'Must define /v1/checkout/pay path');
-      assert.match(openapiContent, /Idempotency-Key/i, 'Checkout pay must require Idempotency-Key header');
-      assert.match(openapiContent, /razorpay_order_id/i, 'Checkout pay response must return razorpay_order_id');
-      assert.match(openapiContent, /order_group_id/i, 'Checkout pay response must return order_group_id');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/checkout\/pay['"]?:/,
+        'Must define /v1/checkout/pay path',
+      );
+      assert.match(
+        openapiContent,
+        /Idempotency-Key/i,
+        'Checkout pay must require Idempotency-Key header',
+      );
+      assert.match(
+        openapiContent,
+        /razorpay_order_id/i,
+        'Checkout pay response must return razorpay_order_id',
+      );
+      assert.match(
+        openapiContent,
+        /order_group_id/i,
+        'Checkout pay response must return order_group_id',
+      );
     });
 
     it('should specify Section 5A GET /v1/orders/{orderGroupId} with sub-orders and delivery legs', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/orders\/\{orderGroupId\}['"]?:/, 'Must define /v1/orders/{orderGroupId} path');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/orders\/\{orderGroupId\}['"]?:/,
+        'Must define /v1/orders/{orderGroupId} path',
+      );
       assert.match(openapiContent, /sub_orders/i, 'Order group response must contain sub_orders');
-      assert.match(openapiContent, /delivery_legs/i, 'Order group response must contain delivery_legs');
+      assert.match(
+        openapiContent,
+        /delivery_legs/i,
+        'Order group response must contain delivery_legs',
+      );
     });
 
     it('should specify Section 5A POST /v1/orders/{orderGroupId}/sub-orders/{subOrderId}/cancel for partial cancellation', () => {
@@ -211,24 +288,40 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
       assert.match(
         openapiContent,
         /['"]?\/v1\/orders\/\{orderGroupId\}\/sub-orders\/\{subOrderId\}\/cancel['"]?:/,
-        'Must define partial sub-order cancel path'
+        'Must define partial sub-order cancel path',
       );
-      assert.match(openapiContent, /ORIGINAL_METHOD/i, 'Cancel must support refund to ORIGINAL_METHOD');
+      assert.match(
+        openapiContent,
+        /ORIGINAL_METHOD/i,
+        'Cancel must support refund to ORIGINAL_METHOD',
+      );
       assert.match(openapiContent, /WALLET/i, 'Cancel must support refund to WALLET');
     });
 
     it('should specify Section 5B PUT /v1/partner/mode with active job mutual exclusion', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/partner\/mode['"]?:/, 'Must define /v1/partner/mode path');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/partner\/mode['"]?:/,
+        'Must define /v1/partner/mode path',
+      );
       assert.match(openapiContent, /DELIVERIES_ONLY/i, 'Partner mode must include DELIVERIES_ONLY');
       assert.match(openapiContent, /RIDES_ONLY/i, 'Partner mode must include RIDES_ONLY');
       assert.match(openapiContent, /ALL_JOBS/i, 'Partner mode must include ALL_JOBS');
-      assert.match(openapiContent, /409|conflict|active.*lock/i, 'Must specify 409 Conflict when switching mode with active conflicting job');
+      assert.match(
+        openapiContent,
+        /409|conflict|active.*lock/i,
+        'Must specify 409 Conflict when switching mode with active conflicting job',
+      );
     });
 
     it('should specify Section 5B GET /v1/partner/jobs/feed for unified job-type-agnostic feed', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/partner\/jobs\/feed['"]?:/, 'Must define /v1/partner/jobs/feed path');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/partner\/jobs\/feed['"]?:/,
+        'Must define /v1/partner/jobs/feed path',
+      );
       assert.match(openapiContent, /delivery_leg/i, 'Feed must handle delivery_leg job type');
       assert.match(openapiContent, /parcel/i, 'Feed must handle parcel job type');
       assert.match(openapiContent, /ride/i, 'Feed must handle ride job type');
@@ -237,21 +330,49 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
 
     it('should specify Section 5B POST /v1/partner/jobs/{id}/accept with 20s timeout constraint', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/partner\/jobs\/\{id\}\/accept['"]?:/, 'Must define /v1/partner/jobs/{id}/accept path');
-      assert.match(openapiContent, /20|timeout|expired/i, 'Job accept must document 20s acceptance timeout window');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/partner\/jobs\/\{id\}\/accept['"]?:/,
+        'Must define /v1/partner/jobs/{id}/accept path',
+      );
+      assert.match(
+        openapiContent,
+        /20|timeout|expired/i,
+        'Job accept must document 20s acceptance timeout window',
+      );
     });
 
     it('should specify Section 5B POST /v1/partner/jobs/{id}/step for lifecycle step execution', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/partner\/jobs\/\{id\}\/step['"]?:/, 'Must define /v1/partner/jobs/{id}/step path');
-      assert.match(openapiContent, /otp|photo|proof|ARRIVED|PICKED_UP|DELIVERED/i, 'Job step must support verification proofs like OTP, photo, or status steps');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/partner\/jobs\/\{id\}\/step['"]?:/,
+        'Must define /v1/partner/jobs/{id}/step path',
+      );
+      assert.match(
+        openapiContent,
+        /otp|photo|proof|ARRIVED|PICKED_UP|DELIVERED/i,
+        'Job step must support verification proofs like OTP, photo, or status steps',
+      );
     });
 
     it('should specify Webhooks POST /v1/webhooks/razorpay with signature verification and idempotency', () => {
       const openapiContent = getOpenApiContent();
-      assert.match(openapiContent, /['"]?\/v1\/webhooks\/razorpay['"]?:/, 'Must define /v1/webhooks/razorpay path');
-      assert.match(openapiContent, /X-Razorpay-Signature/i, 'Razorpay webhook must require X-Razorpay-Signature header');
-      assert.match(openapiContent, /payment\.captured/i, 'Razorpay webhook must document payment.captured event');
+      assert.match(
+        openapiContent,
+        /['"]?\/v1\/webhooks\/razorpay['"]?:/,
+        'Must define /v1/webhooks/razorpay path',
+      );
+      assert.match(
+        openapiContent,
+        /X-Razorpay-Signature/i,
+        'Razorpay webhook must require X-Razorpay-Signature header',
+      );
+      assert.match(
+        openapiContent,
+        /payment\.captured/i,
+        'Razorpay webhook must document payment.captured event',
+      );
     });
   });
 
@@ -273,7 +394,11 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
       ];
 
       for (const schema of requiredSchemas) {
-        assert.match(openapiContent, new RegExp(`${schema}:`), `openapi.yaml must define schema ${schema}`);
+        assert.match(
+          openapiContent,
+          new RegExp(`${schema}:`),
+          `openapi.yaml must define schema ${schema}`,
+        );
       }
     });
   });
@@ -290,7 +415,7 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
       assert.match(
         wsDocContent,
         /zero\s+location\s+writes\s+to\s+firestore/i,
-        'Must emphasize Zero location writes to Firestore invariant'
+        'Must emphasize Zero location writes to Firestore invariant',
       );
       assert.match(wsDocContent, /Redis\s+GEO/i, 'Must reference Redis GEO indexing');
       assert.match(wsDocContent, /PostGIS/i, 'Must reference PostGIS batch persistence');
@@ -312,15 +437,23 @@ describe('OpenAPI 3.1 & WebSocket Event Specifications Validation', () => {
         assert.match(
           wsDocContent,
           new RegExp(`\`?${eventName.replace(':', '\\:')}\`?`),
-          `websocket-events.md must document event ${eventName}`
+          `websocket-events.md must document event ${eventName}`,
         );
       }
     });
 
     it('should specify rate limits, adaptive ping cadence, and route deviation thresholds', () => {
       const wsDocContent = getWsDocContent();
-      assert.match(wsDocContent, /3[-–\s]+5\s*s/i, 'Must specify 3-5s active partner GPS ping interval');
-      assert.match(wsDocContent, /15[-–\s]+30\s*s/i, 'Must specify 15-30s idle partner GPS ping interval');
+      assert.match(
+        wsDocContent,
+        /3[-–\s]+5\s*s/i,
+        'Must specify 3-5s active partner GPS ping interval',
+      );
+      assert.match(
+        wsDocContent,
+        /15[-–\s]+30\s*s/i,
+        'Must specify 15-30s idle partner GPS ping interval',
+      );
       assert.match(wsDocContent, /20\s*s/i, 'Must specify 20s job offer acceptance timeout');
       assert.match(wsDocContent, /100\s*m/i, 'Must specify 100m route deviation threshold');
       assert.match(wsDocContent, /60\s*s/i, 'Must specify 60s route deviation cooldown');

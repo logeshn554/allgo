@@ -1,17 +1,13 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import {
   loadMerchantCatalog,
-  toggleItemAvailability,
   loadStoreConfig,
+  toggleItemAvailability,
   updateDynamicPrepBuffer,
-} from '../../src/data/merchantCatalogManager.ts';
-import {
-  EscPosThermalPrinter,
-} from '../../src/data/thermalPrinterService.ts';
-import {
-  generateDailySettlementReport,
-} from '../../src/data/merchantSettlementService.ts';
+} from './legacy-mobile-data/merchantCatalogManager.ts';
+import { generateDailySettlementReport } from './legacy-mobile-data/merchantSettlementService.ts';
+import { EscPosThermalPrinter } from './legacy-mobile-data/thermalPrinterService.ts';
 
 describe('Subsystem 3: Merchant & Store Operations Portal Unit Tests', () => {
   describe('Live Catalog & Inventory Management ("86ing" Items)', () => {
@@ -76,7 +72,7 @@ describe('Subsystem 3: Merchant & Store Operations Portal Unit Tests', () => {
         async (raw) => {
           capturedCommands = raw;
           return true;
-        }
+        },
       );
 
       assert.equal(res.success, true);

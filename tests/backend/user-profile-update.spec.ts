@@ -1,10 +1,10 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { beforeEach, describe, it } from 'node:test';
 import { validate } from 'class-validator';
-import { UsersController } from '../../apps/api/dist/users/users.controller.js';
-import { UsersService } from '../../apps/api/dist/users/users.service.js';
-import { UserRepository } from '../../apps/api/dist/users/data/user.repository.js';
-import { UpdateProfileDto } from '../../apps/api/dist/users/dto/update-profile.dto.js';
+import { UserRepository } from '../../services/api/dist/users/data/user.repository.js';
+import { UpdateProfileDto } from '../../services/api/dist/users/dto/update-profile.dto.js';
+import { UsersController } from '../../services/api/dist/users/users.controller.js';
+import { UsersService } from '../../services/api/dist/users/users.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Customer Profile Self-Service Update API & IDOR Security Suite', () => {
@@ -141,7 +141,7 @@ describe('Customer Profile Self-Service Update API & IDOR Security Suite', () =>
         {
           name: 'ForbiddenException',
           message: 'User context is missing',
-        }
+        },
       );
     });
   });

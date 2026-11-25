@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { OrderTimeoutScheduler } from '../../apps/api/dist/common/scheduling/order-timeout-scheduler.js';
-import { CloudSchedulerJobHandler } from '../../apps/api/dist/common/scheduling/cloud-scheduler-job-handler.js';
-import { PubSubToBigQueryAnalyticsPipeline } from '../../apps/api/dist/common/scheduling/analytics-pubsub-bigquery.pipeline.js';
-import { SecretManagerLoader } from '../../apps/api/dist/config/secret-manager-loader.js';
+import { describe, it } from 'node:test';
+import { PubSubToBigQueryAnalyticsPipeline } from '../../services/api/dist/common/scheduling/analytics-pubsub-bigquery.pipeline.js';
+import { CloudSchedulerJobHandler } from '../../services/api/dist/common/scheduling/cloud-scheduler-job-handler.js';
+import { OrderTimeoutScheduler } from '../../services/api/dist/common/scheduling/order-timeout-scheduler.js';
+import { SecretManagerLoader } from '../../services/api/dist/config/secret-manager-loader.js';
 
 describe('2. Cloud Tasks for Timeouts (Merchant Accept & Partner Offer)', () => {
   it('should schedule and cancel merchant and partner offer timeout tasks', async () => {

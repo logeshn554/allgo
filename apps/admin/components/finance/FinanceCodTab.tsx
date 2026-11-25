@@ -1,14 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 
@@ -20,7 +11,9 @@ interface FinanceCodTabProps {
 export function FinanceCodTab({ pendingCod, handleReconcileCod }: FinanceCodTabProps) {
   return (
     <div className="space-y-3">
-      <div className="text-lg font-semibold tracking-tight">Pending COD Cash Handover Reconciliations</div>
+      <div className="text-lg font-semibold tracking-tight">
+        Pending COD Cash Handover Reconciliations
+      </div>
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
           <TableHeader>
@@ -45,21 +38,29 @@ export function FinanceCodTab({ pendingCod, handleReconcileCod }: FinanceCodTabP
               pendingCod.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-xs">{item.id.slice(0, 8)}...</TableCell>
-                  <TableCell className="text-foreground">{item.partner_phone || item.partner_id.slice(0, 8)}</TableCell>
-                  <TableCell className="font-semibold text-foreground">₹{parseFloat(item.amount_expected_inr).toFixed(2)}</TableCell>
-                  <TableCell className="text-foreground">₹{parseFloat(item.amount_deposited_inr).toFixed(2)}</TableCell>
-                  <TableCell className={`font-semibold ${parseFloat(item.discrepancy_inr) !== 0 ? 'text-destructive' : 'text-primary'}`}>
-                    ₹{parseFloat(item.discrepancy_inr).toFixed(2)}
+                  <TableCell className="text-foreground">
+                    {item.partner_phone || item.partner_id.slice(0, 8)}
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground">
+                    ₹{Number.parseFloat(item.amount_expected_inr).toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-foreground">
+                    ₹{Number.parseFloat(item.amount_deposited_inr).toFixed(2)}
+                  </TableCell>
+                  <TableCell
+                    className={`font-semibold ${Number.parseFloat(item.discrepancy_inr) !== 0 ? 'text-destructive' : 'text-primary'}`}
+                  >
+                    ₹{Number.parseFloat(item.discrepancy_inr).toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {item.status}
-                    </Badge>
+                    <Badge variant="secondary">{item.status}</Badge>
                   </TableCell>
                   <TableCell className="text-end">
                     <Button
                       size="sm"
-                      onClick={() => handleReconcileCod(item.id, parseFloat(item.discrepancy_inr))}
+                      onClick={() =>
+                        handleReconcileCod(item.id, Number.parseFloat(item.discrepancy_inr))
+                      }
                     >
                       Reconcile & Clear
                     </Button>

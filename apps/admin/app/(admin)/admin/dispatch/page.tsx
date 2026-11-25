@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { adminApi, DispatchJob } from '@/lib/api-client';
-import { DispatchStatsCards } from '@/components/dispatch/DispatchStatsCards';
-import { DispatchJobsTable } from '@/components/dispatch/DispatchJobsTable';
-import { DispatchPartnersTable } from '@/components/dispatch/DispatchPartnersTable';
 import { DispatchExceptionsTable } from '@/components/dispatch/DispatchExceptionsTable';
+import { DispatchJobsTable } from '@/components/dispatch/DispatchJobsTable';
 import { DispatchModals } from '@/components/dispatch/DispatchModals';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@allgo/ui';
+import { DispatchPartnersTable } from '@/components/dispatch/DispatchPartnersTable';
+import { DispatchStatsCards } from '@/components/dispatch/DispatchStatsCards';
+import { type DispatchJob, adminApi } from '@/lib/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { useEffect, useState } from 'react';
 
 export default function DispatchPage() {
   const [stats, setStats] = useState<any>(null);
@@ -74,7 +74,11 @@ export default function DispatchPage() {
     if (!assignJobId || !assignPartnerId) return;
     try {
       setActionLoading(true);
-      await adminApi.manualAssignDispatchJob(assignJobId, assignPartnerId, assignReason || undefined);
+      await adminApi.manualAssignDispatchJob(
+        assignJobId,
+        assignPartnerId,
+        assignReason || undefined,
+      );
       setAssignJobId(null);
       setAssignPartnerId('');
       setAssignReason('');
@@ -146,7 +150,11 @@ export default function DispatchPage() {
           size="sm"
           className="gap-2 cursor-pointer self-start sm:self-auto"
         >
-          <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+          <HugeiconsIcon
+            icon={RefreshIcon}
+            strokeWidth={2}
+            className={`size-4 ${loading ? 'animate-spin' : ''}`}
+          />
           <span>{loading ? 'Refreshing...' : 'Refresh Live State'}</span>
         </Button>
       </div>
@@ -162,15 +170,9 @@ export default function DispatchPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList variant="line">
-          <TabsTrigger value="jobs">
-            Delivery Jobs ({totalJobs})
-          </TabsTrigger>
-          <TabsTrigger value="partners">
-            Online Fleet ({onlinePartners.length})
-          </TabsTrigger>
-          <TabsTrigger value="exceptions">
-            Exceptions Queue ({exceptions.length})
-          </TabsTrigger>
+          <TabsTrigger value="jobs">Delivery Jobs ({totalJobs})</TabsTrigger>
+          <TabsTrigger value="partners">Online Fleet ({onlinePartners.length})</TabsTrigger>
+          <TabsTrigger value="exceptions">Exceptions Queue ({exceptions.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="jobs">

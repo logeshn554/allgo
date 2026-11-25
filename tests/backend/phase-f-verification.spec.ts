@@ -1,10 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { HireDriverBookingService } from '../../apps/api/dist/mobility/hire-driver-booking.service.js';
-import { OrderPlacementService } from '../../apps/api/dist/ordering/services/order-placement.service.js';
-import { CloudTasksGateway } from '../../apps/api/dist/common/scheduling/cloud-tasks.gateway.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
+import { HireDriverBookingService } from '../../services/api/dist/mobility/hire-driver-booking.service.js';
+import { OrderPlacementService } from '../../services/api/dist/ordering/services/order-placement.service.js';
 
 describe('Phase F: Verification & End-to-End Edge Cases', () => {
   it('should auto-enqueue Cloud Task when scheduled hire-driver booking is made and cancel task on cancellation', async () => {
@@ -47,7 +46,7 @@ describe('Phase F: Verification & End-to-End Edge Cases', () => {
       mockRepo,
       mockFare,
       mockContinuity,
-      mockTasksGateway
+      mockTasksGateway,
     );
 
     const scheduledTime = new Date(Date.now() + 2 * 3600 * 1000);
@@ -124,7 +123,13 @@ describe('Phase F: Verification & End-to-End Edge Cases', () => {
         discountAmountInr: 0,
         finalPayableAmountInr: 250.0,
         itemsBreakdown: [
-          { itemId: 'item_1', itemName: 'Burger', unitPriceInr: 200.0, quantity: 1, totalPriceInr: 200.0 }
+          {
+            itemId: 'item_1',
+            itemName: 'Burger',
+            unitPriceInr: 200.0,
+            quantity: 1,
+            totalPriceInr: 200.0,
+          },
         ],
       }),
     };
@@ -142,7 +147,7 @@ describe('Phase F: Verification & End-to-End Edge Cases', () => {
       mockAddressService,
       { reserveInventory: async () => {} } as any,
       mockPaymentService,
-      mockTasksGateway
+      mockTasksGateway,
     );
 
     const scheduledDate = new Date(Date.now() + 4 * 3600 * 1000);
@@ -153,7 +158,7 @@ describe('Phase F: Verification & End-to-End Edge Cases', () => {
         paymentMethod: 'UPI',
         scheduledFor: scheduledDate.toISOString(),
       } as any,
-      async () => ({})
+      async () => ({}),
     );
 
     assert.ok(orderRes);
@@ -163,7 +168,10 @@ describe('Phase F: Verification & End-to-End Edge Cases', () => {
   });
 
   it('should verify certificate pinning implementation in ApiClient and exports in allgo_mobile_shared', () => {
-    const mobileSharedExport = path.resolve(import.meta.dirname, '../../packages/mobile_shared/lib/allgo_mobile_shared.dart');
+    const mobileSharedExport = path.resolve(
+      import.meta.dirname,
+      '../../packages/mobile_shared/lib/allgo_mobile_shared.dart',
+    );
     const content = fs.readFileSync(mobileSharedExport, 'utf8');
     assert.match(content, /certificate_pinning\.dart/);
     assert.match(content, /language_selection_sheet\.dart/);

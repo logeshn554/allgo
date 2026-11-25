@@ -1,17 +1,16 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import jwt from 'jsonwebtoken';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { DeliveryJobService } from '../../apps/api/dist/delivery/delivery-job.service.js';
-import { PartnerAvailabilityService } from '../../apps/api/dist/delivery/partner-availability.service.js';
-import { DispatchEngineService } from '../../apps/api/dist/delivery/dispatch-engine.service.js';
-import { DeliveryJobController } from '../../apps/api/dist/delivery/controllers/delivery-job.controller.js';
-import { MerchantDeliveryController } from '../../apps/api/dist/delivery/controllers/merchant-delivery.controller.js';
-import { PartnerDeliveryController } from '../../apps/api/dist/delivery/controllers/partner-delivery.controller.js';
-import { CustomerDeliveryController } from '../../apps/api/dist/delivery/controllers/customer-delivery.controller.js';
-import { AdminDispatchController } from '../../apps/api/dist/delivery/controllers/admin-dispatch.controller.js';
+import { after, before, describe, it } from 'node:test';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { AdminDispatchController } from '../../services/api/dist/delivery/controllers/admin-dispatch.controller.js';
+import { CustomerDeliveryController } from '../../services/api/dist/delivery/controllers/customer-delivery.controller.js';
+import { DeliveryJobController } from '../../services/api/dist/delivery/controllers/delivery-job.controller.js';
+import { MerchantDeliveryController } from '../../services/api/dist/delivery/controllers/merchant-delivery.controller.js';
+import { PartnerDeliveryController } from '../../services/api/dist/delivery/controllers/partner-delivery.controller.js';
+import { DeliveryJobService } from '../../services/api/dist/delivery/delivery-job.service.js';
+import { DispatchEngineService } from '../../services/api/dist/delivery/dispatch-engine.service.js';
+import { PartnerAvailabilityService } from '../../services/api/dist/delivery/partner-availability.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
 
 describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
   let config: ConfigService;
@@ -48,7 +47,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
     await db.onModuleInit();
     await redis.onModuleInit();
     try {
-      await db.query("SELECT 1;");
+      await db.query('SELECT 1;');
       isLiveAvailable = true;
     } catch {
       isLiveAvailable = false;
@@ -56,7 +55,6 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
     if (!isLiveAvailable) {
       return;
     }
-
 
     const gatewayMock = {
       emitJobOffer: () => {},
@@ -66,27 +64,56 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
     } as any;
 
     partnerAvailabilityService = new PartnerAvailabilityService(db, redis, gatewayMock);
-    dispatchEngineService = new DispatchEngineService(db, redis, gatewayMock, partnerAvailabilityService);
+    dispatchEngineService = new DispatchEngineService(
+      db,
+      redis,
+      gatewayMock,
+      partnerAvailabilityService,
+    );
     deliveryJobService = new DeliveryJobService(db, gatewayMock, dispatchEngineService);
 
     deliveryJobController = new DeliveryJobController(deliveryJobService);
     merchantDeliveryController = new MerchantDeliveryController(deliveryJobService, db);
-    partnerDeliveryController = new PartnerDeliveryController(partnerAvailabilityService, dispatchEngineService, deliveryJobService, db);
+    partnerDeliveryController = new PartnerDeliveryController(
+      partnerAvailabilityService,
+      dispatchEngineService,
+      deliveryJobService,
+      db,
+    );
     customerDeliveryController = new CustomerDeliveryController(deliveryJobService, db);
-    adminDispatchController = new AdminDispatchController(deliveryJobService, dispatchEngineService);
+    adminDispatchController = new AdminDispatchController(
+      deliveryJobService,
+      dispatchEngineService,
+    );
 
     // Clean prior test artifacts
     try {
-      await db.query(`DELETE FROM delivery_jobs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${merchantOwnerId}'));`);
-      await db.query(`DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${merchantOwnerId}');`);
+      await db.query(
+        `DELETE FROM delivery_jobs WHERE outlet_id IN (SELECT id FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${merchantOwnerId}'));`,
+      );
+      await db.query(
+        `DELETE FROM outlets WHERE merchant_id IN (SELECT id FROM merchants WHERE owner_id = '${merchantOwnerId}');`,
+      );
       await db.query(`DELETE FROM merchants WHERE owner_id = '${merchantOwnerId}';`);
-      await db.query(`DELETE FROM partner_location_history WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM partner_availability_sessions WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
+      await db.query(
+        `DELETE FROM partner_location_history WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_availability_sessions WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_service_applications WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
       await db.query(`DELETE FROM partners WHERE user_id = '${partnerUserId}';`);
-      await db.query(`DELETE FROM users WHERE id IN ('${merchantOwnerId}', '${partnerUserId}', '${customerUserId}', '${adminUserId}');`);
+      await db.query(
+        `DELETE FROM users WHERE id IN ('${merchantOwnerId}', '${partnerUserId}', '${customerUserId}', '${adminUserId}');`,
+      );
     } catch {}
 
     // Seed test users
@@ -141,22 +168,42 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
   });
 
   after(async () => {
-    if (!isLiveAvailable) { return; }
+    if (!isLiveAvailable) {
+      return;
+    }
     try {
       if (testOutletId) {
-        await db.query(`DELETE FROM partner_earnings_entries WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
-        await db.query(`DELETE FROM delivery_status_events WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
-        await db.query(`DELETE FROM dispatch_attempts WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
-        await db.query(`DELETE FROM delivery_proofs WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
-        await db.query(`DELETE FROM delivery_cancellation_records WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
-        await db.query(`DELETE FROM delivery_exception_records WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`);
+        await db.query(
+          `DELETE FROM partner_earnings_entries WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
+        await db.query(
+          `DELETE FROM delivery_status_events WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
+        await db.query(
+          `DELETE FROM dispatch_attempts WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
+        await db.query(
+          `DELETE FROM delivery_proofs WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
+        await db.query(
+          `DELETE FROM delivery_cancellation_records WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
+        await db.query(
+          `DELETE FROM delivery_exception_records WHERE delivery_job_id IN (SELECT id FROM delivery_jobs WHERE outlet_id = '${testOutletId}');`,
+        );
         await db.query(`DELETE FROM delivery_jobs WHERE outlet_id = '${testOutletId}';`);
         await db.query(`DELETE FROM outlets WHERE id = '${testOutletId}';`);
       }
       if (testPartnerId) {
-        await db.query(`DELETE FROM partner_location_history WHERE partner_id = '${testPartnerId}';`);
-        await db.query(`DELETE FROM partner_availability_sessions WHERE partner_id = '${testPartnerId}';`);
-        await db.query(`DELETE FROM partner_service_applications WHERE partner_id = '${testPartnerId}';`);
+        await db.query(
+          `DELETE FROM partner_location_history WHERE partner_id = '${testPartnerId}';`,
+        );
+        await db.query(
+          `DELETE FROM partner_availability_sessions WHERE partner_id = '${testPartnerId}';`,
+        );
+        await db.query(
+          `DELETE FROM partner_service_applications WHERE partner_id = '${testPartnerId}';`,
+        );
         await db.query(`DELETE FROM vehicles WHERE partner_id = '${testPartnerId}';`);
         await db.query(`DELETE FROM partner_documents WHERE partner_id = '${testPartnerId}';`);
         await db.query(`DELETE FROM partners WHERE id = '${testPartnerId}';`);
@@ -164,7 +211,9 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
       if (testMerchantId) {
         await db.query(`DELETE FROM merchants WHERE id = '${testMerchantId}';`);
       }
-      await db.query(`DELETE FROM users WHERE id IN ('${merchantOwnerId}', '${partnerUserId}', '${customerUserId}', '${adminUserId}');`);
+      await db.query(
+        `DELETE FROM users WHERE id IN ('${merchantOwnerId}', '${partnerUserId}', '${customerUserId}', '${adminUserId}');`,
+      );
     } catch {}
     await db.onModuleDestroy();
     await redis.onModuleDestroy();
@@ -172,7 +221,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('1. DeliveryJobController: Intake creates job with secure 4-digit PIN and OTP', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const job = await deliveryJobController.createJob({
@@ -180,10 +229,10 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
       customerId: customerUserId,
       verticalType: 'FOOD',
       pickupAddress: 'Feast Kitchen Kilpauk, Chennai',
-      pickupLocation: { latitude: 13.0800, longitude: 80.2400 },
+      pickupLocation: { latitude: 13.08, longitude: 80.24 },
       pickupContactPhone: '+919999000021',
       dropoffAddress: 'Chetpet High Rd, Chennai',
-      dropoffLocation: { latitude: 13.0720, longitude: 80.2450 },
+      dropoffLocation: { latitude: 13.072, longitude: 80.245 },
       dropoffContactPhone: '+919999000023',
       courierFeeInr: 60.0,
       packagingFeeInr: 15.0,
@@ -202,7 +251,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('2. MerchantDeliveryController: Merchant accepts, starts prep, and marks ready', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const req = { user: { userId: merchantOwnerId, roles: ['MERCHANT_ADMIN'] } };
@@ -223,7 +272,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('3. PartnerDeliveryController: Partner goes online and sends heartbeat', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const req = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
@@ -243,7 +292,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('4. Merchant marks ready -> triggers auto-dispatch offer to nearby partner', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const merchantReq = { user: { userId: merchantOwnerId, roles: ['MERCHANT_ADMIN'] } };
@@ -264,7 +313,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('5. PartnerDeliveryController: Partner accepts offer and inspects active job', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const partnerReq = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
@@ -281,7 +330,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('6. Handover Lifecycle: Courier arrives, Merchant verifies OTP -> IN_TRANSIT', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const partnerReq = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
@@ -293,12 +342,17 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
     // Invalid OTP test
     await assert.rejects(
-      async () => merchantDeliveryController.verifyHandover(merchantReq, createdJobId, { handoverOtp: '0000' }),
-      /Invalid handover OTP/
+      async () =>
+        merchantDeliveryController.verifyHandover(merchantReq, createdJobId, {
+          handoverOtp: '0000',
+        }),
+      /Invalid handover OTP/,
     );
 
     // Valid OTP verification
-    const verified = await merchantDeliveryController.verifyHandover(merchantReq, createdJobId, { handoverOtp });
+    const verified = await merchantDeliveryController.verifyHandover(merchantReq, createdJobId, {
+      handoverOtp,
+    });
     assert.strictEqual(verified.status, 'PICKED_UP');
 
     // Partner starts delivery
@@ -308,30 +362,34 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('7. Delivery Completion: Partner arrives at destination and completes with customer PIN', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const partnerReq = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
 
     // Partner arrives at dropoff
-    const arrivedDest = await partnerDeliveryController.arrivedDestination(partnerReq, createdJobId);
+    const arrivedDest = await partnerDeliveryController.arrivedDestination(
+      partnerReq,
+      createdJobId,
+    );
     assert.strictEqual(arrivedDest.status, 'ARRIVED_AT_DESTINATION');
 
     // Wrong PIN rejected
     await assert.rejects(
-      async () => partnerDeliveryController.completeDelivery(partnerReq, createdJobId, {
-        deliveryPin: '9999',
-        proofType: 'PIN',
-      }),
-      /Invalid delivery PIN/
+      async () =>
+        partnerDeliveryController.completeDelivery(partnerReq, createdJobId, {
+          deliveryPin: '9999',
+          proofType: 'PIN',
+        }),
+      /Invalid delivery PIN/,
     );
 
     // Valid PIN completion
     const completed = await partnerDeliveryController.completeDelivery(partnerReq, createdJobId, {
       deliveryPin,
       proofType: 'PIN',
-      latitude: 13.0720,
-      longitude: 80.2450,
+      latitude: 13.072,
+      longitude: 80.245,
     });
     assert.strictEqual(completed.status, 'DELIVERED');
 
@@ -343,7 +401,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
 
   it('8. CustomerDeliveryController: Active deliveries & tracking queries with data redaction', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const custReq = { user: { userId: customerUserId, roles: ['CUSTOMER'] } };
@@ -352,12 +410,16 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
     const tracking = await customerDeliveryController.getTrackingSnapshot(custReq, createdJobId);
     assert.strictEqual(tracking.id, createdJobId);
     assert.strictEqual(tracking.deliveryPin, deliveryPin);
-    assert.strictEqual(tracking.handoverOtp, null, 'Customer view must NOT expose merchant handover OTP');
+    assert.strictEqual(
+      tracking.handoverOtp,
+      null,
+      'Customer view must NOT expose merchant handover OTP',
+    );
   });
 
   it('9. AdminDispatchController: Operational metrics, job details, and online partners radar', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const stats = await adminDispatchController.getStats();
@@ -365,7 +427,7 @@ describe('Phase 4: Controllers & End-to-End Operational Workflow Suite', () => {
     assert.ok(typeof stats.onlinePartners === 'number');
 
     const adminJobs = await adminDispatchController.listJobs('DELIVERED');
-    assert.ok(adminJobs.items.some(j => j.id === createdJobId));
+    assert.ok(adminJobs.items.some((j) => j.id === createdJobId));
 
     const jobDetails = await adminDispatchController.getJobDetails(createdJobId);
     assert.strictEqual(jobDetails.id, createdJobId);

@@ -1,6 +1,6 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
+import type React from 'react';
 
 interface UserStatusCardProps {
   status: string;
@@ -18,7 +18,8 @@ export const UserStatusCard: React.FC<UserStatusCardProps> = ({
       <CardHeader>
         <CardTitle className="text-base">Account Status & Access Control</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Changing status will immediately invalidate active device JWT sessions in Redis and reject downstream requests.
+          Changing status will immediately invalidate active device JWT sessions in Redis and reject
+          downstream requests.
         </p>
       </CardHeader>
       <CardContent>

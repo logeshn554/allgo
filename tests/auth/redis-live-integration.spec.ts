@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as net from 'node:net';
+import { describe, it } from 'node:test';
 import {
   ATOMIC_OTP_VERIFY_AND_CONSUME_LUA,
   OtpSecurityService,
@@ -37,12 +37,12 @@ describe('Live Redis Server Concurrency Integration Suite (Requires Docker / Red
     if (!isOnline) {
       console.log(
         '\n[NOTICE] Redis server not reachable at localhost:6379 (Docker / Redis daemon offline).' +
-        '\n         Live Redis concurrency integration test status: BLOCKED / PENDING.' +
-        '\n         To execute against real Redis: docker run -p 6379:6379 -d redis:7-alpine && npm test\n'
+          '\n         Live Redis concurrency integration test status: BLOCKED / PENDING.' +
+          '\n         To execute against real Redis: docker run -p 6379:6379 -d redis:7-alpine && npm test\n',
       );
       assert.ok(
         true,
-        'Accurately detected offline Redis environment; live integration test marked PENDING without false claims'
+        'Accurately detected offline Redis environment; live integration test marked PENDING without false claims',
       );
       return;
     }
@@ -50,6 +50,9 @@ describe('Live Redis Server Concurrency Integration Suite (Requires Docker / Red
     // When Redis is running locally, execute live Lua script verification
     assert.ok(isOnline, 'Redis is online; live contract verified');
     const service = new OtpSecurityService('allgo-live-test-pepper-2026', 300, 3);
-    assert.ok(ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.length > 50, 'Lua script is defined and ready for execution');
+    assert.ok(
+      ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.length > 50,
+      'Lua script is defined and ready for execution',
+    );
   });
 });

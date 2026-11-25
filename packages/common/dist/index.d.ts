@@ -1,7 +1,7 @@
 export * from './contracts/index.ts';
 export { OrderStatus } from './enums/order-status.enum.ts';
 export * from './enums/order-status.enum.ts';
-export { VerticalType, ALL_VERTICALS, PILOT_LIVE_VERTICALS, GATED_MOBILITY_VERTICALS } from './enums/vertical.enum.ts';
+export { VerticalType, ALL_VERTICALS, PILOT_LIVE_VERTICALS, GATED_MOBILITY_VERTICALS, } from './enums/vertical.enum.ts';
 export { FulfillmentMode } from './enums/fulfillment-mode.enum.ts';
 export * from './enums/fulfillment-mode.enum.ts';
 export * from './i18n/languages.ts';

@@ -1,9 +1,7 @@
 'use client';
 
-import * as React from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 import {
+  HugeiconsIcon,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -16,25 +14,27 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarSeparator,
-  HugeiconsIcon,
 } from '@allgo/ui';
 import {
-  DashboardSquare01Icon,
   ArrowRight01Icon,
-  DeliveryTruck01Icon,
-  Motorbike01Icon,
-  Store01Icon,
-  PackageIcon,
   Car01Icon,
-  Package01Icon,
-  Location01Icon,
-  Shield01Icon,
-  Key01Icon,
-  UserGroupIcon,
   Coins01Icon,
   CustomerServiceIcon,
+  DashboardSquare01Icon,
+  DeliveryTruck01Icon,
+  Key01Icon,
+  Location01Icon,
+  Motorbike01Icon,
+  Package01Icon,
+  PackageIcon,
+  Shield01Icon,
   StarIcon,
+  Store01Icon,
+  UserGroupIcon,
 } from '@hugeicons/core-free-icons';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import type * as React from 'react';
 
 interface NavItem {
   title: string;
@@ -101,9 +101,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <span className="truncate font-semibold tracking-tight text-sidebar-foreground">
                   AllGo Super Admin
                 </span>
-                <span className="truncate text-[11px] text-muted-foreground">
-                  Console v1.0.0
-                </span>
+                <span className="truncate text-[11px] text-muted-foreground">Console v1.0.0</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

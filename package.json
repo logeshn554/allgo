@@ -3,31 +3,44 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
   "description": "AllGo Multi-Vertical On-Demand Delivery and Mobility Platform",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "build:common": "npm run build --workspace=@allgo/common",
-    "build:api": "npm run build --workspace=@allgo/common && npm run build --workspace=@allgo/api",
-    "build": "npm run build:api",
+    "build": "turbo run build",
+    "build:common": "pnpm --filter @allgo/common build",
+    "build:api": "pnpm --filter @allgo/api... build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "lint:openapi": "redocly lint docs/api/openapi.yaml",
+    "dev": "turbo run dev",
     "test": "node --experimental-transform-types --test tests/**/*.spec.ts",
     "test:workspace": "node --experimental-transform-types --test tests/workspace/*.spec.ts",
-    "lint:openapi": "redocly lint docs/api/openapi.yaml"
+    "test:security": "node --experimental-transform-types --test tests/security/*.spec.ts",
+    "test:admin": "node --experimental-transform-types --test tests/admin/*.spec.ts",
+    "test:fast": "node --experimental-transform-types --test tests/workspace/*.spec.ts tests/security/*.spec.ts tests/admin/*.spec.ts tests/api/*.spec.ts",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json}": ["biome check --write --no-errors-on-unmatched"]
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@redocly/cli": "^2.75.0",
     "@types/express": "^5.0.6",
     "@types/ioredis": "^4.28.10",
-    "@types/node": "^26.6.6",
+    "@types/node": "^22.15.0",
     "@types/pg": "^8.23.1",
     "autoprefixer": "^10.7.0",
+    "husky": "^9.1.7",
     "ioredis": "^6.0.0",
+    "lint-staged": "^15.5.0",
     "pg": "^8.23.1",
     "postcss": "^8.5.33",
     "tailwindcss": "^3.4.19",
-    "typescript": "^6.0.3"
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@types/react": "^19.3.0",

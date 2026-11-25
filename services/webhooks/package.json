@@ -1,0 +1,21 @@
+{
+  "name": "@allgo/webhooks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AllGo Inbound Webhooks Service (Payment & Partner Callbacks)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@allgo/common": "workspace:*",
+    "@allgo/env": "workspace:*"
+  },
+  "devDependencies": {
+    "@allgo/config-typescript": "workspace:*"
+  }
+}

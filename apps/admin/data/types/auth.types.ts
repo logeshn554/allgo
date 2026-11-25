@@ -1,10 +1,6 @@
-import { UserSummary } from './users.types';
+import type { UserSummary } from './users.types';
 
-export type TwoFactorPolicy =
-  | 'DISABLED'
-  | 'OPTIONAL'
-  | 'REQUIRED_FOR_ADMINS'
-  | 'REQUIRED_FOR_ALL';
+export type TwoFactorPolicy = 'DISABLED' | 'OPTIONAL' | 'REQUIRED_FOR_ADMINS' | 'REQUIRED_FOR_ALL';
 
 export interface SendOtpResponse {
   status: string;
@@ -30,9 +26,7 @@ export interface TwoFactorChallengeResponse {
 
 export type AuthLoginResult = AuthResponse | TwoFactorChallengeResponse;
 
-export function isTwoFactorChallenge(
-  res: AuthLoginResult,
-): res is TwoFactorChallengeResponse {
+export function isTwoFactorChallenge(res: AuthLoginResult): res is TwoFactorChallengeResponse {
   return 'requiresTwoFactor' in res && res.requiresTwoFactor === true;
 }
 

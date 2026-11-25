@@ -1,0 +1,298 @@
+import { getDriverH3RedisKey, latLngToH3Index } from '@allgo/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  Optional,
+} from '@nestjs/common';
+import { DatabaseService } from '../database/database.service.js';
+import { RedisService } from '../redis/redis.service.js';
+import { PartnerAvailabilityRepository } from './data/partner-availability.repository.js';
+import { DeliveryGateway } from './delivery.gateway.js';
+import { LocationCoordinatesDto, PartnerLocationUpdateDto } from './dto/delivery.dto.js';
+
+export const REDIS_ONLINE_PARTNERS_GEO_KEY = 'dispatch:partners:online:geo';
+export const HEARTBEAT_TTL_SECONDS = 120;
+
+@Injectable()
+export class PartnerAvailabilityService implements OnModuleDestroy {
+  private readonly logger = new Logger(PartnerAvailabilityService.name);
+  private readonly repo: PartnerAvailabilityRepository;
+  private readonly locationBatchBuffer: Array<{
+    partnerId: string;
+    activeJobId: string | null;
+    lon: number;
+    lat: number;
+    heading?: number | null;
+    speedMps?: number | null;
+    accuracy?: number | null;
+    recordedAt?: Date;
+  }> = [];
+  private batchFlushTimer: NodeJS.Timeout | null = null;
+
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly redis: RedisService,
+    private readonly gateway: DeliveryGateway,
+    @Optional() repo?: PartnerAvailabilityRepository,
+  ) {
+    this.repo = repo ?? new PartnerAvailabilityRepository(db);
+    this.batchFlushTimer = setInterval(() => this.flushLocationBatch(), 10000);
+    if (this.batchFlushTimer && typeof this.batchFlushTimer.unref === 'function') {
+      this.batchFlushTimer.unref();
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.batchFlushTimer) {
+      clearInterval(this.batchFlushTimer);
+      this.batchFlushTimer = null;
+    }
+    await this.flushLocationBatch();
+  }
+
+  async getPartnerLastPoint(partnerId: string) {
+    return this.repo.getLastRecordedPoint(partnerId);
+  }
+
+  async flushLocationBatch(): Promise<number> {
+    if (this.locationBatchBuffer.length === 0) return 0;
+    const batch = this.locationBatchBuffer.splice(0, this.locationBatchBuffer.length);
+    try {
+      return await this.repo.batchInsertLocations(batch);
+    } catch (err: any) {
+      this.logger.warn(`Failed to batch insert PostGIS partner locations: ${err.message}`);
+      return 0;
+    }
+  }
+
+  async getPartnerByUserId(userId: string): Promise<any> {
+    return this.repo.getPartnerByUserId(userId);
+  }
+
+  async checkEligibility(partnerId: string): Promise<{ isEligible: boolean; reason?: string }> {
+    return this.repo.checkEligibility(partnerId);
+  }
+
+  async setOnline(
+    userId: string,
+    coords: LocationCoordinatesDto,
+    batteryPercentage = 100,
+  ): Promise<any> {
+    const partner = await this.getPartnerByUserId(userId);
+
+    const eligibility = await this.checkEligibility(partner.id);
+    if (!eligibility.isEligible) {
+      throw new ForbiddenException(`Cannot go online: ${eligibility.reason}`);
+    }
+
+    const sessionId = await this.repo.createSession(
+      partner.id,
+      coords.longitude,
+      coords.latitude,
+      batteryPercentage,
+    );
+
+    try {
+      await this.redis.geoadd(
+        REDIS_ONLINE_PARTNERS_GEO_KEY,
+        coords.longitude,
+        coords.latitude,
+        partner.id,
+      );
+      await this.redis.setex(
+        `dispatch:partner:${partner.id}:heartbeat`,
+        HEARTBEAT_TTL_SECONDS,
+        'ONLINE',
+      );
+      const h3Index = latLngToH3Index(coords.latitude, coords.longitude, 8);
+      const h3Key = getDriverH3RedisKey(h3Index);
+      await this.redis.sadd(h3Key, partner.id);
+      await this.redis.expire(h3Key, HEARTBEAT_TTL_SECONDS);
+    } catch (err: any) {
+      this.logger.warn(`Redis GEO update failed during setOnline: ${err.message}`);
+    }
+
+    return {
+      status: 'ONLINE',
+      partnerId: partner.id,
+      sessionId,
+      location: coords,
+    };
+  }
+
+  async setOffline(userId: string): Promise<{ status: string }> {
+    const partner = await this.getPartnerByUserId(userId);
+    await this.repo.endSession(partner.id);
+
+    try {
+      await this.redis.zrem(REDIS_ONLINE_PARTNERS_GEO_KEY, partner.id);
+      await this.redis.del(`dispatch:partner:${partner.id}:heartbeat`);
+    } catch {}
+
+    return { status: 'OFFLINE' };
+  }
+
+  async heartbeat(
+    userId: string,
+    coords: LocationCoordinatesDto,
+    batteryPercentage = 100,
+  ): Promise<any> {
+    const partner = await this.getPartnerByUserId(userId);
+    await this.repo.updateHeartbeat(
+      partner.id,
+      coords.longitude,
+      coords.latitude,
+      batteryPercentage,
+    );
+
+    try {
+      await this.redis.geoadd(
+        REDIS_ONLINE_PARTNERS_GEO_KEY,
+        coords.longitude,
+        coords.latitude,
+        partner.id,
+      );
+      await this.redis.setex(
+        `dispatch:partner:${partner.id}:heartbeat`,
+        HEARTBEAT_TTL_SECONDS,
+        'ONLINE',
+      );
+      const h3Index = latLngToH3Index(coords.latitude, coords.longitude, 8);
+      const h3Key = getDriverH3RedisKey(h3Index);
+      await this.redis.sadd(h3Key, partner.id);
+      await this.redis.expire(h3Key, HEARTBEAT_TTL_SECONDS);
+    } catch {}
+
+    return { success: true, timestamp: new Date().toISOString() };
+  }
+
+  async recordLocation(
+    userId: string,
+    dto: PartnerLocationUpdateDto,
+  ): Promise<{ success: boolean; id: string }> {
+    const partner = await this.getPartnerByUserId(userId);
+    const activeJobId = await this.repo.getActiveJobId(partner.id);
+    const now = dto.recordedAt ? new Date(dto.recordedAt) : new Date();
+
+    const prevPoint = await this.repo.getLastRecordedPoint(partner.id);
+
+    if (prevPoint) {
+      const timeDiffSec = (now.getTime() - new Date(prevPoint.recorded_at).getTime()) / 1000;
+
+      if (timeDiffSec >= 0 && timeDiffSec < 3600) {
+        const distMeters = this.calculateDistanceMeters(
+          Number(prevPoint.lat),
+          Number(prevPoint.lon),
+          dto.latitude,
+          dto.longitude,
+        );
+        const effectiveTime = Math.max(timeDiffSec, 1);
+        const speedKmh = (distMeters / effectiveTime) * 3.6;
+
+        if (dto.isMockProvider === true) {
+          this.logger.warn(`Mock GPS location rejected for partner ${partner.id}`);
+          throw new BadRequestException('MOCK_PROVIDER: Fake/mock GPS coordinates rejected');
+        }
+
+        if (speedKmh > 120.0) {
+          this.logger.warn(
+            `Suspicious GPS velocity detected for partner ${partner.id}: ${speedKmh.toFixed(1)} km/h`,
+          );
+          throw new BadRequestException(
+            `EXCESSIVE_VELOCITY: Velocity ${speedKmh.toFixed(1)} km/h exceeds 120 km/h limit`,
+          );
+        }
+      }
+    }
+
+    const id = await this.repo.insertLocation(
+      partner.id,
+      activeJobId,
+      dto.longitude,
+      dto.latitude,
+      dto.heading,
+      dto.speedMps,
+      dto.accuracyMeters,
+      now,
+    );
+
+    // Queue point for PostGIS batch persistence
+    this.locationBatchBuffer.push({
+      partnerId: partner.id,
+      activeJobId,
+      lon: dto.longitude,
+      lat: dto.latitude,
+      heading: dto.heading,
+      speedMps: dto.speedMps,
+      accuracy: dto.accuracyMeters,
+      recordedAt: now,
+    });
+    if (this.locationBatchBuffer.length >= 25) {
+      this.flushLocationBatch().catch(() => {});
+    }
+
+    try {
+      await this.redis.geoadd(
+        REDIS_ONLINE_PARTNERS_GEO_KEY,
+        dto.longitude,
+        dto.latitude,
+        partner.id,
+      );
+      await this.redis.setex(
+        `dispatch:partner:${partner.id}:heartbeat`,
+        HEARTBEAT_TTL_SECONDS,
+        'ONLINE',
+      );
+      // Mirror latest telemetry in Redis string for quick O(1) reads
+      const snap = {
+        partnerId: partner.id,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        heading: dto.heading,
+        speedMps: dto.speedMps,
+        accuracyMeters: dto.accuracyMeters,
+        activeJobId,
+        recordedAt: now.toISOString(),
+      };
+      await this.redis.set(
+        `partner:${partner.id}:latest_telemetry`,
+        JSON.stringify(snap),
+        'EX',
+        3600,
+      );
+      const h3Index = latLngToH3Index(dto.latitude, dto.longitude, 8);
+      const h3Key = getDriverH3RedisKey(h3Index);
+      await this.redis.sadd(h3Key, partner.id);
+      await this.redis.expire(h3Key, HEARTBEAT_TTL_SECONDS);
+    } catch {}
+
+    if (activeJobId) {
+      this.gateway.emitPartnerLocationUpdate(activeJobId, {
+        jobId: activeJobId,
+        partnerId: partner.id,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        heading: dto.heading,
+        speedMps: dto.speedMps,
+        recordedAt: now.toISOString(),
+      });
+    }
+
+    return { success: true, id };
+  }
+
+  private calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3,
+      phi1 = (lat1 * Math.PI) / 180,
+      phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180,
+      deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(deltaPhi / 2) ** 2 +
+      Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+}

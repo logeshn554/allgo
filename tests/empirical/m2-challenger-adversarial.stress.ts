@@ -1,26 +1,20 @@
 import 'reflect-metadata';
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { execSync } from 'node:child_process';
-import crypto from 'node:crypto';
+import { beforeEach, describe, it } from 'node:test';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
-import {
-  BadRequestException,
-  UnauthorizedException,
-  ForbiddenException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
 import { NextResponse } from 'next/server.js';
 
-import { UsersService } from '../../apps/api/dist/users/users.service.js';
-import { UsersController } from '../../apps/api/dist/users/users.controller.js';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { AuthController } from '../../apps/api/dist/auth/auth.controller.js';
-import { JwtAuthGuard } from '../../apps/api/dist/common/guards/jwt-auth.guard.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { ROLES_KEY } from '../../apps/api/dist/common/decorators/roles.decorator.js';
+import { AuthController } from '../../services/api/dist/auth/auth.controller.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ROLES_KEY } from '../../services/api/dist/common/decorators/roles.decorator.js';
+import { JwtAuthGuard } from '../../services/api/dist/common/guards/jwt-auth.guard.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { UsersController } from '../../services/api/dist/users/users.controller.js';
+import { UsersService } from '../../services/api/dist/users/users.service.js';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const BASELINE_COMMIT = '5fe64927af3c97a37ae7b3da973761ec2ac54f91';
@@ -48,17 +42,17 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
         assert.strictEqual(
           err.status,
           1,
-          `Expected exit code 1 on database connection error, but got ${err.status}`
+          `Expected exit code 1 on database connection error, but got ${err.status}`,
         );
         const stderr = err.stderr ? err.stderr.toString() : '';
         const stdout = err.stdout ? err.stdout.toString() : '';
         const combined = stdout + stderr;
         assert.ok(
           combined.includes('BLOCKED / PENDING LIVE CONTAINER EXECUTION') ||
-          combined.includes('not reachable') ||
-          combined.includes('EACCES') ||
-          combined.includes('ECONNREFUSED'),
-          'Expected failure explanation in output'
+            combined.includes('not reachable') ||
+            combined.includes('EACCES') ||
+            combined.includes('ECONNREFUSED'),
+          'Expected failure explanation in output',
         );
       }
     });
@@ -75,15 +69,15 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
         assert.strictEqual(
           err.status,
           1,
-          `Expected exit code 1 on database connection error, but got ${err.status}`
+          `Expected exit code 1 on database connection error, but got ${err.status}`,
         );
         const stdout = (err.stdout || '').toString();
         assert.ok(
           stdout.includes('BLOCKED / PENDING LIVE CONTAINER EXECUTION') ||
-          stdout.includes('not reachable') ||
-          stdout.includes('EACCES') ||
-          stdout.includes('ECONNREFUSED'),
-          'Expected failure explanation in output'
+            stdout.includes('not reachable') ||
+            stdout.includes('EACCES') ||
+            stdout.includes('ECONNREFUSED'),
+          'Expected failure explanation in output',
         );
       }
     });
@@ -120,19 +114,22 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
     });
 
     it('1D: verify neither script swallows ECONNREFUSED in source code', () => {
-      const migrationSrc = fs.readFileSync(path.join(ROOT_DIR, 'scripts/run-migrations.ts'), 'utf-8');
+      const migrationSrc = fs.readFileSync(
+        path.join(ROOT_DIR, 'scripts/run-migrations.ts'),
+        'utf-8',
+      );
       const seedsSrc = fs.readFileSync(path.join(ROOT_DIR, 'scripts/run-seeds.ts'), 'utf-8');
 
       // The old anti-pattern was: if (!result.success && !result.error?.includes('ECONNREFUSED')) process.exit(1);
       assert.strictEqual(
         migrationSrc.includes("!result.error?.includes('ECONNREFUSED')"),
         false,
-        'scripts/run-migrations.ts must not swallow ECONNREFUSED'
+        'scripts/run-migrations.ts must not swallow ECONNREFUSED',
       );
       assert.strictEqual(
         seedsSrc.includes("!result.error?.includes('ECONNREFUSED')"),
         false,
-        'scripts/run-seeds.ts must not swallow ECONNREFUSED'
+        'scripts/run-seeds.ts must not swallow ECONNREFUSED',
       );
     });
   });
@@ -152,9 +149,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
 
       if (pathname.startsWith('/admin')) {
         const tokenFromCookie = cookieToken || undefined;
-        const tokenFromHeader = authHeader?.startsWith('Bearer ')
-          ? authHeader.substring(7)
-          : null;
+        const tokenFromHeader = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
         const token = tokenFromCookie || tokenFromHeader;
 
@@ -182,7 +177,8 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
         { path: '/admin/users', expectedRedirect: '/login?redirect=%2Fadmin%2Fusers' },
         {
           path: '/admin/users/c74e8910-1111-2222-3333-444455556666',
-          expectedRedirect: '/login?redirect=%2Fadmin%2Fusers%2Fc74e8910-1111-2222-3333-444455556666',
+          expectedRedirect:
+            '/login?redirect=%2Fadmin%2Fusers%2Fc74e8910-1111-2222-3333-444455556666',
         },
       ];
 
@@ -195,7 +191,10 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
         assert.strictEqual(res.status, 307); // NextResponse.redirect default status
         const location = res.headers.get('location');
         assert.ok(location, 'Expected redirect Location header');
-        assert.ok(location.includes(tc.expectedRedirect), `Expected location to include ${tc.expectedRedirect}`);
+        assert.ok(
+          location.includes(tc.expectedRedirect),
+          `Expected location to include ${tc.expectedRedirect}`,
+        );
       }
     });
 
@@ -289,7 +288,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
             assert.ok(err instanceof BadRequestException);
             assert.match(err.message, /Invalid role name/);
             return true;
-          }
+          },
         );
       }
     });
@@ -372,7 +371,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
           assert.ok(err instanceof BadRequestException);
           assert.match(err.message, /Invalid status/);
           return true;
-        }
+        },
       );
     });
 
@@ -418,7 +417,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
     it('3G: AdminApiClient must construct correct HTTP contracts for roles and status', () => {
       const apiClientSrc = fs.readFileSync(
         path.join(ROOT_DIR, 'apps/admin/src/lib/api-client.ts'),
-        'utf-8'
+        'utf-8',
       );
 
       // Verify assignRole
@@ -485,7 +484,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
       const testToken = jwt.sign(
         { userId: 'u-logout-1', roles: ['ADMIN'], status: 'ACTIVE' },
         config.jwtSecret,
-        { algorithm: 'HS256', expiresIn: '1h' }
+        { algorithm: 'HS256', expiresIn: '1h' },
       );
 
       const mockRedis = {
@@ -514,7 +513,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
           assert.ok(err instanceof UnauthorizedException);
           assert.strictEqual(err.message, 'Token has been revoked');
           return true;
-        }
+        },
       );
     });
 
@@ -522,7 +521,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
       const testToken = jwt.sign(
         { userId: 'u-blocked-1', roles: ['CUSTOMER'], status: 'ACTIVE' },
         config.jwtSecret,
-        { algorithm: 'HS256', expiresIn: '1h' }
+        { algorithm: 'HS256', expiresIn: '1h' },
       );
 
       const mockRedis = {
@@ -551,7 +550,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
           assert.ok(err instanceof UnauthorizedException);
           assert.match(err.message, /Account is blocked/i);
           return true;
-        }
+        },
       );
     });
 
@@ -578,7 +577,7 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
       const res = await controller.logout(
         mockReq as any,
         'Bearer sample_jwt_token_to_logout',
-        undefined
+        undefined,
       );
 
       assert.strictEqual(res.success, true);
@@ -598,18 +597,14 @@ describe('Challenger M2-1 Adversarial Stress Suite', () => {
       assert.strictEqual(
         output,
         '',
-        `Phase 0 baseline violations detected! Modified files:\n${output}`
+        `Phase 0 baseline violations detected! Modified files:\n${output}`,
       );
     });
 
     it('5B: No untracked files may exist in frozen Phase 0 paths', () => {
       const cmd = 'git status --porcelain database/ infra/ docs/ scripts/cost-calculator.ts';
       const output = execSync(cmd, { cwd: ROOT_DIR, encoding: 'utf-8' }).trim();
-      assert.strictEqual(
-        output,
-        '',
-        `Untracked or modified Phase 0 files detected:\n${output}`
-      );
+      assert.strictEqual(output, '', `Untracked or modified Phase 0 files detected:\n${output}`);
     });
   });
 });

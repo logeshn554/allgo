@@ -1,11 +1,4 @@
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
@@ -13,14 +6,15 @@ import { Badge } from '@allgo/ui';
 import { Label } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
 interface ManualAssignModalProps {
   assignJobId: string | null;
@@ -77,7 +71,9 @@ export const ManualAssignModal: React.FC<ManualAssignModalProps> = ({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Reason for Override</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Reason for Override
+            </Label>
             <Input
               type="text"
               placeholder="e.g. VIP express dispatch or nearest courier"
@@ -139,7 +135,9 @@ export const CancelJobModal: React.FC<CancelJobModalProps> = ({
         <div className="space-y-4 my-2">
           {setCancelReasonCode && (
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground">Cancellation Reason Code</Label>
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Cancellation Reason Code
+              </Label>
               <Select
                 value={cancelReasonCode || null}
                 items={{
@@ -157,9 +155,15 @@ export const CancelJobModal: React.FC<CancelJobModalProps> = ({
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value="ADMIN_OVERRIDE">Admin Manual Override</SelectItem>
-                    <SelectItem value="CUSTOMER_CANCELLED">Customer Requested Cancellation</SelectItem>
-                    <SelectItem value="MERCHANT_REJECTED">Merchant Out of Stock / Unresponsive</SelectItem>
-                    <SelectItem value="NO_PARTNERS_AVAILABLE">No Partner Available in Zone</SelectItem>
+                    <SelectItem value="CUSTOMER_CANCELLED">
+                      Customer Requested Cancellation
+                    </SelectItem>
+                    <SelectItem value="MERCHANT_REJECTED">
+                      Merchant Out of Stock / Unresponsive
+                    </SelectItem>
+                    <SelectItem value="NO_PARTNERS_AVAILABLE">
+                      No Partner Available in Zone
+                    </SelectItem>
                     <SelectItem value="FRAUD_SUSPECTED">Suspected Fraudulent Activity</SelectItem>
                   </SelectGroup>
                 </SelectContent>
@@ -167,7 +171,9 @@ export const CancelJobModal: React.FC<CancelJobModalProps> = ({
             </div>
           )}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground">Details / Audit Notes</Label>
+            <Label className="text-xs font-semibold text-muted-foreground">
+              Details / Audit Notes
+            </Label>
             <Textarea
               rows={3}
               placeholder="Enter mandatory reason details for audit..."
@@ -219,7 +225,9 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ selectedJob, o
               </div>
               <div>
                 <span className="text-muted-foreground">Courier Fee: </span>
-                <span className="font-bold text-primary">₹{Number(selectedJob.courier_fee_inr || 0).toFixed(2)}</span>
+                <span className="font-bold text-primary">
+                  ₹{Number(selectedJob.courier_fee_inr || 0).toFixed(2)}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Handover OTP: </span>
@@ -242,30 +250,44 @@ export const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ selectedJob, o
             </div>
 
             <div className="pt-2 border-t border-border">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Status Lifecycle Events</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">
+                Status Lifecycle Events
+              </h4>
               <div className="space-y-1 text-xs">
                 {(selectedJob.events || []).map((ev: any) => (
-                  <div key={ev.id} className="flex justify-between items-center py-0.5 border-b border-border last:border-0">
+                  <div
+                    key={ev.id}
+                    className="flex justify-between items-center py-0.5 border-b border-border last:border-0"
+                  >
                     <span className="inline-flex items-center gap-1">
                       <span>{ev.from_status || 'INIT'}</span>
-                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3 text-muted-foreground rtl:rotate-180" />
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        className="size-3 text-muted-foreground rtl:rotate-180"
+                      />
                       <strong>{ev.to_status}</strong> ({ev.actor_role})
                     </span>
-                    <span className="text-muted-foreground">{new Date(ev.created_at).toLocaleTimeString()}</span>
+                    <span className="text-muted-foreground">
+                      {new Date(ev.created_at).toLocaleTimeString()}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="pt-2 border-t border-border">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Dispatch Attempts</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">
+                Dispatch Attempts
+              </h4>
               <div className="space-y-1 text-xs">
                 {(selectedJob.dispatch_attempts || []).length === 0 ? (
                   <div className="text-muted-foreground text-xs">No dispatch attempts yet.</div>
                 ) : (
                   (selectedJob.dispatch_attempts || []).map((da: any) => (
                     <div key={da.id} className="flex justify-between items-center py-0.5">
-                      <span>#{da.attempt_number} {da.partner_name} ({da.status})</span>
+                      <span>
+                        #{da.attempt_number} {da.partner_name} ({da.status})
+                      </span>
                       <span className="text-muted-foreground">Dist: {da.distance_meters}m</span>
                     </div>
                   ))

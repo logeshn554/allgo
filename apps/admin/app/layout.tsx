@@ -1,16 +1,16 @@
-import { Geist_Mono, Inter } from "next/font/google";
-import "./globals.css";
-import { DirectionProvider, ThemeProvider, TooltipProvider, Toaster } from "@allgo/ui";
-import { AuthProvider } from "@/lib/auth-context";
-import { OfflineBanner } from "@/components/OfflineBanner";
-import { TopLoader } from "@/components/TopLoader";
-import { cn } from "@/lib/utils";
+import { Geist_Mono, Inter } from 'next/font/google';
+import './globals.css';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { TopLoader } from '@/components/TopLoader';
+import { AuthProvider } from '@/lib/auth-context';
+import { cn } from '@/lib/utils';
+import { DirectionProvider, ThemeProvider, Toaster, TooltipProvider } from '@allgo/ui';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  subsets: ['latin'],
+  variable: '--font-mono',
 });
 
 export const metadata = {
@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       dir="ltr"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
+      className={cn('antialiased', fontMono.variable, 'font-sans', inter.variable)}
     >
       <body>
         <DirectionProvider direction="ltr">

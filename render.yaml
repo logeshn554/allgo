@@ -5,8 +5,8 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: npm install && npm run build:api
-    startCommand: node apps/api/dist/main.js
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @allgo/api... build
+    startCommand: node services/api/dist/main.js
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_ENV
@@ -15,10 +15,6 @@ services:
         value: 10000
       - key: CORS_ORIGIN
         value: https://allgo-admin.onrender.com,https://allgo-api.onrender.com
-      - key: EXPO_PUBLIC_API_URL
-        value: https://allgo-api.onrender.com/v1
-      - key: EXPO_PUBLIC_WS_URL
-        value: wss://allgo-api.onrender.com/delivery
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -66,8 +62,8 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: npm install && npm run build --workspace=@allgo/admin
-    startCommand: npm run start --workspace=@allgo/admin
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @allgo/admin... build
+    startCommand: pnpm --filter @allgo/admin start
     envVars:
       - key: NODE_ENV
         value: production
@@ -86,8 +82,8 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: npm install && npm run build --workspace=@allgo/webhooks
-    startCommand: node apps/webhooks/dist/index.js
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @allgo/webhooks... build
+    startCommand: node services/webhooks/dist/main.js
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -105,8 +101,8 @@ services:
     runtime: node
     plan: starter
     region: singapore
-    buildCommand: npm install && npm run build --workspace=@allgo/dispatch
-    startCommand: node apps/dispatch/dist/main.js
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @allgo/dispatch... build
+    startCommand: node services/dispatch/dist/main.js
     envVars:
       - key: NODE_ENV
         value: production

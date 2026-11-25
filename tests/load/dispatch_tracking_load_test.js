@@ -1,18 +1,18 @@
-import http from 'k6/http';
 import { check, sleep } from 'k6';
+import http from 'k6/http';
 
 export const options = {
   stages: [
-    { duration: '30s', target: 50 },  // Ramp up to 50 VUs
-    { duration: '1m', target: 200 },  // Ramp up to 200 VUs
-    { duration: '2m', target: 200 },  // Stay at 200 VUs
-    { duration: '30s', target: 500 },  // Spike to 500 VUs
-    { duration: '1m', target: 500 },  // Sustain 500 VUs
-    { duration: '30s', target: 0 },    // Cooldown to 0
+    { duration: '30s', target: 50 }, // Ramp up to 50 VUs
+    { duration: '1m', target: 200 }, // Ramp up to 200 VUs
+    { duration: '2m', target: 200 }, // Stay at 200 VUs
+    { duration: '30s', target: 500 }, // Spike to 500 VUs
+    { duration: '1m', target: 500 }, // Sustain 500 VUs
+    { duration: '30s', target: 0 }, // Cooldown to 0
   ],
   thresholds: {
     http_req_duration: ['p(95)<250', 'p(99)<400'], // 95% of requests under 250ms
-    http_req_failed: ['rate<0.01'],                 // Under 1% errors
+    http_req_failed: ['rate<0.01'], // Under 1% errors
   },
 };
 
@@ -21,7 +21,7 @@ const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'mock_bearer_token';
 
 const headers = {
   'Content-Type': 'application/json',
-  'Authorization': `Bearer ${AUTH_TOKEN}`,
+  Authorization: `Bearer ${AUTH_TOKEN}`,
   'X-AllGo-Role': 'PARTNER',
 };
 
@@ -53,7 +53,7 @@ export default function () {
   // 3. Customer Tracking Query
   const customerHeaders = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${AUTH_TOKEN}`,
+    Authorization: `Bearer ${AUTH_TOKEN}`,
     'X-AllGo-Role': 'CUSTOMER',
   };
 
@@ -62,8 +62,7 @@ export default function () {
     headers: customerHeaders,
   });
   check(trackRes, {
-    'tracking response status acceptable': (r) =>
-      r.status === 200 || r.status === 404,
+    'tracking response status acceptable': (r) => r.status === 200 || r.status === 404,
   });
 
   sleep(2);

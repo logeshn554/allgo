@@ -1,16 +1,16 @@
 import 'reflect-metadata';
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import fs from 'node:fs';
-import path from 'node:path';
 import { execSync } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { beforeEach, describe, it } from 'node:test';
 
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { UsersService } from '../../services/api/dist/users/users.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { UsersService } from '../../apps/api/dist/users/users.service.js';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const BASELINE_COMMIT = '5fe64927af3c97a37ae7b3da973761ec2ac54f91';
@@ -38,8 +38,14 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
   describe('Target 1: Test Doubles Anti-Mocking & Cryptographic Integrity', () => {
     it('1A: InMemoryRedisTestDouble must enforce exact Lua atomic OTP consumption logic', async () => {
       const challengeKey = 'otp:challenge:+919876543210';
-      const validHmac = crypto.createHmac('sha256', 'test_pepper').update('+919876543210:123456').digest('hex');
-      const invalidHmac = crypto.createHmac('sha256', 'test_pepper').update('+919876543210:000000').digest('hex');
+      const validHmac = crypto
+        .createHmac('sha256', 'test_pepper')
+        .update('+919876543210:123456')
+        .digest('hex');
+      const invalidHmac = crypto
+        .createHmac('sha256', 'test_pepper')
+        .update('+919876543210:000000')
+        .digest('hex');
 
       await redisDouble.hset(challengeKey, 'hmac', validHmac);
       await redisDouble.hset(challengeKey, 'attempts', '0');
@@ -69,7 +75,10 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
 
     it('1B: InMemoryRedisTestDouble must atomically delete challenge upon successful verification (replay protection)', async () => {
       const challengeKey = 'otp:challenge:+919876543211';
-      const validHmac = crypto.createHmac('sha256', 'test_pepper').update('+919876543211:654321').digest('hex');
+      const validHmac = crypto
+        .createHmac('sha256', 'test_pepper')
+        .update('+919876543211:654321')
+        .digest('hex');
 
       await redisDouble.hset(challengeKey, 'hmac', validHmac);
       await redisDouble.hset(challengeKey, 'attempts', '0');
@@ -94,7 +103,7 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
 
       // Fire 10 concurrent verification requests
       const promises = Array.from({ length: 10 }, () =>
-        authService.verifyOtp({ phone, code: issuedOtp }).catch((err) => err)
+        authService.verifyOtp({ phone, code: issuedOtp }).catch((err) => err),
       );
 
       const results = await Promise.all(promises);
@@ -112,10 +121,7 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
       assert.strictEqual(sendRes.cooldownSeconds, 60);
 
       // Immediate 2nd attempt during cooldown must fail
-      await assert.rejects(
-        async () => authService.sendOtp({ phone }),
-        /wait 60 seconds/i
-      );
+      await assert.rejects(async () => authService.sendOtp({ phone }), /wait 60 seconds/i);
 
       // Advance/clear cooldown key but keep rate count
       await redisDouble.del(`otp:cooldown:${phone}`);
@@ -131,7 +137,7 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
       // Attempt 4 (>3 per hour) -> Must be rejected by hourly rate limit
       await assert.rejects(
         async () => authService.sendOtp({ phone }),
-        /Too many OTP requests for this phone number/i
+        /Too many OTP requests for this phone number/i,
       );
     });
   });
@@ -158,13 +164,12 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
       const content = fs.readFileSync(handoffPath, 'utf8');
 
       assert.ok(
-        content.includes('where.exe flutter') &&
-        content.includes('Exit Code: 1'),
-        'Worker handoff must document where.exe flutter exit code 1'
+        content.includes('where.exe flutter') && content.includes('Exit Code: 1'),
+        'Worker handoff must document where.exe flutter exit code 1',
       );
       assert.ok(
         content.includes('Implemented but not executed / Blocked by missing host tooling'),
-        'Worker handoff must classify mobile apps accurately'
+        'Worker handoff must classify mobile apps accurately',
       );
     });
   });
@@ -176,18 +181,24 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
     it('3A: Mobile shared API client endpoints must align with Backend controllers', () => {
       const mobileApiClientPath = path.join(
         ROOT_DIR,
-        'packages/mobile_shared/lib/src/api/api_client.dart'
+        'packages/mobile_shared/lib/src/api/api_client.dart',
       );
       assert.ok(fs.existsSync(mobileApiClientPath));
       const mobileCode = fs.readFileSync(mobileApiClientPath, 'utf8');
 
       // Verify mobile endpoints match backend endpoints
       assert.ok(mobileCode.includes('/v1/auth/otp/send'), 'Mobile must target /v1/auth/otp/send');
-      assert.ok(mobileCode.includes('/v1/auth/otp/verify'), 'Mobile must target /v1/auth/otp/verify');
+      assert.ok(
+        mobileCode.includes('/v1/auth/otp/verify'),
+        'Mobile must target /v1/auth/otp/verify',
+      );
       assert.ok(mobileCode.includes('/v1/auth/me'), 'Mobile must target /v1/auth/me');
       assert.ok(mobileCode.includes('/v1/auth/logout'), 'Mobile must target /v1/auth/logout');
       assert.ok(mobileCode.includes('/v1/health'), 'Mobile must target /v1/health');
-      assert.ok(mobileCode.includes("'X-AllGo-Role': activeRole"), 'Mobile must send X-AllGo-Role header');
+      assert.ok(
+        mobileCode.includes("'X-AllGo-Role': activeRole"),
+        'Mobile must send X-AllGo-Role header',
+      );
     });
 
     it('3B: Admin API client endpoints must align with Backend controllers', () => {
@@ -200,11 +211,20 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
       assert.ok(adminCode.includes('/v1/auth/otp/verify'), 'Admin must target /v1/auth/otp/verify');
       assert.ok(adminCode.includes('/v1/users'), 'Admin must target /v1/users');
       assert.ok(adminCode.includes('/v1/users/${id}'), 'Admin must target /v1/users/:id');
-      assert.ok(adminCode.includes('/v1/users/${id}/status'), 'Admin must target /v1/users/:id/status');
-      assert.ok(adminCode.includes('/v1/users/${userId}/roles'), 'Admin must target /v1/users/:userId/roles');
+      assert.ok(
+        adminCode.includes('/v1/users/${id}/status'),
+        'Admin must target /v1/users/:id/status',
+      );
+      assert.ok(
+        adminCode.includes('/v1/users/${userId}/roles'),
+        'Admin must target /v1/users/:userId/roles',
+      );
       assert.ok(adminCode.includes('/v1/auth/logout'), 'Admin must target /v1/auth/logout');
       assert.ok(adminCode.includes('/v1/auth/me'), 'Admin must target /v1/auth/me');
-      assert.ok(adminCode.includes("'X-AllGo-Role': 'ADMIN'"), 'Admin must send X-AllGo-Role: ADMIN');
+      assert.ok(
+        adminCode.includes("'X-AllGo-Role': 'ADMIN'"),
+        'Admin must send X-AllGo-Role: ADMIN',
+      );
     });
 
     it('3C: Backend OpenAPI controllers must implement all cross-app endpoints with Swagger metadata', () => {
@@ -219,23 +239,38 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
       const mainContent = fs.readFileSync(mainPath, 'utf8');
 
       // Backend route definitions & OpenAPI decorators
-      assert.ok(authContent.includes("@Controller('v1/auth')"), 'AuthController must route v1/auth');
+      assert.ok(
+        authContent.includes("@Controller('v1/auth')"),
+        'AuthController must route v1/auth',
+      );
       assert.ok(authContent.includes("@Post('otp/send')"), 'AuthController must have otp/send');
       assert.ok(authContent.includes("@Post('otp/verify')"), 'AuthController must have otp/verify');
       assert.ok(authContent.includes("@Post('logout')"), 'AuthController must have logout');
       assert.ok(authContent.includes("@Get('me')"), 'AuthController must have me');
       assert.ok(authContent.includes('@ApiTags('), 'AuthController must declare OpenAPI ApiTags');
 
-      assert.ok(usersContent.includes("@Controller('v1/users')"), 'UsersController must route v1/users');
-      assert.ok(usersContent.includes("@Patch(':id/status')"), 'UsersController must have :id/status');
+      assert.ok(
+        usersContent.includes("@Controller('v1/users')"),
+        'UsersController must route v1/users',
+      );
+      assert.ok(
+        usersContent.includes("@Patch(':id/status')"),
+        'UsersController must have :id/status',
+      );
       assert.ok(usersContent.includes("@Post(':id/roles')"), 'UsersController must have :id/roles');
       assert.ok(usersContent.includes('@ApiTags('), 'UsersController must declare OpenAPI ApiTags');
 
-      assert.ok(healthContent.includes("@Controller('v1/health')"), 'HealthController must route v1/health');
+      assert.ok(
+        healthContent.includes("@Controller('v1/health')"),
+        'HealthController must route v1/health',
+      );
 
       // CORS allowed headers
       assert.ok(mainContent.includes("'X-AllGo-Role'"), 'Backend CORS must allow X-AllGo-Role');
-      assert.ok(mainContent.includes('SwaggerModule'), 'Backend main.ts must configure SwaggerModule');
+      assert.ok(
+        mainContent.includes('SwaggerModule'),
+        'Backend main.ts must configure SwaggerModule',
+      );
     });
   });
 
@@ -246,11 +281,7 @@ describe('Challenger M3-1 Adversarial Stress & Verification Suite', () => {
     it('4A: Phase 0 paths must have 0 diff against frozen baseline commit', () => {
       const diffCmd = `git diff --name-only ${BASELINE_COMMIT} -- docs/ infra/terraform/ database/migrations/ database/seeds/ scripts/cost-calculator.ts`;
       const output = execSync(diffCmd, { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
-      assert.strictEqual(
-        output,
-        '',
-        `Phase 0 frozen paths were modified: \n${output}`
-      );
+      assert.strictEqual(output, '', `Phase 0 frozen paths were modified: \n${output}`);
     });
   });
 });

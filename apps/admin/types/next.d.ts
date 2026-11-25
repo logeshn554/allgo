@@ -11,7 +11,12 @@ declare module 'next/navigation' {
   export function useRouter(): AppRouterInstance;
   export function usePathname(): string;
   export function useSearchParams(): URLSearchParams;
-  export function useParams<T extends Record<string, string | string[] | undefined> = Record<string, string | string[] | undefined>>(): T;
+  export function useParams<
+    T extends Record<string, string | string[] | undefined> = Record<
+      string,
+      string | string[] | undefined
+    >,
+  >(): T;
   export function redirect(url: string): never;
   export function notFound(): never;
 }
@@ -48,7 +53,6 @@ declare module 'next/server' {
 }
 
 declare module 'next/link' {
-  import React from 'react';
   export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
     href: string;
     replace?: boolean;

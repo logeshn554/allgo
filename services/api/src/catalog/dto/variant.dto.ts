@@ -1,0 +1,67 @@
+import { IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+
+export class CreateVariantDto {
+  @IsString()
+  @IsNotEmpty()
+  variantName!: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  additionalPriceInr = 0.0;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  salePriceInr?: number;
+
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['SIZE', 'WEIGHT', 'PORTION', 'QUANTITY', 'OTHER'])
+  variantType: 'SIZE' | 'WEIGHT' | 'PORTION' | 'QUANTITY' | 'OTHER' = 'SIZE';
+
+  @IsNumber()
+  @IsOptional()
+  displayOrder?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isAvailable = true;
+}
+
+export class UpdateVariantDto {
+  @IsString()
+  @IsOptional()
+  variantName?: string;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  additionalPriceInr?: number;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  salePriceInr?: number;
+
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['SIZE', 'WEIGHT', 'PORTION', 'QUANTITY', 'OTHER'])
+  variantType?: 'SIZE' | 'WEIGHT' | 'PORTION' | 'QUANTITY' | 'OTHER';
+
+  @IsNumber()
+  @IsOptional()
+  displayOrder?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isAvailable?: boolean;
+}

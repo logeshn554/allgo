@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
 import { authApi } from '@/data/api/auth.api';
-import { useAuth } from '@/lib/auth-context';
 import type { ActiveDeviceSession } from '@/data/types';
+import { useAuth } from '@/lib/auth-context';
 import {
   Badge,
   Button,
@@ -15,11 +14,8 @@ import {
   HugeiconsIcon,
   toast,
 } from '@allgo/ui';
-import {
-  Delete02Icon,
-  LaptopPhoneSyncIcon,
-  RefreshIcon,
-} from '@hugeicons/core-free-icons';
+import { Delete02Icon, LaptopPhoneSyncIcon, RefreshIcon } from '@hugeicons/core-free-icons';
+import { useCallback, useEffect, useState } from 'react';
 
 export function LoginDevicesCard() {
   const { clearClientSession } = useAuth();
@@ -120,11 +116,16 @@ export function LoginDevicesCard() {
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <HugeiconsIcon icon={LaptopPhoneSyncIcon} strokeWidth={2} className="size-4 text-primary" />
+            <HugeiconsIcon
+              icon={LaptopPhoneSyncIcon}
+              strokeWidth={2}
+              className="size-4 text-primary"
+            />
             Login Devices &amp; Active Sessions
           </CardTitle>
           <CardDescription className="text-xs mt-1">
-            Review browsers and devices currently signed into your account. Revoking a device immediately invalidates its session cookie.
+            Review browsers and devices currently signed into your account. Revoking a device
+            immediately invalidates its session cookie.
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 shrink-0">

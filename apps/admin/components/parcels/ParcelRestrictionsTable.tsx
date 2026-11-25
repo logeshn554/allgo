@@ -1,20 +1,15 @@
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
+import type React from 'react';
 
 interface ParcelRestrictionsTableProps {
   restrictions: any[];
   onRefresh?: () => void;
 }
 
-export const ParcelRestrictionsTable: React.FC<ParcelRestrictionsTableProps> = ({ restrictions }) => {
+export const ParcelRestrictionsTable: React.FC<ParcelRestrictionsTableProps> = ({
+  restrictions,
+}) => {
   return (
     <div className="space-y-3">
       <div className="text-lg font-semibold tracking-tight">
@@ -52,7 +47,9 @@ export const ParcelRestrictionsTable: React.FC<ParcelRestrictionsTableProps> = (
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{r.max_weight_kg} kg</TableCell>
-                <TableCell className="font-semibold text-foreground">₹{r.max_declared_value_inr}</TableCell>
+                <TableCell className="font-semibold text-foreground">
+                  ₹{r.max_declared_value_inr}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

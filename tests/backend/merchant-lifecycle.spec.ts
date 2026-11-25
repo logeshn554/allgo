@@ -1,6 +1,6 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { MerchantService } from '../../apps/api/dist/merchant/merchant.service.js';
+import { beforeEach, describe, it } from 'node:test';
+import { MerchantService } from '../../services/api/dist/merchant/merchant.service.js';
 import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin Approval', () => {
@@ -48,7 +48,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         outletName: 'Anjappar Anna Nagar Outlet',
         addressLine1: 'No 12, 2nd Avenue',
         postalCode: '600040',
-        latitude: 13.0850,
+        latitude: 13.085,
         longitude: 80.2101,
         phone: '+919876543210',
         defaultPrepTimeMinutes: 15,
@@ -95,7 +95,11 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       } as any);
 
       // Admin suspends merchant
-      await merchantService.updateAdminMerchantStatus(reg.merchant.id, 'SUSPENDED', 'Compliance violation');
+      await merchantService.updateAdminMerchantStatus(
+        reg.merchant.id,
+        'SUSPENDED',
+        'Compliance violation',
+      );
 
       // Attempting to re-register while SUSPENDED must be rejected
       await assert.rejects(
@@ -120,7 +124,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'ForbiddenException',
           message: /Merchant account is suspended by platform administration/,
-        }
+        },
       );
     });
   });
@@ -152,7 +156,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'ForbiddenException',
           message: /Outlet operations locked\. Administrative approval required/,
-        }
+        },
       );
     });
 
@@ -237,7 +241,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'ForbiddenException',
           message: 'Cross-merchant outlet access rejected',
-        }
+        },
       );
     });
   });
@@ -286,7 +290,13 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       });
 
       dbService.orderItems.set(testOrderId, [
-        { itemId: 'item_1', itemName: 'Chicken Biryani', quantity: 2, unitPriceInr: 270.0, totalPriceInr: 540.0 },
+        {
+          itemId: 'item_1',
+          itemName: 'Chicken Biryani',
+          quantity: 2,
+          unitPriceInr: 270.0,
+          totalPriceInr: 540.0,
+        },
       ]);
     });
 
@@ -327,7 +337,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'BadRequestException',
           message: /Invalid status transition from PLACED to READY/,
-        }
+        },
       );
     });
 
@@ -346,12 +356,14 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
 
       await assert.rejects(
         async () => {
-          await merchantService.updateOrderStatus(testOwnerId, testOrderId, { status: 'MERCHANT_ACCEPTED' });
+          await merchantService.updateOrderStatus(testOwnerId, testOrderId, {
+            status: 'MERCHANT_ACCEPTED',
+          });
         },
         {
           name: 'ForbiddenException',
           message: /Order processing locked\. Administrative approval required/,
-        }
+        },
       );
     });
   });
@@ -440,7 +452,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'BadRequestException',
           message: 'Stock quantity cannot be negative',
-        }
+        },
       );
     });
 
@@ -483,7 +495,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'NotFoundException',
           message: /Product not found or cross-merchant access forbidden/,
-        }
+        },
       );
 
       // 4. Owner 2 attempts to delete Owner 1's product
@@ -494,7 +506,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
         {
           name: 'NotFoundException',
           message: /Product not found or cross-merchant access forbidden/,
-        }
+        },
       );
     });
   });
@@ -593,7 +605,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       const docsReq = await merchantService.updateAdminMerchantStatus(
         merchantId,
         'DOCUMENTS_REQUIRED',
-        'Valid FSSAI certificate needed'
+        'Valid FSSAI certificate needed',
       );
       assert.strictEqual(docsReq.merchant.status, 'DOCUMENTS_REQUIRED');
 
@@ -601,7 +613,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       const approval = await merchantService.updateAdminMerchantStatus(
         merchantId,
         'APPROVED',
-        'FSSAI and GSTIN verified via official databases'
+        'FSSAI and GSTIN verified via official databases',
       );
       assert.strictEqual(approval.merchant.status, 'APPROVED');
 
@@ -613,7 +625,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       const suspended = await merchantService.updateAdminMerchantStatus(
         merchantId,
         'SUSPENDED',
-        'Hygiene inspection failure'
+        'Hygiene inspection failure',
       );
       assert.strictEqual(suspended.merchant.status, 'SUSPENDED');
 
@@ -621,7 +633,7 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       const reactivated = await merchantService.updateAdminMerchantStatus(
         merchantId,
         'APPROVED',
-        'Hygiene re-inspection passed'
+        'Hygiene re-inspection passed',
       );
       assert.strictEqual(reactivated.merchant.status, 'APPROVED');
     });
@@ -721,26 +733,50 @@ describe('Phase 2 Backend: Native Merchant Lifecycle, Store Operations & Admin A
       // Check outlets: primary outlet is approved, but branch 2 MUST still be PENDING_APPROVAL
       const outlets = await merchantService.getOutlets(testOwnerId);
       const branch2After = outlets.find((o: any) => o.id === branch2.id);
-      assert.strictEqual(branch2After.outlet_status, 'PENDING_APPROVAL', 'Approval of merchant must NOT auto-activate pending secondary outlets');
+      assert.strictEqual(
+        branch2After.outlet_status,
+        'PENDING_APPROVAL',
+        'Approval of merchant must NOT auto-activate pending secondary outlets',
+      );
       assert.strictEqual(branch2After.is_open, false);
 
       // Now explicitly approve branch 2
-      const adminApproval = await merchantService.updateAdminOutletStatus(branch2.id, 'admin_001', 'ACTIVE', 'Inspection passed');
+      const adminApproval = await merchantService.updateAdminOutletStatus(
+        branch2.id,
+        'admin_001',
+        'ACTIVE',
+        'Inspection passed',
+      );
       assert.strictEqual(adminApproval.outletStatus, 'ACTIVE');
       assert.strictEqual(adminApproval.isOpen, true);
 
       // Admin suspends branch 2
-      const suspended = await merchantService.updateAdminOutletStatus(branch2.id, 'admin_001', 'SUSPENDED', 'Hygiene violation notice');
+      const suspended = await merchantService.updateAdminOutletStatus(
+        branch2.id,
+        'admin_001',
+        'SUSPENDED',
+        'Hygiene violation notice',
+      );
       assert.strictEqual(suspended.outletStatus, 'SUSPENDED');
       assert.strictEqual(suspended.isOpen, false);
 
       // Admin reactivates branch 2
-      const reactivated = await merchantService.updateAdminOutletStatus(branch2.id, 'admin_001', 'ACTIVE', 'Hygiene re-inspection cleared');
+      const reactivated = await merchantService.updateAdminOutletStatus(
+        branch2.id,
+        'admin_001',
+        'ACTIVE',
+        'Hygiene re-inspection cleared',
+      );
       assert.strictEqual(reactivated.outletStatus, 'ACTIVE');
       assert.strictEqual(reactivated.isOpen, true);
 
       // Admin rejects branch 2
-      const rejected = await merchantService.updateAdminOutletStatus(branch2.id, 'admin_001', 'REJECTED', 'Permanent closure notice');
+      const rejected = await merchantService.updateAdminOutletStatus(
+        branch2.id,
+        'admin_001',
+        'REJECTED',
+        'Permanent closure notice',
+      );
       assert.strictEqual(rejected.outletStatus, 'REJECTED');
       assert.strictEqual(rejected.isOpen, false);
     });

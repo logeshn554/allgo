@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
@@ -10,40 +10,86 @@ const COMMON_MODULE_URL = pathToFileURL(COMMON_INDEX_PATH).href;
 
 describe('Monorepo Structure & Core Workspace Scaffolding', () => {
   describe('Root Configuration', () => {
-    it('should have a valid root package.json with workspaces configured', () => {
+    it('should have a valid root package.json configured for pnpm and turbo', () => {
       const pkgPath = path.join(ROOT_DIR, 'package.json');
       assert.ok(fs.existsSync(pkgPath), 'package.json must exist at root');
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       assert.strictEqual(pkg.private, true, 'root package.json must be private');
-      assert.ok(Array.isArray(pkg.workspaces), 'workspaces must be defined as an array');
-      assert.ok(pkg.workspaces.includes('apps/*'), 'workspaces must include apps/*');
-      assert.ok(pkg.workspaces.includes('packages/*'), 'workspaces must include packages/*');
-    });
-
-    it('should configure npm workspaces without pnpm-workspace.yaml', () => {
-      const pnpmWorkspacePath = path.join(ROOT_DIR, 'pnpm-workspace.yaml');
-      assert.strictEqual(
-        fs.existsSync(pnpmWorkspacePath),
-        false,
-        'pnpm-workspace.yaml should not exist when using npm workspaces'
+      assert.match(pkg.packageManager || '', /^pnpm@/, 'packageManager must use pnpm');
+      assert.ok(pkg.devDependencies?.turbo, 'turbo must be in root devDependencies');
+      assert.ok(
+        pkg.devDependencies?.['@biomejs/biome'],
+        '@biomejs/biome must be in root devDependencies',
       );
+      assert.ok(pkg.devDependencies?.husky, 'husky must be in root devDependencies');
     });
 
-    it('should have a valid tsconfig.base.json', () => {
+    it('should configure pnpm-workspace.yaml with apps, services, and packages', () => {
+      const pnpmWorkspacePath = path.join(ROOT_DIR, 'pnpm-workspace.yaml');
+      assert.ok(fs.existsSync(pnpmWorkspacePath), 'pnpm-workspace.yaml must exist');
+      const content = fs.readFileSync(pnpmWorkspacePath, 'utf-8');
+      assert.match(content, /"apps\/\*"|apps\/\*/);
+      assert.match(content, /"services\/\*"|services\/\*/);
+      assert.match(content, /"packages\/\*"|packages\/\*/);
+    });
+
+    it('should have valid turbo.json, biome.json, and tsconfig.base.json', () => {
+      assert.ok(fs.existsSync(path.join(ROOT_DIR, 'turbo.json')), 'turbo.json must exist');
+      assert.ok(fs.existsSync(path.join(ROOT_DIR, 'biome.json')), 'biome.json must exist');
       const tsconfigPath = path.join(ROOT_DIR, 'tsconfig.base.json');
       assert.ok(fs.existsSync(tsconfigPath), 'tsconfig.base.json must exist');
       const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
       assert.ok(tsconfig.compilerOptions, 'compilerOptions must be defined in tsconfig.base.json');
     });
+
+    it('should have grouped Dockerfiles, justfile, melos.yaml, and legacy cleanup applied', () => {
+      for (const rel of [
+        'justfile',
+        'melos.yaml',
+        'infrastructure/docker/node-service.Dockerfile',
+        'infrastructure/docker/nextjs-app.Dockerfile',
+        'infrastructure/docker/test-runner.Dockerfile',
+        'packages/mobile_shared/pubspec.yaml',
+        'apps/hub_mobile/pubspec.yaml',
+      ]) {
+        assert.ok(fs.existsSync(path.join(ROOT_DIR, rel)), `${rel} must exist`);
+      }
+
+      for (const removed of [
+        'apps/mobile',
+        'scratch',
+        'Dockerfile.test-runner',
+        'services/dispatch/Dockerfile',
+        'apps/customer_mobile/.github',
+      ]) {
+        assert.strictEqual(
+          fs.existsSync(path.join(ROOT_DIR, removed)),
+          false,
+          `${removed} must be removed`,
+        );
+      }
+    });
   });
 
-  describe('Workspace Packages and Apps Manifests', () => {
+  describe('Workspace Packages, Services, and Apps Manifests', () => {
     const requiredPackages = [
-      { dir: 'apps/api', name: '@allgo/api' },
-      { dir: 'apps/dispatch', name: '@allgo/dispatch' },
-      { dir: 'apps/webhooks', name: '@allgo/webhooks' },
-      { dir: 'apps/admin', name: '@allgo/admin' },
-      { dir: 'packages/common', name: '@allgo/common' },
+      { dir: 'services/api', name: '@allgo/api', isAppOrService: true },
+      { dir: 'services/dispatch', name: '@allgo/dispatch', isAppOrService: true },
+      { dir: 'services/webhooks', name: '@allgo/webhooks', isAppOrService: true },
+      { dir: 'apps/admin', name: '@allgo/admin', isAppOrService: true },
+      { dir: 'apps/customer-web', name: '@allgo/customer-web', isAppOrService: true },
+      { dir: 'apps/merchant-web', name: '@allgo/merchant-web', isAppOrService: true },
+      { dir: 'apps/partner-web', name: '@allgo/partner-web', isAppOrService: true },
+      { dir: 'apps/hub-web', name: '@allgo/hub-web', isAppOrService: true },
+      { dir: 'packages/common', name: '@allgo/common', isAppOrService: false },
+      { dir: 'packages/env', name: '@allgo/env', isAppOrService: false },
+      { dir: 'packages/api-client', name: '@allgo/api-client', isAppOrService: false },
+      { dir: 'packages/ui', name: '@allgo/ui', isAppOrService: false },
+      {
+        dir: 'packages/config-typescript',
+        name: '@allgo/config-typescript',
+        isAppOrService: false,
+      },
     ];
 
     for (const pkgInfo of requiredPackages) {
@@ -53,11 +99,11 @@ describe('Monorepo Structure & Core Workspace Scaffolding', () => {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
         assert.strictEqual(manifest.name, pkgInfo.name, `Package name must be ${pkgInfo.name}`);
 
-        if (pkgInfo.dir.startsWith('apps/')) {
+        if (pkgInfo.isAppOrService) {
           assert.strictEqual(
             manifest.dependencies && manifest.dependencies['@allgo/common'],
-            '*',
-            `${pkgInfo.name} must depend on @allgo/common via npm workspace "*"`
+            'workspace:*',
+            `${pkgInfo.name} must depend on @allgo/common via pnpm "workspace:*"`,
           );
         } else if (pkgInfo.dir === 'packages/common') {
           assert.ok(manifest.main, '@allgo/common must define main');
@@ -106,7 +152,7 @@ describe('Monorepo Structure & Core Workspace Scaffolding', () => {
         assert.strictEqual(
           common.OrderStatus[status],
           status,
-          `OrderStatus.${status} must equal '${status}'`
+          `OrderStatus.${status} must equal '${status}'`,
         );
       }
     });

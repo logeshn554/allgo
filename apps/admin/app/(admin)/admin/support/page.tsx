@@ -1,21 +1,22 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { adminApi } from '@/lib/api-client';
 import { TicketDetailPane } from '@/components/support/TicketDetailPane';
+import { adminApi } from '@/lib/api-client';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
+import { AlertCircleIcon, CheckmarkCircle01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { CheckmarkCircle01Icon, AlertCircleIcon } from '@hugeicons/core-free-icons';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 const SUPPORT_STATUS_ITEMS = {
   ALL: 'All Statuses',
@@ -109,13 +110,12 @@ export default function SupportAdminPage() {
             Customer & Merchant Support Operations
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Resolve complaints, assign escalations, process goodwill refunds, and audit communication logs.
+            Resolve complaints, assign escalations, process goodwill refunds, and audit
+            communication logs.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={fetchTickets}>
-            Refresh Queue
-          </Button>
+          <Button onClick={fetchTickets}>Refresh Queue</Button>
           <Select
             value={filterStatus || 'ALL'}
             items={SUPPORT_STATUS_ITEMS}
@@ -154,7 +154,9 @@ export default function SupportAdminPage() {
         </div>
       )}
 
-      <div className={`grid ${selectedTicket ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+      <div
+        className={`grid ${selectedTicket ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-6`}
+      >
         {/* TICKET QUEUE */}
         <Card>
           <CardHeader>
@@ -164,7 +166,9 @@ export default function SupportAdminPage() {
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading tickets...</p>
             ) : tickets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tickets found matching the selected filter.</p>
+              <p className="text-sm text-muted-foreground">
+                No tickets found matching the selected filter.
+              </p>
             ) : (
               <div className="space-y-3">
                 {tickets.map((t) => (
@@ -184,15 +188,16 @@ export default function SupportAdminPage() {
                           t.status === 'RESOLVED'
                             ? 'default'
                             : t.status === 'ESCALATED'
-                            ? 'destructive'
-                            : 'secondary'
+                              ? 'destructive'
+                              : 'secondary'
                         }
                       >
                         {t.status}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mb-1">
-                      Category: <b>{t.category}</b> | Priority: <b>{t.priority}</b> | Role: <b>{t.creator_role}</b>
+                      Category: <b>{t.category}</b> | Priority: <b>{t.priority}</b> | Role:{' '}
+                      <b>{t.creator_role}</b>
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Created: {new Date(t.created_at).toLocaleString()}

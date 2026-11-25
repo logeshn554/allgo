@@ -1,5 +1,5 @@
+import type { CreateZoneDto, UpdateZoneSurgeDto } from '../types';
 import { adminFetch } from './base-client';
-import { CreateZoneDto, UpdateZoneSurgeDto } from '../types';
 
 export class ZonesApi {
   async listZones(cityId?: string, isActive?: boolean): Promise<any[]> {

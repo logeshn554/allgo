@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const MERCHANT_APP_DIR = path.join(ROOT_DIR, 'apps/merchant_mobile');
@@ -48,7 +48,10 @@ describe('Phase 2 Mobile: Native Merchant Application Architecture & Swiggy/Zoma
   });
 
   describe('7-Step Onboarding Wizard (apps/merchant_mobile/lib/src/screens/merchant_registration_screen.dart)', () => {
-    const regScreenPath = path.join(MERCHANT_APP_DIR, 'lib/src/screens/merchant_registration_screen.dart');
+    const regScreenPath = path.join(
+      MERCHANT_APP_DIR,
+      'lib/src/screens/merchant_registration_screen.dart',
+    );
 
     it('should implement all 7 progressive onboarding steps', () => {
       assert.ok(fs.existsSync(regScreenPath));
@@ -116,7 +119,10 @@ describe('Phase 2 Mobile: Native Merchant Application Architecture & Swiggy/Zoma
       assert.match(content, /BottomNavigationBarItem\(icon: Icon\(Icons\.dashboard_outlined\)/);
       assert.match(content, /BottomNavigationBarItem\(icon: Icon\(Icons\.receipt_long_outlined\)/);
       assert.match(content, /BottomNavigationBarItem\(icon: Icon\(Icons\.restaurant_menu\)/);
-      assert.match(content, /BottomNavigationBarItem\(icon: Icon\(Icons\.account_balance_wallet_outlined\)/);
+      assert.match(
+        content,
+        /BottomNavigationBarItem\(icon: Icon\(Icons\.account_balance_wallet_outlined\)/,
+      );
       assert.match(content, /BottomNavigationBarItem\(icon: Icon\(Icons\.storefront_outlined\)/);
     });
 
@@ -160,7 +166,10 @@ describe('Phase 2 Mobile: Native Merchant Application Architecture & Swiggy/Zoma
     });
 
     it('should bind real profile data without hardcoded values in merchant profile screen', () => {
-      const profilePath = path.join(MERCHANT_APP_DIR, 'lib/src/screens/merchant_profile_screen.dart');
+      const profilePath = path.join(
+        MERCHANT_APP_DIR,
+        'lib/src/screens/merchant_profile_screen.dart',
+      );
       assert.ok(fs.existsSync(profilePath));
       const content = fs.readFileSync(profilePath, 'utf-8');
 
@@ -245,7 +254,10 @@ describe('Phase 2 Mobile: Native Merchant Application Architecture & Swiggy/Zoma
 
   describe('Multi-Outlet Branch Management (apps/merchant_mobile/lib/src/screens/)', () => {
     it('should implement OutletManagementScreen listing outlets and branch status', () => {
-      const screenPath = path.join(MERCHANT_APP_DIR, 'lib/src/screens/outlet_management_screen.dart');
+      const screenPath = path.join(
+        MERCHANT_APP_DIR,
+        'lib/src/screens/outlet_management_screen.dart',
+      );
       assert.ok(fs.existsSync(screenPath));
       const content = fs.readFileSync(screenPath, 'utf-8');
 

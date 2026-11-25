@@ -1,18 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { ParcelEventsTable } from '@/components/parcels/ParcelEventsTable';
+import { ParcelInfoCards } from '@/components/parcels/ParcelInfoCards';
+import { CancelModal, ReassignModal, ReturnModal } from '@/components/parcels/ParcelModals';
+import { adminApi } from '@/lib/api-client';
+import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { ArrowLeft01Icon } from '@hugeicons/core-free-icons';
-import { adminApi } from '@/lib/api-client';
-import { ParcelInfoCards } from '@/components/parcels/ParcelInfoCards';
-import { ParcelEventsTable } from '@/components/parcels/ParcelEventsTable';
-import {
-  ReassignModal,
-  CancelModal,
-  ReturnModal,
-} from '@/components/parcels/ParcelModals';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function AdminParcelDetailPage() {
   const params = useParams();
@@ -116,7 +113,10 @@ export default function AdminParcelDetailPage() {
   if (error || !parcel) {
     return (
       <div className="space-y-4">
-        <Link href="/admin/parcels" className="text-primary hover:underline font-semibold text-sm inline-flex items-center gap-1.5">
+        <Link
+          href="/admin/parcels"
+          className="text-primary hover:underline font-semibold text-sm inline-flex items-center gap-1.5"
+        >
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 rtl:rotate-180" />
           <span>Back to Parcels</span>
         </Link>
@@ -130,7 +130,10 @@ export default function AdminParcelDetailPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <Link href="/admin/parcels" className="text-primary hover:underline font-semibold text-sm inline-flex items-center gap-1.5">
+        <Link
+          href="/admin/parcels"
+          className="text-primary hover:underline font-semibold text-sm inline-flex items-center gap-1.5"
+        >
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-4 rtl:rotate-180" />
           <span>Back to Parcel Management</span>
         </Link>

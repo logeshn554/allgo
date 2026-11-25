@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'node:crypto';
-import { WebhookService } from '../../apps/webhooks/dist/webhook.service.js';
-import { InMemoryPubSubPublisher } from '../../apps/webhooks/dist/pubsub-publisher.js';
-import { InMemoryIdempotencyStore } from '../../apps/webhooks/dist/idempotency-store.js';
+import { describe, it } from 'node:test';
+import { InMemoryIdempotencyStore } from '../../services/webhooks/dist/idempotency-store.js';
+import { InMemoryPubSubPublisher } from '../../services/webhooks/dist/pubsub-publisher.js';
+import { WebhookService } from '../../services/webhooks/dist/webhook.service.js';
 
 describe('Phase B4: Inbound Webhook Service (apps/webhooks)', () => {
   const secret = 'test_webhook_secret_phase_b';
@@ -49,7 +49,11 @@ describe('Phase B4: Inbound Webhook Service (apps/webhooks)', () => {
     // Duplicate submission with same eventId
     const dupResult = await service.handleInboundWebhook(rawBody, signature, eventData);
     assert.strictEqual(dupResult.status, 'DUPLICATE');
-    assert.strictEqual(pubsub.publishedMessages.length, 1, 'Duplicate event must NOT be republished');
+    assert.strictEqual(
+      pubsub.publishedMessages.length,
+      1,
+      'Duplicate event must NOT be republished',
+    );
   });
 
   it('should reject invalid or forged webhook signatures', async () => {

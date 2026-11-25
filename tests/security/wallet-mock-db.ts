@@ -27,7 +27,11 @@ export class MockDatabaseService {
       this.walletsById.set(wallet.id, wallet);
       return { rows: [wallet] };
     }
-    if (sql.includes('SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1')) {
+    if (
+      sql.includes(
+        'SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1',
+      )
+    ) {
       const found = this.ledgerEntries.find((e) => e.transaction_reference === params[0]);
       return { rows: found ? [found] : [] };
     }
@@ -53,11 +57,15 @@ export class MockDatabaseService {
       this.ledgerEntries.push(entry);
       return { rows: [entry] };
     }
-    if (sql.includes('SELECT') && sql.includes('COALESCE(SUM') && sql.includes('FROM ledger_entries')) {
+    if (
+      sql.includes('SELECT') &&
+      sql.includes('COALESCE(SUM') &&
+      sql.includes('FROM ledger_entries')
+    ) {
       const walletId = params[0];
       const entries = this.ledgerEntries.filter((e) => e.wallet_id === walletId);
       const balance = entries.reduce((acc, curr) => {
-        const amt = parseFloat(curr.amount_inr);
+        const amt = Number.parseFloat(curr.amount_inr);
         return curr.direction === 'CREDIT' ? acc + amt : acc - amt;
       }, 0);
       return { rows: [{ ledger_balance: balance.toFixed(2) }] };
@@ -70,8 +78,10 @@ export class MockDatabaseService {
     if (sql.includes('UPDATE wallets SET refundable_balance_inr = refundable_balance_inr + $1')) {
       const wallet = this.walletsById.get(params[1]);
       if (wallet) {
-        wallet.refundable_balance_inr = (parseFloat(wallet.refundable_balance_inr) + params[0]).toFixed(2);
-        wallet.balance_inr = (parseFloat(wallet.balance_inr) + params[0]).toFixed(2);
+        wallet.refundable_balance_inr = (
+          Number.parseFloat(wallet.refundable_balance_inr) + params[0]
+        ).toFixed(2);
+        wallet.balance_inr = (Number.parseFloat(wallet.balance_inr) + params[0]).toFixed(2);
       }
       return { rows: wallet ? [wallet] : [] };
     }

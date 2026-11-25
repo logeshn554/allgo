@@ -1,33 +1,27 @@
 // E2E / Unit Verification Suite: Phase 4 Merchant & Dark-Store Partner Application
 // Tests Real-Time KDS, Batch Picking, OOS Fulfillment, 1-Tap SKU Toggle, Custody Handover, Settlement Ledger, and RBAC Guard.
 
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { beforeEach, describe, it } from 'node:test';
+import { requireRole } from '../../services/api/src/middleware/rbac.middleware.ts';
 import {
-  loadKdsOrders,
-  saveKdsOrders,
-  acceptKdsOrder,
-  rejectKdsOrder,
-  toggleItemPicked,
-  flagItemOutOfStock,
-  completeDriverHandover,
-  type KdsLiveOrder,
-} from '../../src/data/merchantOrderFulfillment.ts';
-import {
-  loadSkuCatalog,
-  saveSkuCatalog,
   toggleSkuStock,
-  loadStoreSettings,
-  saveStoreSettings,
   toggleStoreBusyMode,
   updatePrepBuffer,
-} from '../../src/data/merchantInventoryApi.ts';
+} from './legacy-mobile-data/merchantInventoryApi.ts';
 import {
-  loadSettlementLedger,
+  acceptKdsOrder,
+  completeDriverHandover,
+  flagItemOutOfStock,
+  loadKdsOrders,
+  rejectKdsOrder,
+  saveKdsOrders,
+  toggleItemPicked,
+} from './legacy-mobile-data/merchantOrderFulfillment.ts';
+import {
   calculateLedgerSummary,
-  type OrderSettlementRecord,
-} from '../../src/data/merchantSettlementLedger.ts';
-import { requireRole } from '../../apps/api/src/middleware/rbac.middleware.ts';
+  loadSettlementLedger,
+} from './legacy-mobile-data/merchantSettlementLedger.ts';
 
 describe('Phase 4: Merchant & Dark-Store Partner Verification', () => {
   beforeEach(() => {
@@ -39,8 +33,24 @@ describe('Phase 4: Merchant & Dark-Store Partner Verification', () => {
         customerPhone: '+91 98888 77777',
         status: 'NEW',
         items: [
-          { id: 'item_a', name: 'Fresh Milk', sku: 'SKU-01', aisle: 'Aisle 1', category: 'Dairy', quantity: 2, priceCents: 6000 },
-          { id: 'item_b', name: 'Brown Bread', sku: 'SKU-02', aisle: 'Aisle 2', category: 'Bakery', quantity: 1, priceCents: 4500 },
+          {
+            id: 'item_a',
+            name: 'Fresh Milk',
+            sku: 'SKU-01',
+            aisle: 'Aisle 1',
+            category: 'Dairy',
+            quantity: 2,
+            priceCents: 6000,
+          },
+          {
+            id: 'item_b',
+            name: 'Brown Bread',
+            sku: 'SKU-02',
+            aisle: 'Aisle 2',
+            category: 'Bakery',
+            quantity: 1,
+            priceCents: 4500,
+          },
         ],
         totalCents: 10500,
         prepTimeMinutes: 15,
@@ -190,7 +200,9 @@ describe('Phase 4: Merchant & Dark-Store Partner Verification', () => {
         headers: {},
       };
       const res: any = {};
-      const next = () => { nextCalled = true; };
+      const next = () => {
+        nextCalled = true;
+      };
 
       guard(req, res, next);
       assert.equal(nextCalled, true);

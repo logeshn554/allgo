@@ -1,38 +1,31 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { adminApi } from '@/lib/api-client';
 import { authSettingsApi } from '@/data/api';
+import { adminApi } from '@/lib/api-client';
 import {
-  StatusBadge,
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Label,
+  StatusBadge,
 } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 const USER_ROLE_ITEMS = {
   ALL: 'All Roles',
@@ -88,7 +81,10 @@ export default function UsersDirectoryPage() {
   }, [selectedRole, selectedStatus]);
 
   const filteredUsers = users.filter((u) =>
-    phoneSearch ? u.phone?.includes(phoneSearch) || u.fullName?.toLowerCase().includes(phoneSearch.toLowerCase()) : true
+    phoneSearch
+      ? u.phone?.includes(phoneSearch) ||
+        u.fullName?.toLowerCase().includes(phoneSearch.toLowerCase())
+      : true,
   );
 
   return (
@@ -100,16 +96,15 @@ export default function UsersDirectoryPage() {
             User Identity & Access Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Search cross-platform identities, review assigned RBAC roles, audit phone verification, and suspend malicious users.
+            Search cross-platform identities, review assigned RBAC roles, audit phone verification,
+            and suspend malicious users.
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowCreate(true)}>
             Create User
           </Button>
-          <Button onClick={fetchUsers}>
-            Refresh Directory
-          </Button>
+          <Button onClick={fetchUsers}>Refresh Directory</Button>
         </div>
       </div>
 
@@ -170,60 +165,67 @@ export default function UsersDirectoryPage() {
       {/* Users Table */}
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
-            <TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User / Phone</TableHead>
+              <TableHead>Assigned Roles</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Registered Date</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
               <TableRow>
-                <TableHead>User / Phone</TableHead>
-                <TableHead>Assigned Roles</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Registered Date</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  Loading user records...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                    Loading user records...
+            ) : filteredUsers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                  No users found matching current filters.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell>
+                    <div className="font-semibold text-foreground">
+                      {u.fullName || 'Registered User'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{u.phone}</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 flex-wrap">
+                      {u.roles.map((r: string) => (
+                        <Badge key={r} variant="secondary" className="text-xs">
+                          {r}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={u.status} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {new Date(u.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false}
+                      render={<Link href={`/admin/users/${u.id}`} />}
+                    >
+                      View Profile & RBAC
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ) : filteredUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
-                    No users found matching current filters.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredUsers.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{u.fullName || 'Registered User'}</div>
-                      <div className="text-xs text-muted-foreground">{u.phone}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {u.roles.map((r: string) => (
-                          <Badge key={r} variant="secondary" className="text-xs">
-                            {r}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={u.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/admin/users/${u.id}`} />}>
-                        View Profile & RBAC
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
@@ -263,19 +265,37 @@ export default function UsersDirectoryPage() {
           >
             <div className="space-y-1">
               <Label>Full Name</Label>
-              <Input value={createName} onChange={(e) => setCreateName(e.target.value)} placeholder="Jane Doe" />
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Jane Doe"
+              />
             </div>
             <div className="space-y-1">
               <Label>Email</Label>
-              <Input type="email" value={createEmail} onChange={(e) => setCreateEmail(e.target.value)} placeholder="user@allgo.in" />
+              <Input
+                type="email"
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                placeholder="user@allgo.in"
+              />
             </div>
             <div className="space-y-1">
               <Label>Phone (E.164)</Label>
-              <Input value={createPhone} onChange={(e) => setCreatePhone(e.target.value)} placeholder="+919876543210" />
+              <Input
+                value={createPhone}
+                onChange={(e) => setCreatePhone(e.target.value)}
+                placeholder="+919876543210"
+              />
             </div>
             <div className="space-y-1">
               <Label>Password (optional)</Label>
-              <Input type="password" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="Min 8 characters" />
+              <Input
+                type="password"
+                value={createPassword}
+                onChange={(e) => setCreatePassword(e.target.value)}
+                placeholder="Min 8 characters"
+              />
             </div>
             <div className="space-y-1">
               <Label>Initial Role</Label>

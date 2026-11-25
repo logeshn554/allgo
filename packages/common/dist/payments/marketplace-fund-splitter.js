@@ -10,9 +10,7 @@ export function calculateMarketplaceFundSplit(req) {
     const merchantPayout = Math.max(0, foodGross - merchantPlatformCut + packaging);
     // Driver compensation: distance fare + tip + courier share (e.g. 80% of delivery fee)
     const driverPercent = req.driverCommissionPercent ?? 80;
-    const driverPayout = req.driverSubAccountId
-        ? Math.round((delivery * driverPercent) / 100)
-        : 0;
+    const driverPayout = req.driverSubAccountId ? Math.round((delivery * driverPercent) / 100) : 0;
     const driverPlatformCut = delivery - driverPayout;
     const platformTake = merchantPlatformCut + driverPlatformCut;
     const transfers = [];

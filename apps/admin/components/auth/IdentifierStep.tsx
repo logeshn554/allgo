@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Badge, Button, HugeiconsIcon, Input, Label, cn } from '@allgo/ui';
 import {
   ArrowRight01Icon,
@@ -8,10 +7,8 @@ import {
   Shield01Icon,
   SmartPhone01Icon,
 } from '@hugeicons/core-free-icons';
-import {
-  getIdentifierActionLabel,
-  getIdentifierPlaceholder,
-} from './identifier';
+import type React from 'react';
+import { getIdentifierActionLabel, getIdentifierPlaceholder } from './identifier';
 import type { AuthMethodsConfig, IdentifierKind } from './types';
 
 interface IdentifierStepProps {
@@ -124,9 +121,7 @@ export function IdentifierStep({
 
       <Button type="submit" disabled={loading} className="w-full">
         <span>{loading ? 'Processing...' : actionLabel}</span>
-        {!loading && (
-          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
-        )}
+        {!loading && <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />}
       </Button>
 
       {canSignup && onToggleAuthMode && (

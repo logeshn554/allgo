@@ -19,18 +19,16 @@
  * - Category 5 (Contract/Interface): Entry points, public barrels, and facade preservation
  */
 
-import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 import {
   ROOT_DIR,
   TARGET_PROJECTS,
   findSourceFiles,
-  getLineCount,
-  isNonTrivialFile,
   inspectRelativeImports,
-  extractDartImports,
+  isNonTrivialFile,
 } from './reorg-test-helpers.ts';
 
 describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Features)', () => {
@@ -54,7 +52,7 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
       assert.strictEqual(
         fs.existsSync(mainDart),
         false,
-        'mobile_shared must not contain main.dart runnable screen entry point'
+        'mobile_shared must not contain main.dart runnable screen entry point',
       );
     });
 
@@ -62,7 +60,10 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
       const compDir = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/components');
       assert.ok(fs.existsSync(compDir), 'lib/src/components/ must exist in mobile_shared');
       const btnPath = path.join(compDir, 'widgets/allgo_button.dart');
-      assert.ok(fs.existsSync(btnPath), 'AllGoButton component must exist under components/widgets');
+      assert.ok(
+        fs.existsSync(btnPath),
+        'AllGoButton component must exist under components/widgets',
+      );
       assert.ok(isNonTrivialFile(btnPath), 'AllGoButton must contain non-trivial implementation');
     });
 
@@ -79,7 +80,10 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
 
     it('F1-C5 (Contract/Interface): should verify ApiClient public class with domain methods', () => {
       const apiClientPath = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/api/api_client.dart');
-      assert.ok(fs.existsSync(apiClientPath), 'api_client.dart must exist for backward compatibility');
+      assert.ok(
+        fs.existsSync(apiClientPath),
+        'api_client.dart must exist for backward compatibility',
+      );
       const content = fs.readFileSync(apiClientPath, 'utf-8');
       assert.match(content, /class\s+ApiClient/);
       assert.match(content, /sendOtp/);
@@ -103,7 +107,11 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
       const files = findSourceFiles(modelsDir);
       for (const f of files) {
         const content = fs.readFileSync(f, 'utf-8');
-        assert.doesNotMatch(content, /extends\s+StatefulWidget/, `${f} should not declare UI widgets`);
+        assert.doesNotMatch(
+          content,
+          /extends\s+StatefulWidget/,
+          `${f} should not declare UI widgets`,
+        );
       }
     });
 
@@ -117,8 +125,14 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F2-C4 (Data Layer): should verify discovery and parcel models in data/models', () => {
-      const discoveryOutlet = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/data/models/discovery_outlet.dart');
-      const parcelModel = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/data/models/parcel.dart');
+      const discoveryOutlet = path.join(
+        TARGET_PROJECTS.mobileShared,
+        'lib/src/data/models/discovery_outlet.dart',
+      );
+      const parcelModel = path.join(
+        TARGET_PROJECTS.mobileShared,
+        'lib/src/data/models/parcel.dart',
+      );
       assert.ok(fs.existsSync(discoveryOutlet), 'discovery_outlet.dart must exist in data/models');
       assert.ok(fs.existsSync(parcelModel), 'parcel.dart must exist in data/models');
     });
@@ -146,25 +160,43 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F3-C2 (Pages/Views): should verify customer home shell / page view exists', () => {
-      const homeScreen = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/customer_home_shell.dart');
-      const homePage = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/pages/customer_home_page.dart');
+      const homeScreen = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/customer_home_shell.dart',
+      );
+      const homePage = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/pages/customer_home_page.dart',
+      );
       const exists = fs.existsSync(homeScreen) || fs.existsSync(homePage);
       assert.ok(exists, 'Customer home view must exist under screens/ or pages/');
     });
 
     it('F3-C3 (Components): should verify outlet catalog UI components and cards', () => {
-      const catalogScreen = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/outlet_catalog_screen.dart');
-      const catalogPage = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/pages/outlet_catalog_page.dart');
+      const catalogScreen = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/outlet_catalog_screen.dart',
+      );
+      const catalogPage = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/pages/outlet_catalog_page.dart',
+      );
       const exists = fs.existsSync(catalogScreen) || fs.existsSync(catalogPage);
       assert.ok(exists, 'Outlet catalog view must exist under screens/ or pages/');
     });
 
     it('F3-C4 (Data Layer): should verify catalog state and API data fetching structure', () => {
-      const catalogFile = fs.existsSync(path.join(TARGET_PROJECTS.customerMobile, 'lib/src/pages/outlet_catalog_page.dart'))
+      const catalogFile = fs.existsSync(
+        path.join(TARGET_PROJECTS.customerMobile, 'lib/src/pages/outlet_catalog_page.dart'),
+      )
         ? path.join(TARGET_PROJECTS.customerMobile, 'lib/src/pages/outlet_catalog_page.dart')
         : path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/outlet_catalog_screen.dart');
       const content = fs.readFileSync(catalogFile, 'utf-8');
-      assert.match(content, /client|api|Catalog|Outlet/i, 'Catalog screen must interact with catalog data');
+      assert.match(
+        content,
+        /client|api|Catalog|Outlet/i,
+        'Catalog screen must interact with catalog data',
+      );
     });
 
     it('F3-C5 (Contract/Interface): should verify main entry point boots customer application shell', () => {
@@ -181,38 +213,67 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
   // --------------------------------------------------------------------------
   describe('Feature 4: customer_mobile Mobility & Parcels Modularization', () => {
     it('F4-C1 (Scaffold): should verify Android/iOS platform manifests specify in.allgo.customer', () => {
-      const manifestPath = path.join(TARGET_PROJECTS.customerMobile, 'android/app/src/main/AndroidManifest.xml');
+      const manifestPath = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'android/app/src/main/AndroidManifest.xml',
+      );
       assert.ok(fs.existsSync(manifestPath), 'Customer AndroidManifest.xml must exist');
       const content = fs.readFileSync(manifestPath, 'utf-8');
       assert.match(content, /in\.allgo\.customer/);
     });
 
     it('F4-C2 (Pages/Views): should verify mobility, ride booking, and parcel sending views exist', () => {
-      const parcelFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/parcel_send_screen.dart');
-      const rideFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/ride_booking_screen.dart');
-      const driverFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/hire_driver_screen.dart');
+      const parcelFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/parcel_send_screen.dart',
+      );
+      const rideFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/ride_booking_screen.dart',
+      );
+      const driverFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/hire_driver_screen.dart',
+      );
       assert.ok(fs.existsSync(parcelFile), 'parcel_send_screen must exist');
       assert.ok(fs.existsSync(rideFile), 'ride_booking_screen must exist');
       assert.ok(fs.existsSync(driverFile), 'hire_driver_screen must exist');
     });
 
     it('F4-C3 (Components): should verify vehicle selector and package dimension UI structures', () => {
-      const parcelFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/parcel_send_screen.dart');
+      const parcelFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/parcel_send_screen.dart',
+      );
       const content = fs.readFileSync(parcelFile, 'utf-8');
       assert.match(content, /TextEditingController|Form|StatefulWidget/);
       assert.ok(content.length > 500, 'Parcel view must provide comprehensive UI form elements');
     });
 
     it('F4-C4 (Data Layer): should verify mobility fare estimates and parcel quote data handling', () => {
-      const rideFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/ride_booking_screen.dart');
+      const rideFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/ride_booking_screen.dart',
+      );
       const content = fs.readFileSync(rideFile, 'utf-8');
-      assert.match(content, /fare|estimate|booking|quote/i, 'Ride booking must handle fare estimates');
+      assert.match(
+        content,
+        /fare|estimate|booking|quote/i,
+        'Ride booking must handle fare estimates',
+      );
     });
 
     it('F4-C5 (Contract/Interface): should verify navigation routing connects to mobility flows', () => {
-      const homeFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/customer_home_shell.dart');
+      const homeFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/customer_home_shell.dart',
+      );
       const content = fs.readFileSync(homeFile, 'utf-8');
-      assert.match(content, /ride|parcel|mobility/i, 'Home shell must route to mobility and parcels');
+      assert.match(
+        content,
+        /ride|parcel|mobility/i,
+        'Home shell must route to mobility and parcels',
+      );
     });
   });
 
@@ -221,34 +282,55 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
   // --------------------------------------------------------------------------
   describe('Feature 5: customer_mobile Checkout & Orders Modularization', () => {
     it('F5-C1 (Scaffold): should verify cart and checkout source assets existence', () => {
-      const cartFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/cart_screen.dart');
+      const cartFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/cart_screen.dart',
+      );
       assert.ok(fs.existsSync(cartFile), 'cart_screen.dart must exist');
       assert.ok(isNonTrivialFile(cartFile), 'cart_screen must have non-trivial content');
     });
 
     it('F5-C2 (Pages/Views): should verify checkout, order detail, and tracking views exist', () => {
-      const checkoutFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/checkout_screen.dart');
-      const orderDetailFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/order_detail_screen.dart');
-      const trackingFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/delivery_tracking_screen.dart');
+      const checkoutFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/checkout_screen.dart',
+      );
+      const orderDetailFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/order_detail_screen.dart',
+      );
+      const trackingFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/delivery_tracking_screen.dart',
+      );
       assert.ok(fs.existsSync(checkoutFile), 'checkout_screen must exist');
       assert.ok(fs.existsSync(orderDetailFile), 'order_detail_screen must exist');
       assert.ok(fs.existsSync(trackingFile), 'delivery_tracking_screen must exist');
     });
 
     it('F5-C3 (Components): should verify order summary, address selector, and tracking timeline components', () => {
-      const checkoutFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/checkout_screen.dart');
+      const checkoutFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/checkout_screen.dart',
+      );
       const content = fs.readFileSync(checkoutFile, 'utf-8');
       assert.match(content, /payment|address|summary|order/i);
     });
 
     it('F5-C4 (Data Layer): should verify cart state management and active order polling data', () => {
-      const trackingFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/delivery_tracking_screen.dart');
+      const trackingFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/delivery_tracking_screen.dart',
+      );
       const content = fs.readFileSync(trackingFile, 'utf-8');
       assert.match(content, /status|order|tracking|delivery/i);
     });
 
     it('F5-C5 (Contract/Interface): should verify checkout progression contracts with payment callbacks', () => {
-      const checkoutFile = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/checkout_screen.dart');
+      const checkoutFile = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/checkout_screen.dart',
+      );
       const content = fs.readFileSync(checkoutFile, 'utf-8');
       assert.match(content, /Navigator|pop|push|onSuccess|pay/i);
     });
@@ -287,7 +369,10 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F6-C5 (Contract/Interface): should verify legacy screen bridge compatibility for backward safety', () => {
-      const splashScreen = path.join(TARGET_PROJECTS.customerMobile, 'lib/src/screens/splash_screen.dart');
+      const splashScreen = path.join(
+        TARGET_PROJECTS.customerMobile,
+        'lib/src/screens/splash_screen.dart',
+      );
       assert.ok(fs.existsSync(splashScreen), 'splash_screen must exist at legacy location');
       assert.ok(isNonTrivialFile(splashScreen), 'splash_screen must have non-trivial content');
     });
@@ -300,33 +385,51 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     it('F7-C1 (Scaffold): should verify partner pubspec.yaml and platform manifests specify in.allgo.partner', () => {
       const pubspec = path.join(TARGET_PROJECTS.partnerMobile, 'pubspec.yaml');
       assert.ok(fs.existsSync(pubspec), 'partner_mobile pubspec.yaml must exist');
-      const manifest = path.join(TARGET_PROJECTS.partnerMobile, 'android/app/src/main/AndroidManifest.xml');
+      const manifest = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'android/app/src/main/AndroidManifest.xml',
+      );
       assert.ok(fs.existsSync(manifest), 'partner AndroidManifest.xml must exist');
       assert.match(fs.readFileSync(manifest, 'utf-8'), /in\.allgo\.partner/);
     });
 
     it('F7-C2 (Pages/Views): should verify partner home shell and registration views exist', () => {
-      const homeShell = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/partner_home_shell.dart');
-      const registration = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/partner_registration_screen.dart');
+      const homeShell = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/partner_home_shell.dart',
+      );
+      const registration = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/partner_registration_screen.dart',
+      );
       assert.ok(fs.existsSync(homeShell), 'partner_home_shell must exist');
       assert.ok(fs.existsSync(registration), 'partner_registration_screen must exist');
     });
 
     it('F7-C3 (Components): should verify duty toggle bar and radar orders sheet components', () => {
-      const homeShell = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/partner_home_shell.dart');
+      const homeShell = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/partner_home_shell.dart',
+      );
       const content = fs.readFileSync(homeShell, 'utf-8');
       assert.match(content, /duty|online|toggle|radar/i, 'Home shell must provide duty controls');
     });
 
     it('F7-C4 (Data Layer): should verify partner duty status, location telemetry, and earnings data', () => {
-      const earningsFile = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/partner_earnings_screen.dart');
+      const earningsFile = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/partner_earnings_screen.dart',
+      );
       assert.ok(fs.existsSync(earningsFile), 'partner_earnings_screen must exist');
       const content = fs.readFileSync(earningsFile, 'utf-8');
       assert.match(content, /payout|earnings|commission|ledger/i);
     });
 
     it('F7-C5 (Contract/Interface): should verify partner approval guard prevents unverified partners going online', () => {
-      const approvalScreen = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/approval_status_screen.dart');
+      const approvalScreen = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/approval_status_screen.dart',
+      );
       assert.ok(fs.existsSync(approvalScreen), 'approval_status_screen must exist');
       const content = fs.readFileSync(approvalScreen, 'utf-8');
       assert.match(content, /APPROVED|PENDING|REJECTED|status/i);
@@ -340,19 +443,28 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     it('F8-C1 (Scaffold): should verify merchant pubspec.yaml and platform manifests specify in.allgo.merchant', () => {
       const pubspec = path.join(TARGET_PROJECTS.merchantMobile, 'pubspec.yaml');
       assert.ok(fs.existsSync(pubspec), 'merchant_mobile pubspec.yaml must exist');
-      const manifest = path.join(TARGET_PROJECTS.merchantMobile, 'android/app/src/main/AndroidManifest.xml');
+      const manifest = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'android/app/src/main/AndroidManifest.xml',
+      );
       assert.ok(fs.existsSync(manifest), 'merchant AndroidManifest.xml must exist');
       assert.match(fs.readFileSync(manifest, 'utf-8'), /in\.allgo\.merchant/);
     });
 
     it('F8-C2 (Pages/Views): should verify merchant dashboard shell with operational views exists', () => {
-      const shellFile = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/merchant_dashboard_shell.dart');
+      const shellFile = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/merchant_dashboard_shell.dart',
+      );
       assert.ok(fs.existsSync(shellFile), 'merchant_dashboard_shell must exist');
       assert.ok(isNonTrivialFile(shellFile), 'merchant_dashboard_shell must be non-trivial');
     });
 
     it('F8-C3 (Components): should verify 5 operational tabs (Live Orders, Menu, Analytics, Outlets, Profile) components', () => {
-      const shellFile = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/merchant_dashboard_shell.dart');
+      const shellFile = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/merchant_dashboard_shell.dart',
+      );
       const content = fs.readFileSync(shellFile, 'utf-8');
       assert.match(content, /Live Orders|Orders/i);
       assert.match(content, /Menu|Catalog/i);
@@ -362,13 +474,19 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F8-C4 (Data Layer): should verify live order queue stream and store toggle data models', () => {
-      const shellFile = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/merchant_dashboard_shell.dart');
+      const shellFile = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/merchant_dashboard_shell.dart',
+      );
       const content = fs.readFileSync(shellFile, 'utf-8');
       assert.match(content, /prep|open|closed|accept|reject/i);
     });
 
     it('F8-C5 (Contract/Interface): should verify merchant operational gating prevents unauthorized access', () => {
-      const approvalScreen = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/approval_status_screen.dart');
+      const approvalScreen = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/approval_status_screen.dart',
+      );
       assert.ok(fs.existsSync(approvalScreen), 'approval_status_screen must exist');
       const content = fs.readFileSync(approvalScreen, 'utf-8');
       assert.match(content, /APPROVED|PENDING|status/i);
@@ -380,35 +498,56 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
   // --------------------------------------------------------------------------
   describe('Feature 9: merchant_mobile Operating Hours & Registration Decomposition', () => {
     it('F9-C1 (Scaffold): should verify multi-step onboarding assets and statutory document fields', () => {
-      const regScreen = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/merchant_registration_screen.dart');
+      const regScreen = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/merchant_registration_screen.dart',
+      );
       assert.ok(fs.existsSync(regScreen), 'merchant_registration_screen must exist');
       const content = fs.readFileSync(regScreen, 'utf-8');
       assert.match(content, /PAN|FSSAI|GSTIN/i, 'Registration must collect statutory compliance');
     });
 
     it('F9-C2 (Pages/Views): should verify operating hours, merchant registration, and profile views exist', () => {
-      const opHours = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/operating_hours_screen.dart');
-      const profile = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/merchant_profile_screen.dart');
+      const opHours = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/operating_hours_screen.dart',
+      );
+      const profile = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/merchant_profile_screen.dart',
+      );
       assert.ok(fs.existsSync(opHours), 'operating_hours_screen must exist');
       assert.ok(fs.existsSync(profile), 'merchant_profile_screen must exist');
     });
 
     it('F9-C3 (Components): should verify operating hours time slot table and KYC upload components', () => {
-      const opHours = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/operating_hours_screen.dart');
+      const opHours = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/operating_hours_screen.dart',
+      );
       const content = fs.readFileSync(opHours, 'utf-8');
       assert.match(content, /Time|slot|open|close|day/i);
     });
 
     it('F9-C4 (Data Layer): should verify slot validation logic and statutory compliance data models', () => {
-      const modelFile = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/models/operating_hours.dart');
+      const modelFile = path.join(
+        TARGET_PROJECTS.mobileShared,
+        'lib/src/models/operating_hours.dart',
+      );
       assert.ok(fs.existsSync(modelFile), 'operating_hours.dart model must exist in mobile_shared');
       const content = fs.readFileSync(modelFile, 'utf-8');
       assert.match(content, /DayOfWeek|openTime|closeTime|isClosed/i);
     });
 
     it('F9-C5 (Contract/Interface): should verify multi-outlet branch creation and management flow', () => {
-      const outletMgmt = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/outlet_management_screen.dart');
-      const createOutlet = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/create_outlet_screen.dart');
+      const outletMgmt = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/outlet_management_screen.dart',
+      );
+      const createOutlet = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/create_outlet_screen.dart',
+      );
       assert.ok(fs.existsSync(outletMgmt), 'outlet_management_screen must exist');
       assert.ok(fs.existsSync(createOutlet), 'create_outlet_screen must exist');
     });
@@ -443,15 +582,27 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F10-C4 (Data Layer): should verify data models and state management isolated into data layer', () => {
-      const partnerModel = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/models/partner_profile.dart');
-      const merchantModel = path.join(TARGET_PROJECTS.mobileShared, 'lib/src/models/merchant_profile.dart');
+      const partnerModel = path.join(
+        TARGET_PROJECTS.mobileShared,
+        'lib/src/models/partner_profile.dart',
+      );
+      const merchantModel = path.join(
+        TARGET_PROJECTS.mobileShared,
+        'lib/src/models/merchant_profile.dart',
+      );
       assert.ok(fs.existsSync(partnerModel), 'partner_profile model must exist');
       assert.ok(fs.existsSync(merchantModel), 'merchant_profile model must exist');
     });
 
     it('F10-C5 (Contract/Interface): should verify legacy screen bridge paths resolve without breaking test runners', () => {
-      const pSplash = path.join(TARGET_PROJECTS.partnerMobile, 'lib/src/screens/splash_screen.dart');
-      const mSplash = path.join(TARGET_PROJECTS.merchantMobile, 'lib/src/screens/splash_screen.dart');
+      const pSplash = path.join(
+        TARGET_PROJECTS.partnerMobile,
+        'lib/src/screens/splash_screen.dart',
+      );
+      const mSplash = path.join(
+        TARGET_PROJECTS.merchantMobile,
+        'lib/src/screens/splash_screen.dart',
+      );
       assert.ok(fs.existsSync(pSplash), 'partner splash screen must exist');
       assert.ok(fs.existsSync(mSplash), 'merchant splash screen must exist');
     });
@@ -515,7 +666,9 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     it('F12-C2 (Pages/Views): should verify admin routes exist under src/app/admin/', () => {
       const adminApp = path.join(TARGET_PROJECTS.admin, 'src/app/admin');
       assert.ok(fs.existsSync(adminApp), 'src/app/admin must exist');
-      const subdirs = fs.readdirSync(adminApp, { withFileTypes: true }).filter((d) => d.isDirectory());
+      const subdirs = fs
+        .readdirSync(adminApp, { withFileTypes: true })
+        .filter((d) => d.isDirectory());
       assert.ok(subdirs.length >= 5, 'src/app/admin must contain primary domain route directories');
     });
 
@@ -532,10 +685,19 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
 
     it('F12-C4 (Data Layer): should verify domain data types in src/data/types/ (orders, mobility, zones, finance, etc.)', () => {
       const typesDir = path.join(TARGET_PROJECTS.admin, 'src/data/types');
-      assert.ok(fs.existsSync(path.join(typesDir, 'orders.types.ts')), 'orders.types.ts must exist');
-      assert.ok(fs.existsSync(path.join(typesDir, 'mobility.types.ts')), 'mobility.types.ts must exist');
+      assert.ok(
+        fs.existsSync(path.join(typesDir, 'orders.types.ts')),
+        'orders.types.ts must exist',
+      );
+      assert.ok(
+        fs.existsSync(path.join(typesDir, 'mobility.types.ts')),
+        'mobility.types.ts must exist',
+      );
       assert.ok(fs.existsSync(path.join(typesDir, 'zones.types.ts')), 'zones.types.ts must exist');
-      assert.ok(fs.existsSync(path.join(typesDir, 'finance.types.ts')), 'finance.types.ts must exist');
+      assert.ok(
+        fs.existsSync(path.join(typesDir, 'finance.types.ts')),
+        'finance.types.ts must exist',
+      );
     });
 
     it('F12-C5 (Contract/Interface): should verify server-side middleware and AuthContext role guards protect admin console', () => {
@@ -562,14 +724,20 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
 
     it('F13-C2 (Pages/Views): should verify Merchant and Catalog REST controllers define HTTP route handlers', () => {
       const merchantCtrl = path.join(TARGET_PROJECTS.api, 'src/merchant/merchant.controller.ts');
-      const catalogCtrl = path.join(TARGET_PROJECTS.api, 'src/catalog/merchant-catalog.controller.ts');
+      const catalogCtrl = path.join(
+        TARGET_PROJECTS.api,
+        'src/catalog/merchant-catalog.controller.ts',
+      );
       assert.ok(fs.existsSync(merchantCtrl), 'merchant.controller.ts must exist');
       assert.ok(fs.existsSync(catalogCtrl), 'merchant-catalog.controller.ts must exist');
     });
 
     it('F13-C3 (Components): should verify decomposed catalog sub-services (catalog-media, operating-hours, etc.)', () => {
       const mediaService = path.join(TARGET_PROJECTS.api, 'src/catalog/catalog-media.service.ts');
-      const opHoursService = path.join(TARGET_PROJECTS.api, 'src/catalog/operating-hours.service.ts');
+      const opHoursService = path.join(
+        TARGET_PROJECTS.api,
+        'src/catalog/operating-hours.service.ts',
+      );
       assert.ok(fs.existsSync(mediaService), 'catalog-media.service.ts must exist');
       assert.ok(fs.existsSync(opHoursService), 'operating-hours.service.ts must exist');
     });
@@ -608,9 +776,15 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
     });
 
     it('F14-C3 (Components): should verify dispatch, pricing, and restriction sub-services in parcel domain', () => {
-      const dispatchService = path.join(TARGET_PROJECTS.api, 'src/parcel/parcel-dispatch.service.ts');
+      const dispatchService = path.join(
+        TARGET_PROJECTS.api,
+        'src/parcel/parcel-dispatch.service.ts',
+      );
       const pricingService = path.join(TARGET_PROJECTS.api, 'src/parcel/parcel-pricing.service.ts');
-      const restrictionService = path.join(TARGET_PROJECTS.api, 'src/parcel/parcel-restriction.service.ts');
+      const restrictionService = path.join(
+        TARGET_PROJECTS.api,
+        'src/parcel/parcel-restriction.service.ts',
+      );
       assert.ok(fs.existsSync(dispatchService), 'parcel-dispatch.service.ts must exist');
       assert.ok(fs.existsSync(pricingService), 'parcel-pricing.service.ts must exist');
       assert.ok(fs.existsSync(restrictionService), 'parcel-restriction.service.ts must exist');
@@ -668,7 +842,11 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
       const financeDir = path.join(TARGET_PROJECTS.api, 'src/finance');
       const files = findSourceFiles(financeDir);
       assert.ok(files.length > 0, 'finance directory must contain financial service files');
-      const hasLedger = files.some((f) => fs.readFileSync(f, 'utf-8').includes('ledger') || fs.readFileSync(f, 'utf-8').includes('wallet'));
+      const hasLedger = files.some(
+        (f) =>
+          fs.readFileSync(f, 'utf-8').includes('ledger') ||
+          fs.readFileSync(f, 'utf-8').includes('wallet'),
+      );
       assert.ok(hasLedger, 'finance services must handle ledger or wallet operations');
     });
   });
@@ -684,17 +862,19 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
       assert.strictEqual(
         content.compilerOptions.module.toLowerCase(),
         'nodenext',
-        'compilerOptions.module must be NodeNext'
+        'compilerOptions.module must be NodeNext',
       );
       assert.strictEqual(
         content.compilerOptions.moduleResolution.toLowerCase(),
         'nodenext',
-        'compilerOptions.moduleResolution must be NodeNext'
+        'compilerOptions.moduleResolution must be NodeNext',
       );
     });
 
     it('F16-C2 (Pages/Views): should verify all relative imports in controller files end with .js', () => {
-      const files = findSourceFiles(path.join(TARGET_PROJECTS.api, 'src')).filter((f) => f.includes('.controller.ts'));
+      const files = findSourceFiles(path.join(TARGET_PROJECTS.api, 'src')).filter((f) =>
+        f.includes('.controller.ts'),
+      );
       assert.ok(files.length > 0, 'Controller files must be found');
       for (const f of files) {
         const content = fs.readFileSync(f, 'utf-8');
@@ -702,14 +882,16 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
         for (const imp of relativeImports) {
           assert.ok(
             imp.hasJsExtension,
-            `Controller relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`
+            `Controller relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`,
           );
         }
       }
     });
 
     it('F16-C3 (Components): should verify all relative imports in service files end with .js', () => {
-      const files = findSourceFiles(path.join(TARGET_PROJECTS.api, 'src')).filter((f) => f.includes('.service.ts'));
+      const files = findSourceFiles(path.join(TARGET_PROJECTS.api, 'src')).filter((f) =>
+        f.includes('.service.ts'),
+      );
       assert.ok(files.length > 0, 'Service files must be found');
       for (const f of files) {
         const content = fs.readFileSync(f, 'utf-8');
@@ -717,7 +899,7 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
         for (const imp of relativeImports) {
           assert.ok(
             imp.hasJsExtension,
-            `Service relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`
+            `Service relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`,
           );
         }
       }
@@ -735,7 +917,7 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
         for (const imp of relativeImports) {
           assert.ok(
             imp.hasJsExtension,
-            `Infrastructure relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`
+            `Infrastructure relative import without .js extension in ${f}:${imp.line} -> ${imp.importPath}`,
           );
         }
       }
@@ -751,11 +933,14 @@ describe('Tier 1: Feature Coverage (Category-Partition Testing across 17 Feature
           checkedCount++;
           assert.ok(
             imp.hasJsExtension,
-            `Relative import missing .js extension in ${f}:${imp.line} -> ${imp.importPath}`
+            `Relative import missing .js extension in ${f}:${imp.line} -> ${imp.importPath}`,
           );
         }
       }
-      assert.ok(checkedCount > 100, `Expected > 100 relative imports checked in apps/api/src (checked: ${checkedCount})`);
+      assert.ok(
+        checkedCount > 100,
+        `Expected > 100 relative imports checked in apps/api/src (checked: ${checkedCount})`,
+      );
     });
   });
 

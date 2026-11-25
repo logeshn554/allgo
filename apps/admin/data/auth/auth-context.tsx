@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authApi } from '../api/auth.api';
+import { type StoredAdminSession, type UserSummary, isTwoFactorChallenge } from '../types';
 import {
   clearLegacyAuthStorage,
   clearStoredSessions,
@@ -10,11 +12,12 @@ import {
   removeStoredSession,
   updateStoredSessionUser,
 } from './session-store';
-import { isTwoFactorChallenge, StoredAdminSession, UserSummary } from '../types';
 
-export type LoginActionResult =
-  | { requiresTwoFactor: true; twoFactorToken: string; identifier?: string }
-  | void;
+export type LoginActionResult = {
+  requiresTwoFactor: true;
+  twoFactorToken: string;
+  identifier?: string;
+} | void;
 
 export interface AuthContextType {
   user: UserSummary | null;
@@ -42,10 +45,7 @@ export interface AuthContextType {
     code: string,
     redirectTo?: string,
   ) => Promise<LoginActionResult>;
-  completeOAuthLogin: (
-    oauthCode: string,
-    redirectTo?: string,
-  ) => Promise<LoginActionResult>;
+  completeOAuthLogin: (oauthCode: string, redirectTo?: string) => Promise<LoginActionResult>;
   verifyTwoFactorLogin: (
     twoFactorToken: string,
     code: string,

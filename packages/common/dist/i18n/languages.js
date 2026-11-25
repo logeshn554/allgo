@@ -25,11 +25,7 @@ export const NEXT_LANGUAGES = ['hi'];
 /**
  * All officially planned language codes
  */
-export const ALL_SUPPORTED_LANGUAGES = [
-    'en',
-    'ta',
-    'hi',
-];
+export const ALL_SUPPORTED_LANGUAGES = ['en', 'ta', 'hi'];
 export const LANGUAGE_REGISTRY = {
     en: {
         code: 'en',

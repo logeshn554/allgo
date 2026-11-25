@@ -8,7 +8,11 @@ const MIGRATIONS_DIR = path.join(ROOT_DIR, 'database/migrations');
 const DATABASE_URL =
   process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/allgo_dev';
 
-export async function runMigrations(): Promise<{ success: boolean; applied: string[]; error?: string }> {
+export async function runMigrations(): Promise<{
+  success: boolean;
+  applied: string[];
+  error?: string;
+}> {
   console.log('--- AllGo Migration Runner ---');
   console.log(`Connecting to: ${DATABASE_URL.replace(/:[^:@]*@/, ':****@')}`);
 
@@ -101,4 +105,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.met
       process.exit(1);
     });
 }
-

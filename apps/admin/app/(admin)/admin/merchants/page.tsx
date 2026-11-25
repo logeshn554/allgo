@@ -1,29 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { adminApi } from '@/lib/api-client';
 import { StatusBadge } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { CheckmarkCircle01Icon, CancelCircleIcon } from '@hugeicons/core-free-icons';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
+import { CancelCircleIcon, CheckmarkCircle01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 const MERCHANT_STATUS_ITEMS = {
   ALL: 'All Statuses',
@@ -62,7 +55,7 @@ export default function MerchantsListPage() {
     (m) =>
       m.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.outlet_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.phone?.includes(searchQuery)
+      m.phone?.includes(searchQuery),
   );
 
   return (
@@ -74,12 +67,11 @@ export default function MerchantsListPage() {
             Merchant Partners Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Review onboarding requests, manage outlets, verify FSSAI compliance, and approve documents.
+            Review onboarding requests, manage outlets, verify FSSAI compliance, and approve
+            documents.
           </p>
         </div>
-        <Button onClick={fetchMerchants}>
-          Refresh Merchants
-        </Button>
+        <Button onClick={fetchMerchants}>Refresh Merchants</Button>
       </div>
 
       {/* Filter and Search Bar */}
@@ -120,78 +112,93 @@ export default function MerchantsListPage() {
 
       <div className="overflow-hidden rounded-md border border-border">
         <Table>
-            <TableHeader>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Business & Outlet</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Compliance</TableHead>
+              <TableHead>Owner Contact</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
               <TableRow>
-                <TableHead>Business & Outlet</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Compliance</TableHead>
-                <TableHead>Owner Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  Loading merchant applications...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    Loading merchant applications...
+            ) : filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  No merchant applications found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <div className="font-semibold text-foreground">{m.business_name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {m.outlet_name || 'No Outlet Defined'} • {m.postal_code || 'N/A'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground">
+                      {m.vertical_type || 'RESTAURANT'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs">
+                      {m.fssai_license_number ? (
+                        <span className="text-primary font-medium flex items-center gap-1">
+                          <HugeiconsIcon
+                            icon={CheckmarkCircle01Icon}
+                            strokeWidth={2}
+                            className="size-3.5"
+                          />
+                          <span>FSSAI: {m.fssai_license_number}</span>
+                        </span>
+                      ) : (
+                        <span className="text-destructive font-medium flex items-center gap-1">
+                          <HugeiconsIcon
+                            icon={CancelCircleIcon}
+                            strokeWidth={2}
+                            className="size-3.5"
+                          />
+                          <span>No FSSAI</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      GST: {m.gstin || 'Unregistered'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium text-foreground">
+                      {m.contact_name || 'Authorized Signatory'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">{m.phone}</div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={m.status} />
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false}
+                      render={<Link href={`/admin/merchants/${m.id}`} />}
+                    >
+                      Review & Manage
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    No merchant applications found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((m) => (
-                  <TableRow key={m.id}>
-                    <TableCell>
-                      <div className="font-semibold text-foreground">{m.business_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {m.outlet_name || 'No Outlet Defined'} • {m.postal_code || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground">
-                        {m.vertical_type || 'RESTAURANT'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-xs">
-                        {m.fssai_license_number ? (
-                          <span className="text-primary font-medium flex items-center gap-1">
-                            <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-3.5" />
-                            <span>FSSAI: {m.fssai_license_number}</span>
-                          </span>
-                        ) : (
-                          <span className="text-destructive font-medium flex items-center gap-1">
-                            <HugeiconsIcon icon={CancelCircleIcon} strokeWidth={2} className="size-3.5" />
-                            <span>No FSSAI</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        GST: {m.gstin || 'Unregistered'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium text-foreground">{m.contact_name || 'Authorized Signatory'}</div>
-                      <div className="text-xs text-muted-foreground">{m.phone}</div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={m.status} />
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/admin/merchants/${m.id}`} />}>
-                        Review & Manage
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

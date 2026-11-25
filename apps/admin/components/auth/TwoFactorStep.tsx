@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Badge,
   Button,
@@ -13,11 +12,8 @@ import {
   Label,
   cn,
 } from '@allgo/ui';
-import {
-  ArrowLeft01Icon,
-  Key01Icon,
-  Shield01Icon,
-} from '@hugeicons/core-free-icons';
+import { ArrowLeft01Icon, Key01Icon, Shield01Icon } from '@hugeicons/core-free-icons';
+import type React from 'react';
 
 interface TwoFactorStepProps {
   identifier: string;
@@ -68,9 +64,7 @@ export function TwoFactorStep({
             strokeWidth={2}
             className="size-4 shrink-0 text-primary"
           />
-          <span className="truncate text-xs font-medium">
-            {identifier || 'Account Protected'}
-          </span>
+          <span className="truncate text-xs font-medium">{identifier || 'Account Protected'}</span>
           <Badge variant="outline" className="h-5 px-1.5 text-[10px] shrink-0">
             2FA
           </Badge>

@@ -1,0 +1,2 @@
+echo "Running pre-push enterprise checks (Biome lint, Turborepo typecheck, fast tests)..."
+pnpm lint && pnpm typecheck && pnpm test:fast

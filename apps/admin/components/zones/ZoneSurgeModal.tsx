@@ -1,13 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 import { Switch } from '@allgo/ui';
@@ -48,22 +40,23 @@ export function ZoneSurgeModal({
           </DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">
-          Modifying surge multipliers directly updates checkout fees and records an immutable audit log.
+          Modifying surge multipliers directly updates checkout fees and records an immutable audit
+          log.
         </p>
 
         <div className="space-y-4 my-2 text-sm">
           <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/40">
             <div className="space-y-0.5">
-              <Label htmlFor="surge-active" className="text-sm font-semibold">Surge Active Status</Label>
+              <Label htmlFor="surge-active" className="text-sm font-semibold">
+                Surge Active Status
+              </Label>
               <p className="text-xs text-muted-foreground">
-                {isSurgeActive ? 'Surge pricing is dynamically applied' : 'Standard pricing (surge inactive)'}
+                {isSurgeActive
+                  ? 'Surge pricing is dynamically applied'
+                  : 'Standard pricing (surge inactive)'}
               </p>
             </div>
-            <Switch
-              id="surge-active"
-              checked={isSurgeActive}
-              onCheckedChange={setIsSurgeActive}
-            />
+            <Switch id="surge-active" checked={isSurgeActive} onCheckedChange={setIsSurgeActive} />
           </div>
 
           <div className="space-y-2">
@@ -71,9 +64,7 @@ export function ZoneSurgeModal({
               <Label htmlFor="surge-mult" className="text-xs font-semibold text-foreground">
                 Surge Multiplier (1.00x – 3.00x)
               </Label>
-              <span className="font-bold text-sm text-primary">
-                {surgeMultiplier.toFixed(1)}x
-              </span>
+              <span className="font-bold text-sm text-primary">{surgeMultiplier.toFixed(1)}x</span>
             </div>
             <Input
               id="surge-mult"
@@ -82,7 +73,7 @@ export function ZoneSurgeModal({
               max="3.0"
               step="0.1"
               value={surgeMultiplier}
-              onChange={(e) => setSurgeMultiplier(parseFloat(e.target.value) || 1.0)}
+              onChange={(e) => setSurgeMultiplier(Number.parseFloat(e.target.value) || 1.0)}
             />
           </div>
 

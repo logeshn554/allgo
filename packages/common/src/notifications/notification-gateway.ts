@@ -33,8 +33,17 @@ export interface NotificationDeliveryResult {
 }
 
 export interface ChannelSender {
-  sendPush(token: string, title: string, body: string, data?: Record<string, any>): Promise<{ messageId: string }>;
-  sendWhatsApp(phone: string, template: string, variables: Record<string, string>): Promise<{ messageId: string }>;
+  sendPush(
+    token: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+  ): Promise<{ messageId: string }>;
+  sendWhatsApp(
+    phone: string,
+    template: string,
+    variables: Record<string, string>,
+  ): Promise<{ messageId: string }>;
   sendSms(phone: string, text: string): Promise<{ messageId: string }>;
 }
 
@@ -53,7 +62,12 @@ export class MultiChannelNotificationGateway {
     if (payload.fcmToken) {
       try {
         const res = this.sender
-          ? await this.sender.sendPush(payload.fcmToken, payload.title, payload.body, payload.metadata)
+          ? await this.sender.sendPush(
+              payload.fcmToken,
+              payload.title,
+              payload.body,
+              payload.metadata,
+            )
           : { messageId: `fcm-${Date.now()}` };
 
         attempts.push({

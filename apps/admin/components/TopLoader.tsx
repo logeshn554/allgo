@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 function TopLoaderInner() {
   const pathname = usePathname();
@@ -82,10 +82,7 @@ function TopLoaderInner() {
         const nextUrl = new URL(href, window.location.href);
         const currentUrl = new URL(window.location.href);
         if (nextUrl.origin !== currentUrl.origin) return;
-        if (
-          nextUrl.pathname === currentUrl.pathname &&
-          nextUrl.search === currentUrl.search
-        ) {
+        if (nextUrl.pathname === currentUrl.pathname && nextUrl.search === currentUrl.search) {
           return;
         }
         start();

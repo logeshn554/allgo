@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process';
-import http from 'node:http';
 
-async function waitForServer(url: string, timeoutMs: number = 10000): Promise<any> {
+async function waitForServer(url: string, timeoutMs = 10000): Promise<any> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
@@ -48,12 +47,13 @@ async function run() {
     }
 
     console.log('\n[PASS] Backend connected to REAL PostgreSQL and Redis!');
-    console.log(`[PASS] Postgres latency: ${health.services.postgres.latencyMs}ms, Redis latency: ${health.services.redis.latencyMs}ms`);
+    console.log(
+      `[PASS] Postgres latency: ${health.services.postgres.latencyMs}ms, Redis latency: ${health.services.redis.latencyMs}ms`,
+    );
 
     // Probe OpenAPI Swagger docs
     const docsRes = await fetch('http://127.0.0.1:3333/docs');
     console.log(`[PASS] OpenAPI Swagger UI Probe HTTP Status: ${docsRes.status}`);
-
   } finally {
     console.log('\n>>> [STOPPING NESTJS BACKEND SERVICE]...');
     proc.kill('SIGTERM');
@@ -64,4 +64,3 @@ run().catch((err) => {
   console.error('[FAIL]', err);
   process.exit(1);
 });
-

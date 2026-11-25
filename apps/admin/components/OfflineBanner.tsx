@@ -1,6 +1,4 @@
 'use client';
-
-import React from 'react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
 import { HugeiconsIcon } from '@allgo/ui';
 import { WifiOff01Icon } from '@hugeicons/core-free-icons';

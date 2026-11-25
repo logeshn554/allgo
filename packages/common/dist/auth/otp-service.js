@@ -83,8 +83,7 @@ export class OtpSecurityService {
         }
         const storedBuf = Buffer.from(currentData.hmac, 'hex');
         const submittedBuf = Buffer.from(submittedHmac, 'hex');
-        const isMatch = storedBuf.length === submittedBuf.length &&
-            crypto.timingSafeEqual(storedBuf, submittedBuf);
+        const isMatch = storedBuf.length === submittedBuf.length && crypto.timingSafeEqual(storedBuf, submittedBuf);
         if (isMatch) {
             return { statusCode: 1, status: OtpVerificationStatus.SUCCESS };
         }

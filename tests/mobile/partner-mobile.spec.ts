@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 
 describe('Phase 2 Mobile: Partner Mobile Onboarding, Services & Verification Architecture', () => {
   const rootDir = path.resolve(import.meta.dirname, '../..');
@@ -9,7 +9,10 @@ describe('Phase 2 Mobile: Partner Mobile Onboarding, Services & Verification Arc
   const sharedPackageDir = path.join(rootDir, 'packages/mobile_shared');
 
   describe('Partner Registration Wizard (apps/partner_mobile/lib/src/screens/partner_registration_screen.dart)', () => {
-    const regScreenPath = path.join(partnerAppDir, 'lib/src/screens/partner_registration_screen.dart');
+    const regScreenPath = path.join(
+      partnerAppDir,
+      'lib/src/screens/partner_registration_screen.dart',
+    );
 
     it('should exist and implement complete partner registration form', () => {
       assert.ok(fs.existsSync(regScreenPath), 'partner_registration_screen.dart must exist');
@@ -39,7 +42,10 @@ describe('Phase 2 Mobile: Partner Mobile Onboarding, Services & Verification Arc
   });
 
   describe('Partner Approval Status & Operational Gating (apps/partner_mobile/lib/src/screens/approval_status_screen.dart)', () => {
-    const statusScreenPath = path.join(partnerAppDir, 'lib/src/screens/approval_status_screen.dart');
+    const statusScreenPath = path.join(
+      partnerAppDir,
+      'lib/src/screens/approval_status_screen.dart',
+    );
 
     it('should implement live status polling and independent service breakdown', () => {
       assert.ok(fs.existsSync(statusScreenPath), 'approval_status_screen.dart must exist');
@@ -57,7 +63,7 @@ describe('Phase 2 Mobile: Partner Mobile Onboarding, Services & Verification Arc
     it('should export PartnerProfile and ApiClient partner methods', () => {
       const exportFile = path.join(sharedPackageDir, 'lib/allgo_mobile_shared.dart');
       const exportContent = fs.readFileSync(exportFile, 'utf8');
-      assert.ok(exportContent.includes('export \'src/models/partner_profile.dart\';'));
+      assert.ok(exportContent.includes("export 'src/models/partner_profile.dart';"));
 
       const clientFile = path.join(sharedPackageDir, 'lib/src/api/api_client.dart');
       const clientContent = fs.readFileSync(clientFile, 'utf8');

@@ -1,5 +1,5 @@
-import { adminFetch } from './base-client';
 import type { TwoFactorPolicy, TwoFactorStatusResponse } from '../types';
+import { adminFetch } from './base-client';
 
 export interface AuthSettings {
   phoneOtpEnabled: boolean;

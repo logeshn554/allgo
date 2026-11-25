@@ -12,7 +12,6 @@
     "noUnusedParameters": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
@@ -20,5 +19,5 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/components/spinner.tsx"]
+  "exclude": ["node_modules", "dist"]
 }

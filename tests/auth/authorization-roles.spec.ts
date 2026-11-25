@@ -1,9 +1,9 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import { describe, it } from 'node:test';
 import {
-  evaluateAuthoritativeAccess,
-  detectStaleClaims,
   type UserIdentity,
+  detectStaleClaims,
+  evaluateAuthoritativeAccess,
 } from '../../packages/common/src/index.ts';
 
 describe('Authoritative Multi-Role Authorization & Revocation Verification', () => {
@@ -165,4 +165,3 @@ describe('Authoritative Multi-Role Authorization & Revocation Verification', () 
     });
   });
 });
-

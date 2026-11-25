@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:allgo_mobile_shared/allgo_mobile_shared.dart';
 import 'src/localization/app_localizations.dart';
 import 'src/providers/app_settings_provider.dart';
 import 'src/router/app_router.dart';
@@ -57,10 +58,21 @@ class AllGoCustomerApp extends ConsumerWidget {
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: appRouter,
       builder: (context, child) {
-        return MediaQuery.withClampedTextScaling(
-          minScaleFactor: 0.8,
-          maxScaleFactor: 1.5,
-          child: child ?? const SizedBox.shrink(),
+        final fTheme = themeMode == ThemeMode.dark
+            ? AllGoTheme.foruiDarkTheme
+            : AllGoTheme.foruiLightTheme;
+        return FTheme(
+          data: fTheme,
+          child: ShadTheme(
+            data: AllGoTheme.shadLightTheme,
+            child: FToaster(
+              child: MediaQuery.withClampedTextScaling(
+                minScaleFactor: 0.8,
+                maxScaleFactor: 1.5,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
+          ),
         );
       },
     );

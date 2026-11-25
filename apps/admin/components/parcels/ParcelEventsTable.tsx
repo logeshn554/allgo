@@ -1,15 +1,8 @@
-import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
 interface ParcelEventsTableProps {
   events: any[];
@@ -62,9 +55,7 @@ export const ParcelEventsTable: React.FC<ParcelEventsTableProps> = ({ events }) 
                       <span>{e.to_status || e.toStatus || '—'}</span>
                     </span>
                   </TableCell>
-                  <TableCell className="text-foreground text-xs">
-                    {e.reason || '—'}
-                  </TableCell>
+                  <TableCell className="text-foreground text-xs">{e.reason || '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

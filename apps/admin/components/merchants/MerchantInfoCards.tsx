@@ -1,7 +1,7 @@
-import React from 'react';
-import { MerchantApplicationSummary } from '@/lib/api-client';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import type { MerchantApplicationSummary } from '@/lib/api-client';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
+import type React from 'react';
 
 interface MerchantInfoCardsProps {
   merchant: MerchantApplicationSummary;
@@ -37,7 +37,9 @@ export const MerchantInfoCards: React.FC<MerchantInfoCardsProps> = ({ merchant }
           </div>
           <div>
             <span className="text-muted-foreground">GSTIN: </span>
-            <span className="font-mono font-bold text-foreground">{m.gstin || 'Unregistered / Composite'}</span>
+            <span className="font-mono font-bold text-foreground">
+              {m.gstin || 'Unregistered / Composite'}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -57,9 +59,7 @@ export const MerchantInfoCards: React.FC<MerchantInfoCardsProps> = ({ merchant }
           <div>
             <span className="text-muted-foreground">Expiry Date: </span>
             <span className="text-foreground">
-              {m.fssai_expiry_date
-                ? new Date(m.fssai_expiry_date).toLocaleDateString()
-                : 'N/A'}
+              {m.fssai_expiry_date ? new Date(m.fssai_expiry_date).toLocaleDateString() : 'N/A'}
             </span>
           </div>
           <div>
@@ -84,9 +84,7 @@ export const MerchantInfoCards: React.FC<MerchantInfoCardsProps> = ({ merchant }
           <div>
             <span className="text-muted-foreground">Account Number: </span>
             <span className="font-mono text-foreground">
-              {m.bank_account_number
-                ? `•••• •••• •••• ${m.bank_account_number.slice(-4)}`
-                : 'N/A'}
+              {m.bank_account_number ? `•••• •••• •••• ${m.bank_account_number.slice(-4)}` : 'N/A'}
             </span>
           </div>
           <div>
@@ -108,7 +106,9 @@ export const MerchantInfoCards: React.FC<MerchantInfoCardsProps> = ({ merchant }
           </div>
           <div>
             <span className="text-muted-foreground">Address: </span>
-            <span className="text-foreground">{m.address_line1 || 'N/A'}, PIN: {m.postal_code || 'N/A'}</span>
+            <span className="text-foreground">
+              {m.address_line1 || 'N/A'}, PIN: {m.postal_code || 'N/A'}
+            </span>
           </div>
           <div>
             <span className="text-muted-foreground">Operational Duty: </span>

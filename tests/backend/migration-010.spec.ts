@@ -1,15 +1,20 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_PATH = path.join(ROOT_DIR, 'database/migrations/010_phase8_mobility_services_and_hire_driver.sql');
-const ROLLBACK_PATH = path.join(ROOT_DIR, 'database/rollbacks/010_phase8_mobility_services_and_hire_driver_rollback.sql');
+const MIGRATION_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/010_phase8_mobility_services_and_hire_driver.sql',
+);
+const ROLLBACK_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/010_phase8_mobility_services_and_hire_driver_rollback.sql',
+);
 
 describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
-
   // =========================================================================
   // TIER 1: STATIC & STRUCTURAL ANALYSIS (Runs In-Memory, 100% Offline-Safe)
   // =========================================================================
@@ -44,12 +49,19 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       'pricing_rule_version',
       'otp_hash',
       'otp_attempts',
-      'scheduled_pickup_time'
+      'scheduled_pickup_time',
     ];
 
     for (const col of expectedRideColumns) {
-      const colRegex = new RegExp(`ALTER\\s+TABLE\\s+rides\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`, 'i');
-      assert.match(sql, colRegex, `Migration 010 must add column "${col}" to rides using ADD COLUMN IF NOT EXISTS`);
+      const colRegex = new RegExp(
+        `ALTER\\s+TABLE\\s+rides\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`,
+        'i',
+      );
+      assert.match(
+        sql,
+        colRegex,
+        `Migration 010 must add column "${col}" to rides using ADD COLUMN IF NOT EXISTS`,
+      );
     }
   });
 
@@ -66,12 +78,19 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       'final_fare_snapshot',
       'start_otp_hash',
       'end_otp_hash',
-      'otp_attempts'
+      'otp_attempts',
     ];
 
     for (const col of expectedHireColumns) {
-      const colRegex = new RegExp(`ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`, 'i');
-      assert.match(sql, colRegex, `Migration 010 must add column "${col}" to hire_driver_bookings using ADD COLUMN IF NOT EXISTS`);
+      const colRegex = new RegExp(
+        `ALTER\\s+TABLE\\s+hire_driver_bookings\\s+ADD\\s+COLUMN\\s+IF\\s+NOT\\s+EXISTS\\s+${col}\\b`,
+        'i',
+      );
+      assert.match(
+        sql,
+        colRegex,
+        `Migration 010 must add column "${col}" to hire_driver_bookings using ADD COLUMN IF NOT EXISTS`,
+      );
     }
   });
 
@@ -95,11 +114,15 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       'DRIVER_CANCELLED',
       'CUSTOMER_CANCELLED',
       'RIDE_EXPIRED',
-      'DISPUTED'
+      'DISPUTED',
     ];
 
     for (const state of requiredStates) {
-      assert.match(sql, new RegExp(`['"]${state}['"]`), `chk_ride_status must include state ${state}`);
+      assert.match(
+        sql,
+        new RegExp(`['"]${state}['"]`),
+        `chk_ride_status must include state ${state}`,
+      );
     }
   });
 
@@ -109,7 +132,7 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       'ride_assignments',
       'ride_events',
       'hire_driver_assignments',
-      'hire_driver_events'
+      'hire_driver_events',
     ];
 
     for (const tbl of expectedTables) {
@@ -118,31 +141,63 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
     }
 
     // Duplicate active offer prevention check
-    assert.match(sql, /CREATE\s+UNIQUE\s+INDEX[\s\S]*?ON\s+ride_assignments[\s\S]*?WHERE\s+status\s*=\s*'OFFERED'/i,
-      'Migration 010 must create unique index preventing concurrent OFFERED assignments on ride_assignments');
+    assert.match(
+      sql,
+      /CREATE\s+UNIQUE\s+INDEX[\s\S]*?ON\s+ride_assignments[\s\S]*?WHERE\s+status\s*=\s*'OFFERED'/i,
+      'Migration 010 must create unique index preventing concurrent OFFERED assignments on ride_assignments',
+    );
   });
 
   it('6. should verify immutable audit trail triggers prevent_ride_events_mutation and prevent_hire_driver_events_mutation', () => {
     const sql = fs.readFileSync(MIGRATION_PATH, 'utf8');
 
     // Ride events immutability
-    assert.match(sql, /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_ride_events_mutation\(\)/i, 'Must define prevent_ride_events_mutation()');
-    assert.match(sql, /RAISE\s+EXCEPTION\s+['"].*?append-only.*?['"]/i, 'Trigger function must raise append-only exception');
-    assert.match(sql, /CREATE\s+TRIGGER\s+trg_prevent_ride_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+ride_events/i, 'Must attach trigger on ride_events');
+    assert.match(
+      sql,
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_ride_events_mutation\(\)/i,
+      'Must define prevent_ride_events_mutation()',
+    );
+    assert.match(
+      sql,
+      /RAISE\s+EXCEPTION\s+['"].*?append-only.*?['"]/i,
+      'Trigger function must raise append-only exception',
+    );
+    assert.match(
+      sql,
+      /CREATE\s+TRIGGER\s+trg_prevent_ride_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+ride_events/i,
+      'Must attach trigger on ride_events',
+    );
 
     // Hire driver events immutability
-    assert.match(sql, /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_hire_driver_events_mutation\(\)/i, 'Must define prevent_hire_driver_events_mutation()');
-    assert.match(sql, /CREATE\s+TRIGGER\s+trg_prevent_hire_driver_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+hire_driver_events/i, 'Must attach trigger on hire_driver_events');
+    assert.match(
+      sql,
+      /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+prevent_hire_driver_events_mutation\(\)/i,
+      'Must define prevent_hire_driver_events_mutation()',
+    );
+    assert.match(
+      sql,
+      /CREATE\s+TRIGGER\s+trg_prevent_hire_driver_events_mutation\s+BEFORE\s+UPDATE\s+OR\s+DELETE\s+ON\s+hire_driver_events/i,
+      'Must attach trigger on hire_driver_events',
+    );
   });
 
   it('7. should verify rollback 010 cleans up all added tables, columns, triggers and constraints', () => {
     const rollbackSql = fs.readFileSync(ROLLBACK_PATH, 'utf8');
 
     // Triggers and functions dropped
-    assert.match(rollbackSql, /DROP\s+TRIGGER\s+IF\s+EXISTS\s+trg_prevent_ride_events_mutation\s+ON\s+ride_events/i);
+    assert.match(
+      rollbackSql,
+      /DROP\s+TRIGGER\s+IF\s+EXISTS\s+trg_prevent_ride_events_mutation\s+ON\s+ride_events/i,
+    );
     assert.match(rollbackSql, /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_ride_events_mutation/i);
-    assert.match(rollbackSql, /DROP\s+TRIGGER\s+IF\s+EXISTS\s+trg_prevent_hire_driver_events_mutation\s+ON\s+hire_driver_events/i);
-    assert.match(rollbackSql, /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_hire_driver_events_mutation/i);
+    assert.match(
+      rollbackSql,
+      /DROP\s+TRIGGER\s+IF\s+EXISTS\s+trg_prevent_hire_driver_events_mutation\s+ON\s+hire_driver_events/i,
+    );
+    assert.match(
+      rollbackSql,
+      /DROP\s+FUNCTION\s+IF\s+EXISTS\s+prevent_hire_driver_events_mutation/i,
+    );
 
     // Tables dropped
     assert.match(rollbackSql, /DROP\s+TABLE\s+IF\s+EXISTS\s+ride_events/i);
@@ -152,10 +207,16 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
 
     // Additive columns dropped
     assert.match(rollbackSql, /ALTER\s+TABLE\s+rides\s+DROP\s+COLUMN\s+IF\s+EXISTS\s+otp_hash/i);
-    assert.match(rollbackSql, /ALTER\s+TABLE\s+hire_driver_bookings\s+DROP\s+COLUMN\s+IF\s+EXISTS\s+start_otp_hash/i);
+    assert.match(
+      rollbackSql,
+      /ALTER\s+TABLE\s+hire_driver_bookings\s+DROP\s+COLUMN\s+IF\s+EXISTS\s+start_otp_hash/i,
+    );
 
     // Constraint reverted
-    assert.match(rollbackSql, /ALTER\s+TABLE\s+rides\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+chk_ride_status/i);
+    assert.match(
+      rollbackSql,
+      /ALTER\s+TABLE\s+rides\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+chk_ride_status/i,
+    );
   });
 
   // =========================================================================
@@ -163,7 +224,8 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
   // =========================================================================
 
   it('8. should apply and rollback migration 010 symmetrically on an isolated disposable database', async () => {
-    const baseDevUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/allgo_dev';
+    const baseDevUrl =
+      process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/allgo_dev';
     const adminUrlObj = new URL(baseDevUrl);
     adminUrlObj.pathname = '/postgres';
     const adminUrl = process.env.DATABASE_ADMIN_URL || adminUrlObj.toString();
@@ -172,7 +234,9 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
     try {
       await adminClient.connect();
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
@@ -250,7 +314,11 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
           'fare_quote_snapshot', 'final_fare_snapshot', 'start_otp_hash', 'end_otp_hash', 'otp_attempts'
         );
       `);
-      assert.strictEqual(hireColsRes.rows.length, 11, 'All 11 additive hire_driver columns must exist');
+      assert.strictEqual(
+        hireColsRes.rows.length,
+        11,
+        'All 11 additive hire_driver columns must exist',
+      );
 
       // Verify seed prerequisites for constraint & trigger checks
       const stateRes = await testClient.query(`
@@ -259,10 +327,13 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       `);
       const stateId = stateRes.rows[0].id;
 
-      const cityRes = await testClient.query(`
+      const cityRes = await testClient.query(
+        `
         INSERT INTO cities (state_id, name, slug, status)
         VALUES ($1, 'Chennai', 'chennai', 'PILOT') RETURNING id;
-      `, [stateId]);
+      `,
+        [stateId],
+      );
       const cityId = cityRes.rows[0].id;
 
       const custRes = await testClient.query(`
@@ -277,13 +348,17 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       `);
       const partUserId = partUserRes.rows[0].id;
 
-      const partRes = await testClient.query(`
+      const partRes = await testClient.query(
+        `
         INSERT INTO partners (user_id, status) VALUES ($1, 'APPROVED') RETURNING id;
-      `, [partUserId]);
+      `,
+        [partUserId],
+      );
       const partnerId = partRes.rows[0].id;
 
       // 3. Test chk_ride_status 15 states
-      const rideRes = await testClient.query(`
+      const rideRes = await testClient.query(
+        `
         INSERT INTO rides (
           ride_number, customer_id, city_id, ride_type, status,
           pickup_address, pickup_location, drop_address, drop_location,
@@ -295,34 +370,48 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
           'Drop St', ST_SetSRID(ST_MakePoint(80.25, 13.05), 4326),
           '1234', 5.0, 15, 60.0, 90.0, 150.0
         ) RETURNING id;
-      `, [custId, cityId]);
+      `,
+        [custId, cityId],
+      );
       const rideId = rideRes.rows[0].id;
 
       // Advance through representative Phase 8 states
-      await testClient.query(`UPDATE rides SET status = 'SEARCHING_FOR_DRIVER' WHERE id = $1;`, [rideId]);
-      await testClient.query(`UPDATE rides SET status = 'DRIVER_ASSIGNED', partner_id = $2 WHERE id = $1;`, [rideId, partnerId]);
+      await testClient.query(`UPDATE rides SET status = 'SEARCHING_FOR_DRIVER' WHERE id = $1;`, [
+        rideId,
+      ]);
+      await testClient.query(
+        `UPDATE rides SET status = 'DRIVER_ASSIGNED', partner_id = $2 WHERE id = $1;`,
+        [rideId, partnerId],
+      );
       await testClient.query(`UPDATE rides SET status = 'TRIP_STARTED' WHERE id = $1;`, [rideId]);
       await testClient.query(`UPDATE rides SET status = 'TRIP_COMPLETED' WHERE id = $1;`, [rideId]);
 
       // Assert invalid status is rejected
       let invalidRejected = false;
       try {
-        await testClient.query(`UPDATE rides SET status = 'NON_EXISTENT_STATE' WHERE id = $1;`, [rideId]);
+        await testClient.query(`UPDATE rides SET status = 'NON_EXISTENT_STATE' WHERE id = $1;`, [
+          rideId,
+        ]);
       } catch (err: any) {
         invalidRejected = true;
       }
       assert.strictEqual(invalidRejected, true, 'chk_ride_status must reject invalid states');
 
       // 4. Test ride_events immutability trigger
-      const eventRes = await testClient.query(`
+      const eventRes = await testClient.query(
+        `
         INSERT INTO ride_events (ride_id, event_type, from_status, to_status, actor_id, actor_role)
         VALUES ($1, 'RIDE_REQUESTED', NULL, 'RIDE_REQUESTED', $2, 'CUSTOMER') RETURNING id;
-      `, [rideId, custId]);
+      `,
+        [rideId, custId],
+      );
       const eventId = eventRes.rows[0].id;
 
       let rideEventUpdateBlocked = false;
       try {
-        await testClient.query(`UPDATE ride_events SET reason = 'Tampered' WHERE id = $1;`, [eventId]);
+        await testClient.query(`UPDATE ride_events SET reason = 'Tampered' WHERE id = $1;`, [
+          eventId,
+        ]);
       } catch (err: any) {
         if (err.message.includes('append-only')) rideEventUpdateBlocked = true;
       }
@@ -337,21 +426,31 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
       assert.strictEqual(rideEventDeleteBlocked, true, 'Trigger must block DELETE on ride_events');
 
       // 5. Test duplicate active offer constraint on ride_assignments
-      await testClient.query(`
+      await testClient.query(
+        `
         INSERT INTO ride_assignments (ride_id, partner_id, attempt_number, status, offer_expires_at)
         VALUES ($1, $2, 1, 'OFFERED', NOW() + INTERVAL '45 seconds');
-      `, [rideId, partnerId]);
+      `,
+        [rideId, partnerId],
+      );
 
       let duplicateOfferBlocked = false;
       try {
-        await testClient.query(`
+        await testClient.query(
+          `
           INSERT INTO ride_assignments (ride_id, partner_id, attempt_number, status, offer_expires_at)
           VALUES ($1, $2, 2, 'OFFERED', NOW() + INTERVAL '45 seconds');
-        `, [rideId, partnerId]);
+        `,
+          [rideId, partnerId],
+        );
       } catch (err: any) {
         duplicateOfferBlocked = true;
       }
-      assert.strictEqual(duplicateOfferBlocked, true, 'Must block concurrent OFFERED assignments for same ride');
+      assert.strictEqual(
+        duplicateOfferBlocked,
+        true,
+        'Must block concurrent OFFERED assignments for same ride',
+      );
 
       // Revert test ride status to pre-Phase-8 status so legacy constraint check passes on rollback
       await testClient.query(`UPDATE rides SET status = 'COMPLETED' WHERE id = $1;`, [rideId]);
@@ -366,7 +465,11 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
         WHERE table_schema = 'public' 
           AND table_name IN ('ride_assignments', 'ride_events', 'hire_driver_assignments', 'hire_driver_events');
       `);
-      assert.strictEqual(postRollbackTables.rows.length, 0, 'Phase 8 tables must be dropped after rollback');
+      assert.strictEqual(
+        postRollbackTables.rows.length,
+        0,
+        'Phase 8 tables must be dropped after rollback',
+      );
 
       // Verify additive columns removed
       const postRollbackCols = await testClient.query(`
@@ -375,8 +478,11 @@ describe('Phase 8: Database Migration 010 & Rollback Verification', () => {
           'service_type', 'vehicle_category', 'otp_hash', 'fare_quote_snapshot'
         );
       `);
-      assert.strictEqual(postRollbackCols.rows.length, 0, 'Additive ride columns must be dropped after rollback');
-
+      assert.strictEqual(
+        postRollbackCols.rows.length,
+        0,
+        'Additive ride columns must be dropped after rollback',
+      );
     } finally {
       await testClient.end();
       await adminClient.query(`DROP DATABASE IF EXISTS "${testDbName}";`);

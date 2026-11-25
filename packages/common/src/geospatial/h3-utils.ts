@@ -35,7 +35,7 @@ export function latLngToH3Index(lat: number, lng: number, res: 8 | 9 = 8): strin
  * k = 1 returns the center hex + 6 adjacent hexes (7 total).
  * k = 2 returns center + radius 1 + radius 2 (19 total).
  */
-export function getH3KRing(originHex: string, k: number = 1): string[] {
+export function getH3KRing(originHex: string, k = 1): string[] {
   if (!originHex.startsWith('88') && !originHex.startsWith('89')) {
     return [originHex];
   }
@@ -44,8 +44,8 @@ export function getH3KRing(originHex: string, k: number = 1): string[] {
   const hexLatStr = originHex.slice(2, 7);
   const hexLngStr = originHex.slice(7, 12);
 
-  const qLat = parseInt(hexLatStr, 16) - 100000;
-  const qLng = parseInt(hexLngStr, 16) - 200000;
+  const qLat = Number.parseInt(hexLatStr, 16) - 100000;
+  const qLng = Number.parseInt(hexLngStr, 16) - 200000;
 
   const hexes = new Set<string>();
 

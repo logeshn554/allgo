@@ -1,12 +1,7 @@
-import type {
-  AuthMethodsConfig,
-  IdentifierKind,
-  IdentifierResolution,
-} from './types';
+import type { AuthMethodsConfig, IdentifierKind, IdentifierResolution } from './types';
 
 const INDIAN_E164_REGEX = /^\+91[6-9]\d{9}$/;
-const EMAIL_REGEX =
-  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/;
 const PHONE_CHAR_REGEX = /^[+\d\s\-()]+$/;
 
 /**
@@ -182,10 +177,7 @@ export function getIdentifierPlaceholder(methods: AuthMethodsConfig): string {
 /**
  * Returns a contextual label for the primary Continue button based on live detection.
  */
-export function getIdentifierActionLabel(
-  kind: IdentifierKind,
-  methods: AuthMethodsConfig,
-): string {
+export function getIdentifierActionLabel(kind: IdentifierKind, methods: AuthMethodsConfig): string {
   if (kind === 'phone') {
     if (methods.emailPassword) {
       return 'Continue with Phone';

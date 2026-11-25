@@ -1,10 +1,10 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { LedgerService } from '../../apps/api/dist/finance/ledger/ledger.service.js';
-import { WalletService } from '../../apps/api/dist/finance/wallet/wallet.service.js';
-import { SupportService } from '../../apps/api/dist/support/support.service.js';
-import { RatingsService } from '../../apps/api/dist/ratings/ratings.service.js';
-import { NotificationsService } from '../../apps/api/dist/notifications/notifications.service.js';
+import { describe, it } from 'node:test';
+import { LedgerService } from '../../services/api/dist/finance/ledger/ledger.service.js';
+import { WalletService } from '../../services/api/dist/finance/wallet/wallet.service.js';
+import { NotificationsService } from '../../services/api/dist/notifications/notifications.service.js';
+import { RatingsService } from '../../services/api/dist/ratings/ratings.service.js';
+import { SupportService } from '../../services/api/dist/support/support.service.js';
 
 // In-Memory Database Double for Fast, Deterministic Unit Testing
 class MockDatabaseService {
@@ -18,19 +18,27 @@ class MockDatabaseService {
   async query(sql: string, params: any[] = []): Promise<{ rows: any[] }> {
     // 0. Trigger simulation: Enforce strict immutability on ledger_entries
     if (sql.includes('UPDATE ledger_entries') || sql.includes('DELETE FROM ledger_entries')) {
-      throw new Error('Posted ledger entries are strictly immutable and cannot be updated or deleted. Post a compensating reversal transaction instead.');
+      throw new Error(
+        'Posted ledger entries are strictly immutable and cannot be updated or deleted. Post a compensating reversal transaction instead.',
+      );
     }
 
     // 0.1 Column conformity checks
     if (sql.includes('INSERT INTO notifications') && sql.includes('referenceId')) {
-      throw new Error('column "referenceid" does not exist in table notifications; must be reference_id');
+      throw new Error(
+        'column "referenceid" does not exist in table notifications; must be reference_id',
+      );
     }
     if (sql.includes('p.service_types')) {
       throw new Error('column p.service_types does not exist on table partners');
     }
 
     // 1. Ledger queries
-    if (sql.includes('SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1')) {
+    if (
+      sql.includes(
+        'SELECT ledger_transaction_id FROM ledger_entries WHERE transaction_reference = $1',
+      )
+    ) {
       const found = this.ledgerEntries.find((e) => e.transaction_reference === params[0]);
       return { rows: found ? [found] : [] };
     }
@@ -87,7 +95,9 @@ class MockDatabaseService {
     if (sql.includes('UPDATE wallets SET promotional_balance_inr = promotional_balance_inr + $1')) {
       const wallet = this.wallets.get(params[1]);
       if (wallet) {
-        wallet.promotional_balance_inr = (parseFloat(wallet.promotional_balance_inr || '0') + params[0]).toFixed(2);
+        wallet.promotional_balance_inr = (
+          Number.parseFloat(wallet.promotional_balance_inr || '0') + params[0]
+        ).toFixed(2);
       }
       return { rows: [wallet] };
     }
@@ -95,16 +105,28 @@ class MockDatabaseService {
     if (sql.includes('UPDATE wallets SET refundable_balance_inr = refundable_balance_inr + $1')) {
       const wallet = this.wallets.get(params[1]);
       if (wallet) {
-        wallet.refundable_balance_inr = (parseFloat(wallet.refundable_balance_inr || '0') + params[0]).toFixed(2);
+        wallet.refundable_balance_inr = (
+          Number.parseFloat(wallet.refundable_balance_inr || '0') + params[0]
+        ).toFixed(2);
       }
       return { rows: [wallet] };
     }
 
-    if (sql.includes('UPDATE wallets \n       SET promotional_balance_inr = GREATEST(0.00, promotional_balance_inr - $1)')) {
+    if (
+      sql.includes(
+        'UPDATE wallets \n       SET promotional_balance_inr = GREATEST(0.00, promotional_balance_inr - $1)',
+      )
+    ) {
       const wallet = this.wallets.get(params[2]);
       if (wallet) {
-        wallet.promotional_balance_inr = Math.max(0, parseFloat(wallet.promotional_balance_inr || '0') - params[0]).toFixed(2);
-        wallet.refundable_balance_inr = Math.max(0, parseFloat(wallet.refundable_balance_inr || '0') - params[1]).toFixed(2);
+        wallet.promotional_balance_inr = Math.max(
+          0,
+          Number.parseFloat(wallet.promotional_balance_inr || '0') - params[0],
+        ).toFixed(2);
+        wallet.refundable_balance_inr = Math.max(
+          0,
+          Number.parseFloat(wallet.refundable_balance_inr || '0') - params[1],
+        ).toFixed(2);
       }
       return { rows: [wallet] };
     }
@@ -130,11 +152,14 @@ class MockDatabaseService {
       return { rows: [w] };
     }
 
-    if (sql.includes('SELECT \n         COALESCE(SUM(CASE WHEN direction = \'CREDIT\'')) {
+    if (sql.includes("SELECT \n         COALESCE(SUM(CASE WHEN direction = 'CREDIT'")) {
       let sum = 0;
       for (const e of this.ledgerEntries) {
         if (e.wallet_id === params[0]) {
-          sum += e.direction === 'CREDIT' ? parseFloat(e.amount_inr) : -parseFloat(e.amount_inr);
+          sum +=
+            e.direction === 'CREDIT'
+              ? Number.parseFloat(e.amount_inr)
+              : -Number.parseFloat(e.amount_inr);
         }
       }
       return { rows: [{ ledger_balance: sum.toFixed(2) }] };
@@ -176,13 +201,21 @@ class MockDatabaseService {
       return { rows: t ? [t] : [] };
     }
 
-    if (sql.includes('FROM support_tickets t\n       JOIN users u ON u.id = t.user_id\n       WHERE t.id = $1')) {
+    if (
+      sql.includes(
+        'FROM support_tickets t\n       JOIN users u ON u.id = t.user_id\n       WHERE t.id = $1',
+      )
+    ) {
       const t = this.supportTickets.get(params[0]);
-      return { rows: t ? [{ ...t, creator_phone: '+919876543210', creator_name: 'Test Customer' }] : [] };
+      return {
+        rows: t ? [{ ...t, creator_phone: '+919876543210', creator_name: 'Test Customer' }] : [],
+      };
     }
 
     if (sql.includes('FROM support_ticket_messages m') && sql.includes('is_internal = FALSE')) {
-      const filtered = this.supportMessages.filter((m) => m.ticket_id === params[0] && !m.is_internal);
+      const filtered = this.supportMessages.filter(
+        (m) => m.ticket_id === params[0] && !m.is_internal,
+      );
       return { rows: filtered };
     }
 
@@ -200,8 +233,10 @@ class MockDatabaseService {
     // 4. Ratings queries
     if (sql.includes('SELECT id FROM ratings \n       WHERE reviewer_id = $1')) {
       const existing = this.ratings.find(
-        (r) => r.reviewer_id === params[0] && r.target_id === params[1] &&
-               ((params[2] && r.order_group_id === params[2]) || (params[4] && r.ride_id === params[4]))
+        (r) =>
+          r.reviewer_id === params[0] &&
+          r.target_id === params[1] &&
+          ((params[2] && r.order_group_id === params[2]) || (params[4] && r.ride_id === params[4])),
       );
       return { rows: existing ? [existing] : [] };
     }
@@ -235,7 +270,9 @@ class MockDatabaseService {
 
     // 5. Notifications queries
     if (sql.includes('SELECT id FROM notifications \n       WHERE user_id = $1')) {
-      const existing = this.notifications.find((n) => n.user_id === params[0] && n.title === params[1]);
+      const existing = this.notifications.find(
+        (n) => n.user_id === params[0] && n.title === params[1],
+      );
       return { rows: existing ? [existing] : [] };
     }
 
@@ -274,7 +311,6 @@ class MockDatabaseService {
 }
 
 describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contract Suite', () => {
-
   // =========================================================================
   // 1. DOUBLE-ENTRY ACCOUNTING LEDGER INVARIANTS
   // =========================================================================
@@ -292,20 +328,20 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
             {
               accountType: 'GATEWAY_ESCROW',
               direction: 'DEBIT',
-              amountInr: 100.00,
+              amountInr: 100.0,
               description: 'Customer payment debited',
             },
             {
               accountType: 'CUSTOMER_WALLET',
               direction: 'CREDIT',
-              amountInr: 80.00, // Unbalanced by 20 INR!
+              amountInr: 80.0, // Unbalanced by 20 INR!
               description: 'Wallet credit',
             },
           ],
         });
       },
       /Double-entry invariant violation.*Total DEBIT.*does not equal Total CREDIT/i,
-      'Ledger must reject any transaction where debits do not balance credits down to 2 decimals'
+      'Ledger must reject any transaction where debits do not balance credits down to 2 decimals',
     );
   });
 
@@ -313,42 +349,46 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const mockDb = new MockDatabaseService();
     const ledger = new LedgerService(mockDb as any);
 
-    await assert.rejects(
-      async () => {
-        await ledger.postTransaction({
-          transactionReference: 'TX-SINGLE-ENTRY',
-          description: 'Single entry invalid transaction',
-          entries: [
-            {
-              accountType: 'GATEWAY_ESCROW',
-              direction: 'DEBIT',
-              amountInr: 100.00,
-              description: 'Orphaned debit',
-            },
-          ],
-        });
-      },
-      /A double-entry transaction must contain at least two entries/i
-    );
+    await assert.rejects(async () => {
+      await ledger.postTransaction({
+        transactionReference: 'TX-SINGLE-ENTRY',
+        description: 'Single entry invalid transaction',
+        entries: [
+          {
+            accountType: 'GATEWAY_ESCROW',
+            direction: 'DEBIT',
+            amountInr: 100.0,
+            description: 'Orphaned debit',
+          },
+        ],
+      });
+    }, /A double-entry transaction must contain at least two entries/i);
   });
 
   it('1.3 should strictly reject negative or zero entry amounts', async () => {
     const mockDb = new MockDatabaseService();
     const ledger = new LedgerService(mockDb as any);
 
-    await assert.rejects(
-      async () => {
-        await ledger.postTransaction({
-          transactionReference: 'TX-NEGATIVE',
-          description: 'Negative amount attempt',
-          entries: [
-            { accountType: 'GATEWAY_ESCROW', direction: 'DEBIT', amountInr: -50.00, description: 'Negative debit' },
-            { accountType: 'CUSTOMER_WALLET', direction: 'CREDIT', amountInr: -50.00, description: 'Negative credit' },
-          ],
-        });
-      },
-      /Invalid entry amount.*All entries must have amount > 0/i
-    );
+    await assert.rejects(async () => {
+      await ledger.postTransaction({
+        transactionReference: 'TX-NEGATIVE',
+        description: 'Negative amount attempt',
+        entries: [
+          {
+            accountType: 'GATEWAY_ESCROW',
+            direction: 'DEBIT',
+            amountInr: -50.0,
+            description: 'Negative debit',
+          },
+          {
+            accountType: 'CUSTOMER_WALLET',
+            direction: 'CREDIT',
+            amountInr: -50.0,
+            description: 'Negative credit',
+          },
+        ],
+      });
+    }, /Invalid entry amount.*All entries must have amount > 0/i);
   });
 
   it('1.4 should successfully post balanced transaction and enforce idempotency on transaction reference', async () => {
@@ -359,27 +399,56 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
       transactionReference: 'TX-BALANCED-100',
       description: 'Order Payment Allocation',
       entries: [
-        { accountType: 'GATEWAY_ESCROW', direction: 'DEBIT', amountInr: 250.00, description: 'Payment collected' },
-        { accountType: 'MERCHANT_SETTLEMENT', direction: 'CREDIT', amountInr: 200.00, description: 'Merchant share' },
-        { accountType: 'PLATFORM_COMMISSION', direction: 'CREDIT', amountInr: 50.00, description: 'Platform fee' },
+        {
+          accountType: 'GATEWAY_ESCROW',
+          direction: 'DEBIT',
+          amountInr: 250.0,
+          description: 'Payment collected',
+        },
+        {
+          accountType: 'MERCHANT_SETTLEMENT',
+          direction: 'CREDIT',
+          amountInr: 200.0,
+          description: 'Merchant share',
+        },
+        {
+          accountType: 'PLATFORM_COMMISSION',
+          direction: 'CREDIT',
+          amountInr: 50.0,
+          description: 'Platform fee',
+        },
       ],
     });
 
     assert.ok(result.transactionId, 'Must return generated ledger_transaction_id');
     assert.strictEqual(result.entryCount, 3, 'Must record all 3 entries');
-    assert.strictEqual(result.balancedAmount, 250.00, 'Must record exact balanced amount');
+    assert.strictEqual(result.balancedAmount, 250.0, 'Must record exact balanced amount');
 
     // Duplicate submission with same transactionReference must be idempotent
     const duplicateResult = await ledger.postTransaction({
       transactionReference: 'TX-BALANCED-100',
       description: 'Duplicate attempt',
       entries: [
-        { accountType: 'GATEWAY_ESCROW', direction: 'DEBIT', amountInr: 250.00, description: 'Duplicate' },
-        { accountType: 'MERCHANT_SETTLEMENT', direction: 'CREDIT', amountInr: 250.00, description: 'Duplicate' },
+        {
+          accountType: 'GATEWAY_ESCROW',
+          direction: 'DEBIT',
+          amountInr: 250.0,
+          description: 'Duplicate',
+        },
+        {
+          accountType: 'MERCHANT_SETTLEMENT',
+          direction: 'CREDIT',
+          amountInr: 250.0,
+          description: 'Duplicate',
+        },
       ],
     });
 
-    assert.strictEqual(duplicateResult.transactionId, result.transactionId, 'Idempotent call must return original transactionId without duplicate entries');
+    assert.strictEqual(
+      duplicateResult.transactionId,
+      result.transactionId,
+      'Idempotent call must return original transactionId without duplicate entries',
+    );
   });
 
   it('1.5 should post compensating reversal with inverted directions and reversal flag', async () => {
@@ -390,14 +459,28 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
       transactionReference: 'TX-ORIG-500',
       description: 'Initial Delivery Fee Payment',
       entries: [
-        { accountType: 'GATEWAY_ESCROW', direction: 'DEBIT', amountInr: 120.00, description: 'Fee in escrow' },
-        { accountType: 'PARTNER_EARNINGS', direction: 'CREDIT', amountInr: 120.00, description: 'Partner earnings' },
+        {
+          accountType: 'GATEWAY_ESCROW',
+          direction: 'DEBIT',
+          amountInr: 120.0,
+          description: 'Fee in escrow',
+        },
+        {
+          accountType: 'PARTNER_EARNINGS',
+          direction: 'CREDIT',
+          amountInr: 120.0,
+          description: 'Partner earnings',
+        },
       ],
     });
 
     const reversal = await ledger.postReversal('TX-ORIG-500', 'Delivery cancelled before pickup');
     assert.ok(reversal.reversalTransactionId, 'Must generate reversal transaction');
-    assert.match(reversal.reversalReference, /^REV-TX-ORIG-500/i, 'Reversal reference must link to original transaction');
+    assert.match(
+      reversal.reversalReference,
+      /^REV-TX-ORIG-500/i,
+      'Reversal reference must link to original transaction',
+    );
   });
 
   // =========================================================================
@@ -410,14 +493,14 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const wallet = new WalletService(mockDb as any, ledger);
 
     const userId = 'usr-test-wallet-01';
-    await wallet.creditWallet(userId, 100.00, 'Initial promo topup');
+    await wallet.creditWallet(userId, 100.0, 'Initial promo topup');
 
     await assert.rejects(
       async () => {
-        await wallet.debitWallet(userId, 150.00, 'Attempt to overdraw');
+        await wallet.debitWallet(userId, 150.0, 'Attempt to overdraw');
       },
       /Insufficient wallet balance/i,
-      'Must strictly reject debit when requested amount exceeds current balance'
+      'Must strictly reject debit when requested amount exceeds current balance',
     );
   });
 
@@ -427,11 +510,15 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const wallet = new WalletService(mockDb as any, ledger);
 
     const userId = 'usr-test-wallet-02';
-    await wallet.creditWallet(userId, 300.00, 'Refund Credit');
-    await wallet.debitWallet(userId, 50.00, 'Order Payment');
+    await wallet.creditWallet(userId, 300.0, 'Refund Credit');
+    await wallet.debitWallet(userId, 50.0, 'Order Payment');
 
     const walletInfo = await wallet.getOrCreateWallet(userId);
-    assert.strictEqual(walletInfo.balanceInr, 250.00, 'Balance must equal total credits minus debits (300 - 50 = 250)');
+    assert.strictEqual(
+      walletInfo.balanceInr,
+      250.0,
+      'Balance must equal total credits minus debits (300 - 50 = 250)',
+    );
   });
 
   it('2.3 should correctly deduct promotional credits first and update sub-balances on debit without drift', async () => {
@@ -440,21 +527,21 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const wallet = new WalletService(mockDb as any, ledger);
 
     const userId = 'usr-test-wallet-sub';
-    await wallet.creditWallet(userId, 50.00, 'Promotional bonus', undefined, true);
-    await wallet.creditWallet(userId, 100.00, 'Refund credit', undefined, false);
+    await wallet.creditWallet(userId, 50.0, 'Promotional bonus', undefined, true);
+    await wallet.creditWallet(userId, 100.0, 'Refund credit', undefined, false);
 
     let w = await wallet.getOrCreateWallet(userId);
-    assert.strictEqual(w.balanceInr, 150.00);
-    assert.strictEqual(w.promotionalBalanceInr, 50.00);
-    assert.strictEqual(w.refundableBalanceInr, 100.00);
+    assert.strictEqual(w.balanceInr, 150.0);
+    assert.strictEqual(w.promotionalBalanceInr, 50.0);
+    assert.strictEqual(w.refundableBalanceInr, 100.0);
 
     // Debit 70 INR: 50 promo consumed, 20 refundable consumed
-    await wallet.debitWallet(userId, 70.00, 'Order Payment');
+    await wallet.debitWallet(userId, 70.0, 'Order Payment');
 
     w = await wallet.getOrCreateWallet(userId);
-    assert.strictEqual(w.balanceInr, 80.00);
-    assert.strictEqual(w.promotionalBalanceInr, 0.00);
-    assert.strictEqual(w.refundableBalanceInr, 80.00);
+    assert.strictEqual(w.balanceInr, 80.0);
+    assert.strictEqual(w.promotionalBalanceInr, 0.0);
+    assert.strictEqual(w.refundableBalanceInr, 80.0);
   });
 
   // =========================================================================
@@ -465,16 +552,13 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const mockDb = new MockDatabaseService();
     const support = new SupportService(mockDb as any);
 
-    await assert.rejects(
-      async () => {
-        await support.createTicket('usr-1', 'CUSTOMER', {
-          category: '',
-          subject: '',
-          description: '',
-        });
-      },
-      /category, subject, and description are required/i
-    );
+    await assert.rejects(async () => {
+      await support.createTicket('usr-1', 'CUSTOMER', {
+        category: '',
+        subject: '',
+        description: '',
+      });
+    }, /category, subject, and description are required/i);
   });
 
   it('3.2 CRITICAL SECURITY INVARIANT: Non-admin users must NEVER receive internal admin notes', async () => {
@@ -491,20 +575,48 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     });
 
     // Admin posts internal note (e.g., fraud score, bank reference, internal discussion)
-    await support.addMessage(ticket.id, adminId, 'ADMIN', 'Suspicious refund pattern detected. Flagged for risk review.', true);
+    await support.addMessage(
+      ticket.id,
+      adminId,
+      'ADMIN',
+      'Suspicious refund pattern detected. Flagged for risk review.',
+      true,
+    );
 
     // Admin posts public reply to customer
-    await support.addMessage(ticket.id, adminId, 'ADMIN', 'We are investigating your bank charge and will refund within 24h.', false);
+    await support.addMessage(
+      ticket.id,
+      adminId,
+      'ADMIN',
+      'We are investigating your bank charge and will refund within 24h.',
+      false,
+    );
 
     // Customer retrieves ticket conversation:
     const customerView = await support.getTicketDetails(ticket.id, customerId, 'CUSTOMER');
-    assert.strictEqual(customerView.messages.some((m: any) => m.is_internal === true), false, 'CRITICAL: Customer must never receive internal notes!');
-    assert.strictEqual(customerView.messages.length, 2, 'Customer should only see initial ticket message and public admin reply');
+    assert.strictEqual(
+      customerView.messages.some((m: any) => m.is_internal === true),
+      false,
+      'CRITICAL: Customer must never receive internal notes!',
+    );
+    assert.strictEqual(
+      customerView.messages.length,
+      2,
+      'Customer should only see initial ticket message and public admin reply',
+    );
 
     // Admin retrieves ticket conversation:
     const adminView = await support.getTicketDetails(ticket.id, adminId, 'ADMIN');
-    assert.strictEqual(adminView.messages.some((m: any) => m.is_internal === true), true, 'Admin must receive all internal notes');
-    assert.strictEqual(adminView.messages.length, 3, 'Admin must see complete conversation including internal notes');
+    assert.strictEqual(
+      adminView.messages.some((m: any) => m.is_internal === true),
+      true,
+      'Admin must receive all internal notes',
+    );
+    assert.strictEqual(
+      adminView.messages.length,
+      3,
+      'Admin must see complete conversation including internal notes',
+    );
   });
 
   it('3.3 should prevent non-admin users from creating internal notes', async () => {
@@ -523,7 +635,7 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
         await support.addMessage(ticket.id, customerId, 'CUSTOMER', 'Hacking internal note', true);
       },
       /Only administrators can post internal notes/i,
-      'Non-admin users must be strictly forbidden from posting internal notes'
+      'Non-admin users must be strictly forbidden from posting internal notes',
     );
   });
 
@@ -535,27 +647,21 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
     const mockDb = new MockDatabaseService();
     const ratings = new RatingsService(mockDb as any);
 
-    await assert.rejects(
-      async () => {
-        await ratings.submitRating('usr-1', {
-          targetType: 'PARTNER',
-          targetId: 'part-1',
-          score: 0, // Invalid!
-        });
-      },
-      /Rating score must be an integer between 1 and 5/i
-    );
+    await assert.rejects(async () => {
+      await ratings.submitRating('usr-1', {
+        targetType: 'PARTNER',
+        targetId: 'part-1',
+        score: 0, // Invalid!
+      });
+    }, /Rating score must be an integer between 1 and 5/i);
 
-    await assert.rejects(
-      async () => {
-        await ratings.submitRating('usr-1', {
-          targetType: 'PARTNER',
-          targetId: 'part-1',
-          score: 6, // Invalid!
-        });
-      },
-      /Rating score must be an integer between 1 and 5/i
-    );
+    await assert.rejects(async () => {
+      await ratings.submitRating('usr-1', {
+        targetType: 'PARTNER',
+        targetId: 'part-1',
+        score: 6, // Invalid!
+      });
+    }, /Rating score must be an integer between 1 and 5/i);
   });
 
   it('4.2 should prevent duplicate ratings for the same completed service', async () => {
@@ -574,17 +680,14 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
       rideId,
     });
 
-    await assert.rejects(
-      async () => {
-        await ratings.submitRating(reviewerId, {
-          targetType: 'PARTNER',
-          targetId: partnerId,
-          score: 4,
-          rideId,
-        });
-      },
-      /already submitted a rating for this completed service/i
-    );
+    await assert.rejects(async () => {
+      await ratings.submitRating(reviewerId, {
+        targetType: 'PARTNER',
+        targetId: partnerId,
+        score: 4,
+        rideId,
+      });
+    }, /already submitted a rating for this completed service/i);
   });
 
   it('4.3 should allow admin moderation to hide abusive review with reason', async () => {
@@ -599,7 +702,12 @@ describe('Phase 9: Financial Systems, Ledger, Wallets, Support & Ratings Contrac
       orderGroupId: 'grp-1',
     });
 
-    const moderated = await ratings.moderateRating(r.id, 'admin-1', true, 'Violates community guidelines / profanity');
+    const moderated = await ratings.moderateRating(
+      r.id,
+      'admin-1',
+      true,
+      'Violates community guidelines / profanity',
+    );
     assert.strictEqual(moderated.is_hidden, true, 'Review must be flagged as hidden');
     assert.strictEqual(moderated.moderation_reason, 'Violates community guidelines / profanity');
   });

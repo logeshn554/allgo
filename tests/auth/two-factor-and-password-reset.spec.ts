@@ -1,5 +1,13 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { AuthManagerRepository } from '../../services/api/dist/auth/data/auth-manager.repository.js';
+import { AuthRepository } from '../../services/api/dist/auth/data/auth.repository.js';
+import { EmailAuthService } from '../../services/api/dist/auth/email-auth.service.js';
+import { OtpService } from '../../services/api/dist/auth/otp.service.js';
+import { TokenSessionService } from '../../services/api/dist/auth/token-session.service.js';
+import { TwoFactorService } from '../../services/api/dist/auth/two-factor.service.js';
 import {
   base32Decode,
   base32Encode,
@@ -10,15 +18,7 @@ import {
   hashBackupCode,
   verifyAndConsumeBackupCode,
   verifyTotpCode,
-} from '../../apps/api/src/auth/totp.util.ts';
-import { AuthManagerRepository } from '../../apps/api/dist/auth/data/auth-manager.repository.js';
-import { TwoFactorService } from '../../apps/api/dist/auth/two-factor.service.js';
-import { EmailAuthService } from '../../apps/api/dist/auth/email-auth.service.js';
-import { TokenSessionService } from '../../apps/api/dist/auth/token-session.service.js';
-import { OtpService } from '../../apps/api/dist/auth/otp.service.js';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { AuthRepository } from '../../apps/api/dist/auth/data/auth.repository.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+} from '../../services/api/src/auth/totp.util.ts';
 
 function createInMemoryRedis() {
   const store = new Map<string, string>();

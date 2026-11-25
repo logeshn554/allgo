@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Label } from '@allgo/ui';
+import type React from 'react';
 
 interface FinanceSettlementsTabProps {
   partnerIdInput: string;
@@ -48,9 +48,7 @@ export function FinanceSettlementsTab({
                   required
                 />
               </div>
-              <Button type="submit">
-                Generate Partner Statement
-              </Button>
+              <Button type="submit">Generate Partner Statement</Button>
             </form>
           </CardContent>
         </Card>

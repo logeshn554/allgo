@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { ParcelStatsCards } from '@/components/parcels/ParcelStatsCards';
-import { ParcelsTable } from '@/components/parcels/ParcelsTable';
+import { ParcelModals } from '@/components/parcels/ParcelModals';
 import { ParcelRestrictionsTable } from '@/components/parcels/ParcelRestrictionsTable';
 import { ParcelServicesTable } from '@/components/parcels/ParcelServicesTable';
-import { ParcelModals } from '@/components/parcels/ParcelModals';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@allgo/ui';
+import { ParcelStatsCards } from '@/components/parcels/ParcelStatsCards';
+import { ParcelsTable } from '@/components/parcels/ParcelsTable';
+import { adminApi } from '@/lib/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { RefreshIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ParcelsPage() {
   const [activeTab, setActiveTab] = useState<'parcels' | 'restrictions' | 'services'>('parcels');
@@ -75,7 +76,8 @@ export default function ParcelsPage() {
             Parcel & Courier Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Authoritative parcel bookings, assignment dispatch, Dual OTP verification and restricted goods governance
+            Authoritative parcel bookings, assignment dispatch, Dual OTP verification and restricted
+            goods governance
           </p>
         </div>
         <Button
@@ -85,7 +87,11 @@ export default function ParcelsPage() {
           size="sm"
           className="gap-2 cursor-pointer self-start sm:self-auto"
         >
-          <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className={`size-4 ${loading ? 'animate-spin' : ''}`} />
+          <HugeiconsIcon
+            icon={RefreshIcon}
+            strokeWidth={2}
+            className={`size-4 ${loading ? 'animate-spin' : ''}`}
+          />
           <span>Refresh</span>
         </Button>
       </div>
@@ -101,9 +107,7 @@ export default function ParcelsPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="parcels">
-            All Parcel Bookings ({totalCount})
-          </TabsTrigger>
+          <TabsTrigger value="parcels">All Parcel Bookings ({totalCount})</TabsTrigger>
           <TabsTrigger value="restrictions">
             Package Restrictions & Policies ({restrictions.length})
           </TabsTrigger>

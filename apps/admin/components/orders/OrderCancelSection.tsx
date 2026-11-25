@@ -1,5 +1,4 @@
 'use client';
-import React from 'react';
 import { Button } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 
@@ -27,11 +26,7 @@ export function OrderCancelSection({
   return (
     <div className="border-t border-border pt-4 mt-4">
       {!showCancelDialog ? (
-        <Button
-          variant="destructive"
-          className="w-full"
-          onClick={() => setShowCancelDialog(true)}
-        >
+        <Button variant="destructive" className="w-full" onClick={() => setShowCancelDialog(true)}>
           Emergency Cancel & Refund Order
         </Button>
       ) : (
@@ -54,10 +49,7 @@ export function OrderCancelSection({
             >
               {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCancelDialog(false)}
-            >
+            <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
               Abort
             </Button>
           </div>

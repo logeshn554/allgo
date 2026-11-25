@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Button, HugeiconsIcon } from '@allgo/ui';
 import { Alert02Icon, Logout01Icon, RefreshIcon } from '@hugeicons/core-free-icons';
+import { useEffect } from 'react';
 
 export default function GlobalSegmentError({
   error,

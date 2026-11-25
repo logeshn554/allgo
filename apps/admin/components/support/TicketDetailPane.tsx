@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Button } from '@allgo/ui';
 import { Textarea } from '@allgo/ui';
 import { Checkbox } from '@allgo/ui';
 import { Label } from '@allgo/ui';
-import { Badge } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
 interface TicketDetailPaneProps {
   selectedTicket: any;
@@ -52,7 +51,8 @@ export function TicketDetailPane({
           <div>
             <CardTitle className="text-base">{selectedTicket.subject}</CardTitle>
             <div className="text-xs text-muted-foreground mt-1">
-              From: {selectedTicket.creator_name || selectedTicket.creator_phone} ({selectedTicket.creator_role})
+              From: {selectedTicket.creator_name || selectedTicket.creator_phone} (
+              {selectedTicket.creator_role})
             </div>
           </div>
           {onClose && (
@@ -65,32 +65,16 @@ export function TicketDetailPane({
 
       <CardContent className="flex-1 space-y-4 flex flex-col justify-between">
         <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleUpdateStatus('IN_PROGRESS')}
-          >
+          <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('IN_PROGRESS')}>
             Set IN_PROGRESS
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleUpdateStatus('ESCALATED')}
-          >
+          <Button variant="destructive" size="sm" onClick={() => handleUpdateStatus('ESCALATED')}>
             Escalate Dispute
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => handleUpdateStatus('RESOLVED')}
-          >
+          <Button variant="default" size="sm" onClick={() => handleUpdateStatus('RESOLVED')}>
             Mark RESOLVED
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleUpdateStatus('CLOSED')}
-          >
+          <Button variant="secondary" size="sm" onClick={() => handleUpdateStatus('CLOSED')}>
             Close Ticket
           </Button>
         </div>
@@ -103,8 +87,8 @@ export function TicketDetailPane({
                 m.is_internal
                   ? 'bg-amber-500/10 border-amber-500/30 self-start'
                   : m.sender_role === 'ADMIN'
-                  ? 'bg-primary/10 border-primary/20 self-end ms-auto'
-                  : 'bg-muted border-border self-start'
+                    ? 'bg-primary/10 border-primary/20 self-end ms-auto'
+                    : 'bg-muted border-border self-start'
               }`}
             >
               <div className="font-semibold mb-1 flex items-center gap-2">
@@ -112,7 +96,10 @@ export function TicketDetailPane({
                   {m.is_internal ? '[INTERNAL ADMIN NOTE]' : `${m.sender_name || m.sender_role}`}
                 </span>
                 <span className="text-muted-foreground font-normal">
-                  {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(m.created_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </span>
               </div>
               <div className="text-foreground whitespace-pre-wrap">{m.message}</div>
@@ -124,7 +111,11 @@ export function TicketDetailPane({
           <Textarea
             value={messageDraft}
             onChange={(e) => setMessageDraft(e.target.value)}
-            placeholder={isInternalDraft ? 'Add internal note (visible ONLY to admins)...' : 'Write reply to customer/partner...'}
+            placeholder={
+              isInternalDraft
+                ? 'Add internal note (visible ONLY to admins)...'
+                : 'Write reply to customer/partner...'
+            }
             rows={3}
             required
             className={isInternalDraft ? 'border-amber-500/50' : ''}
@@ -136,15 +127,14 @@ export function TicketDetailPane({
                 checked={isInternalDraft}
                 onCheckedChange={(checked) => setIsInternalDraft(Boolean(checked))}
               />
-              <Label htmlFor="internal-note" className="text-xs font-semibold text-amber-600 dark:text-amber-400 cursor-pointer">
+              <Label
+                htmlFor="internal-note"
+                className="text-xs font-semibold text-amber-600 dark:text-amber-400 cursor-pointer"
+              >
                 Mark as Internal Note (Never visible to customer)
               </Label>
             </div>
-            <Button
-              type="submit"
-              variant={isInternalDraft ? 'secondary' : 'default'}
-              size="sm"
-            >
+            <Button type="submit" variant={isInternalDraft ? 'secondary' : 'default'} size="sm">
               {isInternalDraft ? 'Add Note' : 'Send Reply'}
             </Button>
           </div>

@@ -23,7 +23,7 @@ export function calculateHaversineDistanceMeters(
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
@@ -39,12 +39,12 @@ export function calculateHaversineDistanceMeters(
 
 /**
  * sanitizeDriverTelemetry
- * 
+ *
  * Enforces velocity check ($\Delta d / \Delta t \le 120$ km/h) and rejects GPS spoofing (`isMockProvider`).
  */
 export function sanitizeDriverTelemetry(
   previousPing: GeoPoint | null,
-  currentPing: GeoPoint
+  currentPing: GeoPoint,
 ): SanitizedTelemetryResult {
   // 1. Check coordinates boundary
   if (
@@ -100,7 +100,7 @@ export function sanitizeDriverTelemetry(
     previousPing.latitude,
     previousPing.longitude,
     currentPing.latitude,
-    currentPing.longitude
+    currentPing.longitude,
   );
 
   const speedMetersPerSecond = distanceDeltaMeters / timeDeltaSeconds;

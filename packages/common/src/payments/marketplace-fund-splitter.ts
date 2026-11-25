@@ -30,7 +30,7 @@ export interface MarketplaceFundSplitResult {
 }
 
 export function calculateMarketplaceFundSplit(
-  req: OrderFundSplitRequest
+  req: OrderFundSplitRequest,
 ): MarketplaceFundSplitResult {
   const commPercent = req.merchantCommissionPercent ?? 15;
   const packaging = req.packagingFeeCents ?? 0;
@@ -45,9 +45,7 @@ export function calculateMarketplaceFundSplit(
 
   // Driver compensation: distance fare + tip + courier share (e.g. 80% of delivery fee)
   const driverPercent = req.driverCommissionPercent ?? 80;
-  const driverPayout = req.driverSubAccountId
-    ? Math.round((delivery * driverPercent) / 100)
-    : 0;
+  const driverPayout = req.driverSubAccountId ? Math.round((delivery * driverPercent) / 100) : 0;
 
   const driverPlatformCut = delivery - driverPayout;
   const platformTake = merchantPlatformCut + driverPlatformCut;

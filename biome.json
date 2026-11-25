@@ -1,0 +1,110 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "ignore": [
+      "node_modules",
+      "dist",
+      ".next",
+      ".turbo",
+      ".dart_tool",
+      "build",
+      "out",
+      "coverage",
+      "apps/customer_mobile/**",
+      "apps/merchant_mobile/**",
+      "apps/partner_mobile/**",
+      "apps/hub_mobile/**",
+      "packages/mobile_shared/**",
+      "database/**",
+      "infrastructure/**",
+      "pnpm-lock.yaml",
+      "**/next-env.d.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "organizeImports": {
+    "enabled": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "warn"
+      },
+      "complexity": {
+        "useLiteralKeys": "warn",
+        "useOptionalChain": "warn",
+        "noThisInStatic": "warn",
+        "noStaticOnlyClass": "warn",
+        "noForEach": "warn"
+      },
+      "performance": {
+        "noDelete": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "warn",
+        "noExportsInTest": "warn",
+        "noGlobalIsNan": "warn",
+        "noAssignInExpressions": "warn",
+        "noControlCharactersInRegex": "warn",
+        "noImplicitAnyLet": "warn",
+        "noDoubleEquals": "warn",
+        "noConfusingVoidType": "warn"
+      },
+      "style": {
+        "noNonNullAssertion": "off",
+        "useImportType": "warn",
+        "noUnusedTemplateLiteral": "warn",
+        "useTemplate": "warn",
+        "useSingleVarDeclarator": "warn",
+        "useExponentiationOperator": "warn",
+        "noUselessElse": "warn",
+        "useNodejsImportProtocol": "warn",
+        "useDefaultParameterLast": "warn"
+      },
+      "a11y": {
+        "recommended": false
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "warn"
+      }
+    }
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "overrides": [
+    {
+      "include": ["services/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
+    }
+  ]
+}

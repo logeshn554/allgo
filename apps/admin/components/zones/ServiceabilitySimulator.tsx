@@ -1,17 +1,15 @@
 'use client';
-
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Label } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
 
 interface ServiceabilitySimulatorProps {
@@ -46,7 +44,9 @@ export function ServiceabilitySimulator({
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <CardTitle className="text-base">Customer Location Serviceability Simulator</CardTitle>
-          <span className="text-xs text-muted-foreground">Runs live PostGIS ST_Contains point-in-polygon resolution</span>
+          <span className="text-xs text-muted-foreground">
+            Runs live PostGIS ST_Contains point-in-polygon resolution
+          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -71,10 +71,7 @@ export function ServiceabilitySimulator({
           </div>
           <div className="space-y-1">
             <Label className="text-xs font-medium text-muted-foreground">Vertical</Label>
-            <Select
-              value={simVertical}
-              onValueChange={(val) => setSimVertical(val ?? 'FOOD')}
-            >
+            <Select value={simVertical} onValueChange={(val) => setSimVertical(val ?? 'FOOD')}>
               <SelectTrigger className="w-36">
                 <SelectValue placeholder="Vertical" />
               </SelectTrigger>
@@ -89,10 +86,7 @@ export function ServiceabilitySimulator({
               </SelectContent>
             </Select>
           </div>
-          <Button
-            onClick={handleRunSimulator}
-            disabled={isSimulating}
-          >
+          <Button onClick={handleRunSimulator} disabled={isSimulating}>
             {isSimulating ? 'Checking...' : 'Check Location'}
           </Button>
         </div>
@@ -120,14 +114,18 @@ export function ServiceabilitySimulator({
             {simResult.serviceSettings && (
               <div className="flex flex-wrap gap-4 mt-2 text-xs text-foreground font-normal">
                 <div>
-                  Base Delivery Fee: <strong>₹{simResult.serviceSettings.baseDeliveryFeeInr}</strong>
+                  Base Delivery Fee:{' '}
+                  <strong>₹{simResult.serviceSettings.baseDeliveryFeeInr}</strong>
                 </div>
                 <div>
-                  Free Distance: <strong>{simResult.serviceSettings.freeDeliveryDistanceKm} km</strong>
+                  Free Distance:{' '}
+                  <strong>{simResult.serviceSettings.freeDeliveryDistanceKm} km</strong>
                 </div>
                 <div>
                   Surge: <strong>{simResult.serviceSettings.surgeMultiplier}x</strong>{' '}
-                  {simResult.serviceSettings.isSurgeActive && <span className="text-destructive font-semibold">(Active)</span>}
+                  {simResult.serviceSettings.isSurgeActive && (
+                    <span className="text-destructive font-semibold">(Active)</span>
+                  )}
                 </div>
                 <div>
                   Eligible Outlets: <strong>{simResult.eligibleOutletsCount}</strong>

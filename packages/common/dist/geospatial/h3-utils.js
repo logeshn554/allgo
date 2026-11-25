@@ -32,8 +32,8 @@ export function getH3KRing(originHex, k = 1) {
     const res = originHex.startsWith('88') ? 8 : 9;
     const hexLatStr = originHex.slice(2, 7);
     const hexLngStr = originHex.slice(7, 12);
-    const qLat = parseInt(hexLatStr, 16) - 100000;
-    const qLng = parseInt(hexLngStr, 16) - 200000;
+    const qLat = Number.parseInt(hexLatStr, 16) - 100000;
+    const qLng = Number.parseInt(hexLngStr, 16) - 200000;
     const hexes = new Set();
     for (let dLat = -k; dLat <= k; dLat++) {
         for (let dLng = -k; dLng <= k; dLng++) {

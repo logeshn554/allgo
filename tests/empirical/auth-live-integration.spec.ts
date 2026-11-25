@@ -1,11 +1,10 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import jwt from 'jsonwebtoken';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
+import { after, before, describe, it } from 'node:test';
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
 
 describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live PostgreSQL & Live Redis)', () => {
   let config: ConfigService;
@@ -81,7 +80,11 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
 
     // Verify challenge in Redis was atomically consumed/deleted
     const challengeExists = await redis.exists(`otp:challenge:${phone}`);
-    assert.strictEqual(challengeExists, 0, 'Challenge key must be deleted upon successful verification');
+    assert.strictEqual(
+      challengeExists,
+      0,
+      'Challenge key must be deleted upon successful verification',
+    );
   });
 
   it('[LIVE INTEGRATION] 2. Should enforce 60s resend cooldown in real Redis', async (t: any) => {
@@ -96,7 +99,7 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     // Immediate second send must be rejected by Redis cooldown check
     await assert.rejects(
       async () => authService.sendOtp({ phone }, ip),
-      /wait 60 seconds before requesting another OTP/i
+      /wait 60 seconds before requesting another OTP/i,
     );
 
     // Verify cooldown key in real Redis
@@ -115,18 +118,27 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     const realOtp = otpAdapter.getLastIssuedOtpForDevTesting(phone)!;
 
     // Attempt 1: Invalid
-    await assert.rejects(async () => authService.verifyOtp({ phone, code: '000000' }), /Invalid OTP code/i);
+    await assert.rejects(
+      async () => authService.verifyOtp({ phone, code: '000000' }),
+      /Invalid OTP code/i,
+    );
 
     // Attempt 2: Invalid
-    await assert.rejects(async () => authService.verifyOtp({ phone, code: '111111' }), /Invalid OTP code/i);
+    await assert.rejects(
+      async () => authService.verifyOtp({ phone, code: '111111' }),
+      /Invalid OTP code/i,
+    );
 
     // Attempt 3: Invalid (triggers lockout in Redis Lua)
-    await assert.rejects(async () => authService.verifyOtp({ phone, code: '222222' }), /Maximum verification attempts exceeded/i);
+    await assert.rejects(
+      async () => authService.verifyOtp({ phone, code: '222222' }),
+      /Maximum verification attempts exceeded/i,
+    );
 
     // Attempt 4: Even with correct code, Redis challenge is destroyed
     await assert.rejects(
       async () => authService.verifyOtp({ phone, code: realOtp }),
-      /OTP has expired or has already been used/i
+      /OTP has expired or has already been used/i,
     );
   });
 
@@ -153,8 +165,16 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     const successes = results.filter((r) => r && r.accessToken);
     const failures = results.filter((r) => r instanceof Error);
 
-    assert.strictEqual(successes.length, 1, 'Exactly 1 concurrent request must succeed via Redis EVAL atomicity');
-    assert.strictEqual(failures.length, 4, '4 concurrent requests must fail due to atomic consumption');
+    assert.strictEqual(
+      successes.length,
+      1,
+      'Exactly 1 concurrent request must succeed via Redis EVAL atomicity',
+    );
+    assert.strictEqual(
+      failures.length,
+      4,
+      '4 concurrent requests must fail due to atomic consumption',
+    );
   });
 
   it('[LIVE INTEGRATION] 5. Should rotate refresh token and record device session in real PostgreSQL & Redis', async (t: any) => {
@@ -166,10 +186,17 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     const ip = '10.0.1.5';
     await authService.sendOtp({ phone }, ip);
     const otp = otpAdapter.getLastIssuedOtpForDevTesting(phone)!;
-    const initialSession = await authService.verifyOtp({ phone, code: otp, deviceId: 'dev_test_005' });
+    const initialSession = await authService.verifyOtp({
+      phone,
+      code: otp,
+      deviceId: 'dev_test_005',
+    });
 
     // Rotate refresh token
-    const rotatedSession = await authService.refreshToken(initialSession.refreshToken, 'dev_test_005');
+    const rotatedSession = await authService.refreshToken(
+      initialSession.refreshToken,
+      'dev_test_005',
+    );
     assert.ok(rotatedSession.accessToken);
     assert.ok(rotatedSession.refreshToken);
     assert.notStrictEqual(rotatedSession.refreshToken, initialSession.refreshToken);
@@ -195,7 +222,11 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     const ip = '10.0.1.6';
     await authService.sendOtp({ phone }, ip);
     const otp = otpAdapter.getLastIssuedOtpForDevTesting(phone)!;
-    const initialSession = await authService.verifyOtp({ phone, code: otp, deviceId: 'dev_test_006' });
+    const initialSession = await authService.verifyOtp({
+      phone,
+      code: otp,
+      deviceId: 'dev_test_006',
+    });
 
     // Legitimate rotation
     await authService.refreshToken(initialSession.refreshToken, 'dev_test_006');
@@ -203,7 +234,7 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     // Malicious or accidental reuse of initial rotated refresh token
     await assert.rejects(
       async () => authService.refreshToken(initialSession.refreshToken, 'dev_test_006'),
-      /Refresh token reuse detected\. Session terminated for security\./i
+      /Refresh token reuse detected\. Session terminated for security\./i,
     );
 
     // Device session must be deleted from PostgreSQL
@@ -225,7 +256,11 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
     const otp = otpAdapter.getLastIssuedOtpForDevTesting(phone)!;
     const session = await authService.verifyOtp({ phone, code: otp, deviceId: 'dev_test_007' });
 
-    const logoutRes = await authService.logout(session.accessToken, session.user.id, 'dev_test_007');
+    const logoutRes = await authService.logout(
+      session.accessToken,
+      session.user.id,
+      'dev_test_007',
+    );
     assert.strictEqual(logoutRes.success, true);
 
     // Access token revoked in Redis
@@ -252,7 +287,7 @@ describe('Phase 1 Real Infrastructure Authentication Integration Suite (Live Pos
 
     await assert.rejects(
       async () => failClosedAuth.sendOtp({ phone: '+919876510008' }, '10.0.1.8'),
-      /Redis cache service is unavailable/i
+      /Redis cache service is unavailable/i,
     );
   });
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Badge,
   Button,
@@ -17,6 +16,7 @@ import {
   RefreshIcon,
   SmartPhone01Icon,
 } from '@hugeicons/core-free-icons';
+import type React from 'react';
 import type { OtpChannel } from './types';
 
 interface OtpVerifyStepProps {
@@ -140,9 +140,7 @@ export function OtpVerifyStep({
           className="text-xs text-muted-foreground"
         >
           <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-3.5" />
-          {resendCooldown > 0
-            ? `Resend code in ${resendCooldown}s`
-            : 'Resend verification code'}
+          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend verification code'}
         </Button>
       </div>
     </form>

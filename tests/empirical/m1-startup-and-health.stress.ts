@@ -1,11 +1,11 @@
 import 'reflect-metadata';
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import { HttpStatus } from '@nestjs/common';
-import { HealthController } from '../../apps/api/dist/health/health.controller.js';
-import { HealthService } from '../../apps/api/dist/health/health.service.js';
+import { HealthController } from '../../services/api/dist/health/health.controller.js';
+import { HealthService } from '../../services/api/dist/health/health.service.js';
 
 function createMockResponse() {
   const mockRes = {
@@ -30,7 +30,10 @@ describe('M1 Empirical Stress Test: NestJS Production Build & Health Check', () 
       assert.ok(fs.existsSync(commonDist), 'packages/common/dist must exist');
       assert.ok(fs.existsSync(path.join(commonDist, 'index.js')), 'index.js must exist');
       assert.ok(fs.existsSync(path.join(commonDist, 'index.d.ts')), 'index.d.ts must exist');
-      assert.ok(fs.existsSync(path.join(commonDist, 'enums/vertical.enum.js')), 'vertical.enum.js must exist');
+      assert.ok(
+        fs.existsSync(path.join(commonDist, 'enums/vertical.enum.js')),
+        'vertical.enum.js must exist',
+      );
     });
 
     it('should verify compiled dist artifacts for apps/api', () => {
@@ -38,8 +41,14 @@ describe('M1 Empirical Stress Test: NestJS Production Build & Health Check', () 
       assert.ok(fs.existsSync(apiDist), 'apps/api/dist must exist');
       assert.ok(fs.existsSync(path.join(apiDist, 'main.js')), 'main.js must exist');
       assert.ok(fs.existsSync(path.join(apiDist, 'app.module.js')), 'app.module.js must exist');
-      assert.ok(fs.existsSync(path.join(apiDist, 'auth/auth.service.js')), 'auth.service.js must exist');
-      assert.ok(fs.existsSync(path.join(apiDist, 'health/health.service.js')), 'health.service.js must exist');
+      assert.ok(
+        fs.existsSync(path.join(apiDist, 'auth/auth.service.js')),
+        'auth.service.js must exist',
+      );
+      assert.ok(
+        fs.existsSync(path.join(apiDist, 'health/health.service.js')),
+        'health.service.js must exist',
+      );
     });
   });
 
@@ -96,7 +105,11 @@ describe('M1 Empirical Stress Test: NestJS Production Build & Health Check', () 
       const res = createMockResponse();
       await controller.getHealth(res as any);
 
-      assert.strictEqual(res.statusCode, HttpStatus.SERVICE_UNAVAILABLE, 'Degraded status must fail closed with 503');
+      assert.strictEqual(
+        res.statusCode,
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Degraded status must fail closed with 503',
+      );
       assert.strictEqual(res.body.status, 'degraded');
       assert.strictEqual(res.body.services.postgres.status, 'down');
       assert.strictEqual(res.body.services.redis.status, 'up');
@@ -123,7 +136,11 @@ describe('M1 Empirical Stress Test: NestJS Production Build & Health Check', () 
       const res = createMockResponse();
       await controller.getHealth(res as any);
 
-      assert.strictEqual(res.statusCode, HttpStatus.SERVICE_UNAVAILABLE, 'Degraded status must fail closed with 503');
+      assert.strictEqual(
+        res.statusCode,
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Degraded status must fail closed with 503',
+      );
       assert.strictEqual(res.body.status, 'degraded');
       assert.strictEqual(res.body.services.postgres.status, 'up');
       assert.strictEqual(res.body.services.redis.status, 'down');

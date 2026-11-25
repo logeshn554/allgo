@@ -33,11 +33,7 @@ export const NEXT_LANGUAGES: readonly SupportedLanguageCode[] = ['hi'];
 /**
  * All officially planned language codes
  */
-export const ALL_SUPPORTED_LANGUAGES: readonly SupportedLanguageCode[] = [
-  'en',
-  'ta',
-  'hi',
-];
+export const ALL_SUPPORTED_LANGUAGES: readonly SupportedLanguageCode[] = ['en', 'ta', 'hi'];
 
 export interface LanguageMeta {
   code: SupportedLanguageCode;

@@ -1,5 +1,5 @@
+import type { MobilityStats } from '../types';
 import { adminFetch } from './base-client';
-import { MobilityStats } from '../types';
 
 export class MobilityApi {
   async getMobilityStats(): Promise<MobilityStats> {
@@ -46,13 +46,10 @@ export class MobilityApi {
     stateCode: string,
     flags: { ridesEnabled?: boolean; hireDriverEnabled?: boolean; bikeTaxiEnabled?: boolean },
   ): Promise<any> {
-    return adminFetch<any>(
-      `/v1/admin/mobility/feature-flags/${encodeURIComponent(stateCode)}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(flags),
-      },
-    );
+    return adminFetch<any>(`/v1/admin/mobility/feature-flags/${encodeURIComponent(stateCode)}`, {
+      method: 'POST',
+      body: JSON.stringify(flags),
+    });
   }
 
   async getMobilityHireDriver(status?: string): Promise<any[]> {

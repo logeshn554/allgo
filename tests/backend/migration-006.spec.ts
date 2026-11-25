@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
@@ -19,7 +19,10 @@ describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
 
   it('should verify migration 006 and rollback 006 files exist and conform to SQL transaction safety', () => {
     assert.ok(fs.existsSync(file006), '006_phase5_mobility_and_parcels.sql must exist');
-    assert.ok(fs.existsSync(fileRollback006), '006_phase5_mobility_and_parcels_rollback.sql must exist');
+    assert.ok(
+      fs.existsSync(fileRollback006),
+      '006_phase5_mobility_and_parcels_rollback.sql must exist',
+    );
 
     const sql006 = fs.readFileSync(file006, 'utf8');
     assert.ok(sql006.includes('BEGIN;'), 'Migration 006 must be enclosed in BEGIN');
@@ -31,14 +34,20 @@ describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
   });
 
   it('should apply and rollback migration 006 symmetrically on an isolated disposable database', async () => {
-    const adminUrl = process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
-    const adminClient = new pg.Client({ connectionString: adminUrl, connectionTimeoutMillis: 3000 });
+    const adminUrl =
+      process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+    const adminClient = new pg.Client({
+      connectionString: adminUrl,
+      connectionTimeoutMillis: 3000,
+    });
 
     const disposableDbName = `allgo_disp_006_${Date.now()}`;
     try {
       await adminClient.connect();
     } catch {
-      console.log('Skipping isolated DB test because PostgreSQL is unavailable in this environment');
+      console.log(
+        'Skipping isolated DB test because PostgreSQL is unavailable in this environment',
+      );
       return;
     }
 
@@ -63,7 +72,10 @@ describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
         await dispClient.query(fs.readFileSync(file006, 'utf8'));
 
         // 4. Verify Phase 5 tables and configurations
-        const flagsRes = await dispClient.query('SELECT * FROM mobility_feature_flags WHERE state_code = $1;', ['TN']);
+        const flagsRes = await dispClient.query(
+          'SELECT * FROM mobility_feature_flags WHERE state_code = $1;',
+          ['TN'],
+        );
         assert.equal(flagsRes.rows.length, 1);
         assert.equal(flagsRes.rows[0].rides_enabled, true);
 
@@ -80,15 +92,12 @@ describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
         assert.equal(sosTableRes.rows.length, 1);
 
         // 5. Test check constraints (e.g. invalid vehicle category)
-        await assert.rejects(
-          async () => {
-            await dispClient.query(`
+        await assert.rejects(async () => {
+          await dispClient.query(`
               INSERT INTO ride_fares_config (vehicle_category, base_fare_inr, per_km_rate_inr, minimum_fare_inr)
               VALUES ('HOVERBOARD', 100, 50, 150);
             `);
-          },
-          /chk_vehicle_cat/
-        );
+        }, /chk_vehicle_cat/);
 
         // 6. Test Rollback 006
         await dispClient.query(fs.readFileSync(fileRollback006, 'utf8'));
@@ -98,7 +107,11 @@ describe('Phase 5: Database Migration 006 & Rollback Verification', () => {
           SELECT table_name FROM information_schema.tables
           WHERE table_schema = 'public' AND table_name IN ('mobility_feature_flags', 'ride_fares_config', 'parcel_fares_config', 'mobility_sos_events');
         `);
-        assert.equal(rolledBackTables.rows.length, 0, 'Phase 5 specific tables must be dropped cleanly');
+        assert.equal(
+          rolledBackTables.rows.length,
+          0,
+          'Phase 5 specific tables must be dropped cleanly',
+        );
       } finally {
         await dispClient.end();
       }

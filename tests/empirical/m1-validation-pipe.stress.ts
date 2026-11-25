@@ -1,10 +1,10 @@
 import 'reflect-metadata';
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { ValidationPipe, BadRequestException } from '@nestjs/common';
-import { SendOtpDto } from '../../apps/api/dist/auth/dto/send-otp.dto.js';
-import { VerifyOtpDto } from '../../apps/api/dist/auth/dto/verify-otp.dto.js';
-import { RefreshTokenDto } from '../../apps/api/dist/auth/dto/refresh-token.dto.js';
+import { beforeEach, describe, it } from 'node:test';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { RefreshTokenDto } from '../../services/api/dist/auth/dto/refresh-token.dto.js';
+import { SendOtpDto } from '../../services/api/dist/auth/dto/send-otp.dto.js';
+import { VerifyOtpDto } from '../../services/api/dist/auth/dto/verify-otp.dto.js';
 
 describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => {
   let pipe: ValidationPipe;
@@ -39,21 +39,31 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
         await assert.rejects(
           () => pipe.transform({ phone: testCase.phone }, { type: 'body', metatype: SendOtpDto }),
           (err: any) => {
-            assert.ok(err instanceof BadRequestException, `Expected BadRequestException for ${testCase.name}`);
+            assert.ok(
+              err instanceof BadRequestException,
+              `Expected BadRequestException for ${testCase.name}`,
+            );
             const response = err.getResponse();
             assert.ok(response, 'Response body must exist');
             return true;
-          }
+          },
         );
       });
 
       it(`should reject ${testCase.name} with BadRequestException on VerifyOtpDto`, async () => {
         await assert.rejects(
-          () => pipe.transform({ phone: testCase.phone, code: '123456' }, { type: 'body', metatype: VerifyOtpDto }),
+          () =>
+            pipe.transform(
+              { phone: testCase.phone, code: '123456' },
+              { type: 'body', metatype: VerifyOtpDto },
+            ),
           (err: any) => {
-            assert.ok(err instanceof BadRequestException, `Expected BadRequestException for ${testCase.name}`);
+            assert.ok(
+              err instanceof BadRequestException,
+              `Expected BadRequestException for ${testCase.name}`,
+            );
             return true;
-          }
+          },
         );
       });
     }
@@ -62,7 +72,10 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
   describe('2.2 SQL and Script Injection Payloads', () => {
     const injectionPayloads = [
       { name: 'SQL Injection: simple tautology in phone', phone: "'+919876543210' OR '1'='1" },
-      { name: 'SQL Injection: stacked query in phone', phone: '+919876543210; DROP TABLE users;--' },
+      {
+        name: 'SQL Injection: stacked query in phone',
+        phone: '+919876543210; DROP TABLE users;--',
+      },
       { name: 'SQL Injection: union select in phone', phone: "'+91' UNION SELECT * FROM users--" },
       { name: 'XSS: script tags in phone', phone: '+919876543210<script>alert(1)</script>' },
       { name: 'XSS: image onerror in phone', phone: '+919876543210" onerror="alert(1)' },
@@ -77,7 +90,7 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
           (err: any) => {
             assert.ok(err instanceof BadRequestException);
             return true;
-          }
+          },
         );
       });
     }
@@ -99,12 +112,12 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
           () =>
             pipe.transform(
               { phone: '+919876543210', code: testCase.code },
-              { type: 'body', metatype: VerifyOtpDto }
+              { type: 'body', metatype: VerifyOtpDto },
             ),
           (err: any) => {
             assert.ok(err instanceof BadRequestException);
             return true;
-          }
+          },
         );
       });
     }
@@ -122,7 +135,7 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
       it(`should accept ${testCase.name} at ValidationPipe without throwing`, async () => {
         const transformed = await pipe.transform(
           { phone: testCase.phone },
-          { type: 'body', metatype: SendOtpDto }
+          { type: 'body', metatype: SendOtpDto },
         );
         assert.strictEqual(transformed.phone, testCase.phone);
       });
@@ -135,23 +148,23 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
         () =>
           pipe.transform(
             { phone: '+919876543210', code: '123456', platform: 'WINDOWS_PHONE_HACK' },
-            { type: 'body', metatype: VerifyOtpDto }
+            { type: 'body', metatype: VerifyOtpDto },
           ),
         (err: any) => {
           assert.ok(err instanceof BadRequestException);
           const res = err.getResponse() as any;
           assert.ok(
-            JSON.stringify(res.message).includes('platform must be one of the following values')
+            JSON.stringify(res.message).includes('platform must be one of the following values'),
           );
           return true;
-        }
+        },
       );
     });
 
     it('should accept valid platform ANDROID', async () => {
       const res = await pipe.transform(
         { phone: '+919876543210', code: '123456', platform: 'ANDROID' },
-        { type: 'body', metatype: VerifyOtpDto }
+        { type: 'body', metatype: VerifyOtpDto },
       );
       assert.strictEqual(res.platform, 'ANDROID');
     });
@@ -159,7 +172,7 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
     it('should accept valid platform IOS', async () => {
       const res = await pipe.transform(
         { phone: '+919876543210', code: '123456', platform: 'IOS' },
-        { type: 'body', metatype: VerifyOtpDto }
+        { type: 'body', metatype: VerifyOtpDto },
       );
       assert.strictEqual(res.platform, 'IOS');
     });
@@ -167,7 +180,7 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
     it('should accept valid platform WEB', async () => {
       const res = await pipe.transform(
         { phone: '+919876543210', code: '123456', platform: 'WEB' },
-        { type: 'body', metatype: VerifyOtpDto }
+        { type: 'body', metatype: VerifyOtpDto },
       );
       assert.strictEqual(res.platform, 'WEB');
     });
@@ -177,21 +190,21 @@ describe('M1 Empirical Stress Test: ValidationPipe Adversarial Payloads', () => 
     it('should reject missing refreshToken with BadRequestException', async () => {
       await assert.rejects(
         () => pipe.transform({}, { type: 'body', metatype: RefreshTokenDto }),
-        (err: any) => err instanceof BadRequestException
+        (err: any) => err instanceof BadRequestException,
       );
     });
 
     it('should reject empty refreshToken string with BadRequestException', async () => {
       await assert.rejects(
         () => pipe.transform({ refreshToken: '' }, { type: 'body', metatype: RefreshTokenDto }),
-        (err: any) => err instanceof BadRequestException
+        (err: any) => err instanceof BadRequestException,
       );
     });
 
     it('should reject non-string refreshToken with BadRequestException', async () => {
       await assert.rejects(
         () => pipe.transform({ refreshToken: 123456 }, { type: 'body', metatype: RefreshTokenDto }),
-        (err: any) => err instanceof BadRequestException
+        (err: any) => err instanceof BadRequestException,
       );
     });
   });

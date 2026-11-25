@@ -68,7 +68,7 @@ function parseArgs(args: string[]): CalculatorInputs {
     ordersPerDay: 1000,
     activeCouriers: 50,
     operatingHours: 12,
-    exchangeRateUsdInr: 94.40, // Configurable planning input [UNVERIFIED: Planning estimate input]
+    exchangeRateUsdInr: 94.4, // Configurable planning input [UNVERIFIED: Planning estimate input]
     formatJson: false,
   };
 
@@ -76,21 +76,21 @@ function parseArgs(args: string[]): CalculatorInputs {
     if (arg === '--json') {
       inputs.formatJson = true;
     } else if (arg.startsWith('--ordersPerDay=')) {
-      inputs.ordersPerDay = parseInt(arg.split('=')[1], 10);
+      inputs.ordersPerDay = Number.parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--activeCouriers=')) {
-      inputs.activeCouriers = parseInt(arg.split('=')[1], 10);
+      inputs.activeCouriers = Number.parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--operatingHours=')) {
-      inputs.operatingHours = parseInt(arg.split('=')[1], 10);
+      inputs.operatingHours = Number.parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--usdInrRate=')) {
-      inputs.exchangeRateUsdInr = parseFloat(arg.split('=')[1]);
+      inputs.exchangeRateUsdInr = Number.parseFloat(arg.split('=')[1]);
     } else if (arg.startsWith('--ceilingDev=')) {
-      inputs.ceilingDev = parseFloat(arg.split('=')[1]);
+      inputs.ceilingDev = Number.parseFloat(arg.split('=')[1]);
     } else if (arg.startsWith('--ceilingProd=')) {
-      inputs.ceilingProd = parseFloat(arg.split('=')[1]);
+      inputs.ceilingProd = Number.parseFloat(arg.split('=')[1]);
     } else if (arg.startsWith('--ceilingMaps=')) {
-      inputs.ceilingMaps = parseFloat(arg.split('=')[1]);
+      inputs.ceilingMaps = Number.parseFloat(arg.split('=')[1]);
     } else if (arg.startsWith('--ceilingSms=')) {
-      inputs.ceilingSms = parseFloat(arg.split('=')[1]);
+      inputs.ceilingSms = Number.parseFloat(arg.split('=')[1]);
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -155,45 +155,65 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   // Cross-zone egress (~20 GB @ $0.01/GiB) = $0.20
   // Cloud Storage (20 GB @ $0.023/GB) = $0.46
   // Secret Manager (15 active versions @ $0.06/version) = $0.90
-  const devCloudSqlInr = Math.round(27.50 * exchangeRateUsdInr) + Math.round(1.70 * exchangeRateUsdInr) + Math.round(0.80 * exchangeRateUsdInr); // 2596 + 160 + 76 = 2832
+  const devCloudSqlInr =
+    Math.round(27.5 * exchangeRateUsdInr) +
+    Math.round(1.7 * exchangeRateUsdInr) +
+    Math.round(0.8 * exchangeRateUsdInr); // 2596 + 160 + 76 = 2832
   const devRedisInr = Math.round(35.77 * exchangeRateUsdInr); // 3377
-  const devNetworkInr = Math.round(0.20 * exchangeRateUsdInr); // 19
+  const devNetworkInr = Math.round(0.2 * exchangeRateUsdInr); // 19
   const devStorageInr = Math.round(0.46 * exchangeRateUsdInr); // 43
-  const devSecretsInr = Math.round(0.90 * exchangeRateUsdInr); // 85
-  const devGcpMonthlyInr = devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹6,356
+  const devSecretsInr = Math.round(0.9 * exchangeRateUsdInr); // 85
+  const devGcpMonthlyInr =
+    devCloudSqlInr + devRedisInr + devNetworkInr + devStorageInr + devSecretsInr; // ₹6,356
 
   // 3. Prod Pilot Environment GCP Cost (24x7 HA Cloud SQL + Standard M2 HA Redis + Direct VPC Egress + min_instances=1)
   // Cloud SQL db-custom-2-7680 HA (730 hrs compute @ $0.3310/hr = $241.63 + $6.80 HA SSD + $2.80 PITR) = $251.23
   const prodSqlComputeInr = Math.round(241.63 * exchangeRateUsdInr); // ₹22,810 (2 vCPU @ $0.0505 * 2 + 7.5 GiB @ $0.0086 * 2)
-  const prodSqlStorageInr = Math.round(6.80 * exchangeRateUsdInr);   // ₹642
-  const prodSqlBackupsInr = Math.round(2.80 * exchangeRateUsdInr);   // ₹264
+  const prodSqlStorageInr = Math.round(6.8 * exchangeRateUsdInr); // ₹642
+  const prodSqlBackupsInr = Math.round(2.8 * exchangeRateUsdInr); // ₹264
 
   // Memorystore Redis Standard Tier M2 HA 5GB (730 hrs * 5GB * $0.0540/GB-hr in asia-south1 Mumbai) = $197.10
-  const prodRedisInr = Math.round(197.10 * exchangeRateUsdInr);      // ₹18,606
+  const prodRedisInr = Math.round(197.1 * exchangeRateUsdInr); // ₹18,606
 
   // Cloud Run baseline (Request-based): api ($9.51) + dispatch ($34.94) + webhooks ($0.59) + admin ($0.20) = $45.24
   // Dynamic scale component for order volume above 1,000 baseline
   const dynamicComputeUsd = Math.max(0, (ordersPerDay - 1000) * 30 * 0.002);
-  const prodCloudRunApiInr = Math.round((9.51 + dynamicComputeUsd * 0.4) * exchangeRateUsdInr);       // ₹898 baseline
-  const prodCloudRunDispatchInr = Math.round((34.94 + dynamicComputeUsd * 0.5) * exchangeRateUsdInr); // ₹3,298 baseline
-  const prodCloudRunWebhooksInr = Math.round((0.59 + dynamicComputeUsd * 0.08) * exchangeRateUsdInr); // ₹56 baseline
-  const prodCloudRunAdminInr = Math.round((0.20 + dynamicComputeUsd * 0.02) * exchangeRateUsdInr);    // ₹19 baseline
+  const prodCloudRunApiInr = Math.round((9.51 + dynamicComputeUsd * 0.4) * exchangeRateUsdInr); // ₹898 baseline
+  const prodCloudRunDispatchInr = Math.round(
+    (34.94 + dynamicComputeUsd * 0.5) * exchangeRateUsdInr,
+  ); // ₹3,298 baseline
+  const prodCloudRunWebhooksInr = Math.round(
+    (0.59 + dynamicComputeUsd * 0.08) * exchangeRateUsdInr,
+  ); // ₹56 baseline
+  const prodCloudRunAdminInr = Math.round((0.2 + dynamicComputeUsd * 0.02) * exchangeRateUsdInr); // ₹19 baseline
 
   // Direct VPC Egress ($0.00 setup fee; $1.00 cross-zone network egress for ~100 GB)
-  const prodNetworkInr = Math.round(1.00 * exchangeRateUsdInr);       // ₹94
+  const prodNetworkInr = Math.round(1.0 * exchangeRateUsdInr); // ₹94
 
   // Cloud Storage & Secret Manager
-  const prodStorageInr = Math.round(4.80 * exchangeRateUsdInr);       // ₹453
-  const prodSecretsInr = Math.round(2.70 * exchangeRateUsdInr);       // ₹255
+  const prodStorageInr = Math.round(4.8 * exchangeRateUsdInr); // ₹453
+  const prodSecretsInr = Math.round(2.7 * exchangeRateUsdInr); // ₹255
 
   // Observability & Operational Contingency Buffer
-  const prodLoggingInr = Math.round(25.00 * exchangeRateUsdInr);      // ₹2,360
-  const prodMonitoringInr = Math.round(10.00 * exchangeRateUsdInr);   // ₹944
-  const prodBufferInr = Math.round(22.50 * exchangeRateUsdInr);       // ₹2,124
+  const prodLoggingInr = Math.round(25.0 * exchangeRateUsdInr); // ₹2,360
+  const prodMonitoringInr = Math.round(10.0 * exchangeRateUsdInr); // ₹944
+  const prodBufferInr = Math.round(22.5 * exchangeRateUsdInr); // ₹2,124
 
-  const prodGcpMonthlyInr = prodSqlComputeInr + prodSqlStorageInr + prodSqlBackupsInr +
-    prodRedisInr + prodCloudRunApiInr + prodCloudRunDispatchInr + prodCloudRunWebhooksInr + prodCloudRunAdminInr +
-    prodNetworkInr + prodStorageInr + prodSecretsInr + prodLoggingInr + prodMonitoringInr + prodBufferInr; // ₹52,823 baseline
+  const prodGcpMonthlyInr =
+    prodSqlComputeInr +
+    prodSqlStorageInr +
+    prodSqlBackupsInr +
+    prodRedisInr +
+    prodCloudRunApiInr +
+    prodCloudRunDispatchInr +
+    prodCloudRunWebhooksInr +
+    prodCloudRunAdminInr +
+    prodNetworkInr +
+    prodStorageInr +
+    prodSecretsInr +
+    prodLoggingInr +
+    prodMonitoringInr +
+    prodBufferInr; // ₹52,823 baseline
 
   // 4. Google Maps Cost Analysis (Modernized March 2025 Per-SKU India Pricing)
   // Multi-vertical distribution: 80% Delivery (2.1 calls), 10% Parcel (2.1 calls), 10% Mobility (3.3 calls)
@@ -203,14 +223,16 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const mobilityOrders = ordersPerDay * 0.1;
 
   const monthlyDeliveryCalls = deliveryOrders * 2.1 * 30; // 50,400 calls
-  const monthlyParcelCalls = parcelOrders * 2.1 * 30;     // 6,300 calls
+  const monthlyParcelCalls = parcelOrders * 2.1 * 30; // 6,300 calls
   const monthlyMobilityCalls = mobilityOrders * 3.3 * 30; // 9,900 calls
-  const monthlyRoutesCalls = Math.round(monthlyDeliveryCalls + monthlyParcelCalls + monthlyMobilityCalls); // 66,600 calls
-  
-  const monthlyRouteMatrixElements = Math.round(ordersPerDay * 0.50 * 30); // ~15,000 matrix elements
-  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.33 * 30);       // ~10,000 un-cached addresses
-  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.50 * 30);          // ~15,000 un-cached checkout searches
-  const monthlyPlaceDetailsCalls = Math.round(ordersPerDay * 0.40 * 30);    // ~12,000 place details calls
+  const monthlyRoutesCalls = Math.round(
+    monthlyDeliveryCalls + monthlyParcelCalls + monthlyMobilityCalls,
+  ); // 66,600 calls
+
+  const monthlyRouteMatrixElements = Math.round(ordersPerDay * 0.5 * 30); // ~15,000 matrix elements
+  const monthlyGeocodingCalls = Math.round(ordersPerDay * 0.33 * 30); // ~10,000 un-cached addresses
+  const monthlyPlacesCalls = Math.round(ordersPerDay * 0.5 * 30); // ~15,000 un-cached checkout searches
+  const monthlyPlaceDetailsCalls = Math.round(ordersPerDay * 0.4 * 30); // ~12,000 place details calls
 
   const billableRoutesCalls = Math.max(0, monthlyRoutesCalls - 70000);
   const billableRouteMatrixElements = Math.max(0, monthlyRouteMatrixElements - 70000);
@@ -224,7 +246,13 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   const geocodingBillableInr = (billableGeocodingCalls / 1000) * 125;
   const placesBillableInr = (billablePlacesCalls / 1000) * 70;
   const placeDetailsBillableInr = (billablePlaceDetailsCalls / 1000) * 125;
-  const mapsMonthlyInr = Math.round(routesBillableInr + routeMatrixBillableInr + geocodingBillableInr + placesBillableInr + placeDetailsBillableInr); // ₹0 under 70k free cap
+  const mapsMonthlyInr = Math.round(
+    routesBillableInr +
+      routeMatrixBillableInr +
+      geocodingBillableInr +
+      placesBillableInr +
+      placeDetailsBillableInr,
+  ); // ₹0 under 70k free cap
 
   // Naive Continuous Polling Anti-Pattern Comparison (5s interval across active couriers):
   const secondsPerDay = operatingHours * 3600;
@@ -236,8 +264,8 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   // Approach A gross value in India before free allowance
   const approachAGrossInr = Math.round(
     (monthlyRoutesCalls / 1000) * 125 +
-    (monthlyGeocodingCalls / 1000) * 125 +
-    (monthlyPlacesCalls / 1000) * 70
+      (monthlyGeocodingCalls / 1000) * 125 +
+      (monthlyPlacesCalls / 1000) * 70,
   );
   const mapsDivergenceRatio = Math.round(mapsNaiveMonthlyInr / Math.max(1, approachAGrossInr)); // ~168x gross divergence
 
@@ -250,7 +278,7 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   // Approach 1: Direct Firebase Phone Auth / Identity Platform ($0.07 USD / ~₹6.61 INR per SMS after 300 free/mo)
   const firebaseFreeMonthly = 300; // 10 SMS/day globally
   const firebaseBillableOtps = Math.max(0, monthlyOtps - firebaseFreeMonthly);
-  const smsDirectFirebaseMonthlyInr = Math.round((firebaseBillableOtps * 0.07) * exchangeRateUsdInr); // ₹2,16,082
+  const smsDirectFirebaseMonthlyInr = Math.round(firebaseBillableOtps * 0.07 * exchangeRateUsdInr); // ₹2,16,082
 
   // Total Production Pilot Monthly (Prod GCP + Maps Approach A + DLT SMS)
   const totalPilotMonthlyInr = prodGcpMonthlyInr + mapsMonthlyInr + smsMonthlyInr; // ₹61,073
@@ -258,19 +286,20 @@ export function calculateMonthlyCosts(inputs: CalculatorInputs): CostProjection 
   // Combined Spend (Only if Dev and Prod Pilot environments run simultaneously)
   const combinedDevAndProdMonthlyInr = totalPilotMonthlyInr + devGcpMonthlyInr; // ₹67,429
 
-  const anyCeilingsConfigured = (
+  const anyCeilingsConfigured =
     ceilings.devCeilingConfigured ||
     ceilings.prodCeilingConfigured ||
     ceilings.mapsCeilingConfigured ||
-    ceilings.smsCeilingConfigured
-  );
+    ceilings.smsCeilingConfigured;
 
-  const evaluation = anyCeilingsConfigured ? {
-    dev: evaluateCeiling(devGcpMonthlyInr, inputs.ceilingDev),
-    prod: evaluateCeiling(prodGcpMonthlyInr, inputs.ceilingProd),
-    maps: evaluateCeiling(mapsMonthlyInr, inputs.ceilingMaps),
-    sms: evaluateCeiling(smsMonthlyInr, inputs.ceilingSms),
-  } : undefined;
+  const evaluation = anyCeilingsConfigured
+    ? {
+        dev: evaluateCeiling(devGcpMonthlyInr, inputs.ceilingDev),
+        prod: evaluateCeiling(prodGcpMonthlyInr, inputs.ceilingProd),
+        maps: evaluateCeiling(mapsMonthlyInr, inputs.ceilingMaps),
+        sms: evaluateCeiling(smsMonthlyInr, inputs.ceilingSms),
+      }
+    : undefined;
 
   return {
     inputs,

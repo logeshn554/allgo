@@ -1,13 +1,16 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { UnauthorizedException } from '@nestjs/common';
-import { AuthManagerRepository } from '../../apps/api/dist/auth/data/auth-manager.repository.js';
-import { TokenSessionService } from '../../apps/api/dist/auth/token-session.service.js';
-import { OtpService } from '../../apps/api/dist/auth/otp.service.js';
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { AuthRepository } from '../../apps/api/dist/auth/data/auth.repository.js';
-import { LocalOtpDeliveryAdapter } from '../../apps/api/dist/auth/adapters/local-otp-delivery.adapter.js';
-import { JwtAuthGuard } from '../../apps/api/dist/common/guards/jwt-auth.guard.js';
+import { createRequire } from 'node:module';
+import { describe, it } from 'node:test';
+
+const require = createRequire(import.meta.url);
+const { UnauthorizedException } = require('../../services/api/node_modules/@nestjs/common');
+import { LocalOtpDeliveryAdapter } from '../../services/api/dist/auth/adapters/local-otp-delivery.adapter.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { AuthManagerRepository } from '../../services/api/dist/auth/data/auth-manager.repository.js';
+import { AuthRepository } from '../../services/api/dist/auth/data/auth.repository.js';
+import { OtpService } from '../../services/api/dist/auth/otp.service.js';
+import { TokenSessionService } from '../../services/api/dist/auth/token-session.service.js';
+import { JwtAuthGuard } from '../../services/api/dist/common/guards/jwt-auth.guard.js';
 
 function createInMemoryRedis() {
   const store = new Map<string, string>();

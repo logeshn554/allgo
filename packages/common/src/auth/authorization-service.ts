@@ -44,9 +44,7 @@ export interface AuthorizationDecision {
  * Authoritatively evaluates access request against database/Redis truth.
  * Firebase token claims are never trusted for authorization decisions.
  */
-export function evaluateAuthoritativeAccess(
-  req: AuthorizationCheckRequest
-): AuthorizationDecision {
+export function evaluateAuthoritativeAccess(req: AuthorizationCheckRequest): AuthorizationDecision {
   const requireActive = req.requireActiveAccount !== false;
 
   // Tier 1: Global Account Status Check
@@ -63,9 +61,7 @@ export function evaluateAuthoritativeAccess(
   }
 
   // Tier 2: Active Role Context Verification
-  const matchingRole = req.identity.roles.find(
-    (r) => r.role === req.activeRoleContext
-  );
+  const matchingRole = req.identity.roles.find((r) => r.role === req.activeRoleContext);
 
   if (!matchingRole) {
     return {
@@ -101,27 +97,25 @@ export function evaluateAuthoritativeAccess(
  */
 export function detectStaleClaims(
   tokenClaims: { roles?: string[]; status?: string },
-  authoritativeIdentity: UserIdentity
+  authoritativeIdentity: UserIdentity,
 ): { isStale: boolean; discrepancies: string[] } {
   const discrepancies: string[] = [];
 
   if (tokenClaims.status && tokenClaims.status !== authoritativeIdentity.accountStatus) {
     discrepancies.push(
-      `Status mismatch: token claim is "${tokenClaims.status}", authoritative state is "${authoritativeIdentity.accountStatus}"`
+      `Status mismatch: token claim is "${tokenClaims.status}", authoritative state is "${authoritativeIdentity.accountStatus}"`,
     );
   }
 
   if (tokenClaims.roles) {
     const authoritativeActiveRoles = new Set(
-      authoritativeIdentity.roles
-        .filter((r) => r.status === 'ACTIVE')
-        .map((r) => r.role)
+      authoritativeIdentity.roles.filter((r) => r.status === 'ACTIVE').map((r) => r.role),
     );
 
     for (const claimedRole of tokenClaims.roles) {
       if (!authoritativeActiveRoles.has(claimedRole as UserRole)) {
         discrepancies.push(
-          `Revoked/inactive role in token: "${claimedRole}" is not active in authoritative state`
+          `Revoked/inactive role in token: "${claimedRole}" is not active in authoritative state`,
         );
       }
     }
@@ -132,4 +126,3 @@ export function detectStaleClaims(
     discrepancies,
   };
 }
-

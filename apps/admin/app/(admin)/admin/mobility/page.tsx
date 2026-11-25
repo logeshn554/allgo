@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { adminApi } from '@/lib/api-client';
-import { MobilityStats } from '@/components/mobility/MobilityStats';
-import { MobilityRidesTab } from '@/components/mobility/MobilityRidesTab';
-import { MobilityParcelsTab } from '@/components/mobility/MobilityParcelsTab';
-import { MobilityHireDriverTab } from '@/components/mobility/MobilityHireDriverTab';
 import { MobilityFaresTab } from '@/components/mobility/MobilityFaresTab';
-import { MobilitySosTab } from '@/components/mobility/MobilitySosTab';
 import { MobilityFlagsTab } from '@/components/mobility/MobilityFlagsTab';
-import { RideDetailModal } from '@/components/mobility/RideDetailModal';
+import { MobilityHireDriverTab } from '@/components/mobility/MobilityHireDriverTab';
+import { MobilityParcelsTab } from '@/components/mobility/MobilityParcelsTab';
+import { MobilityRidesTab } from '@/components/mobility/MobilityRidesTab';
 import { MobilitySosModal } from '@/components/mobility/MobilitySosModal';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@allgo/ui';
+import { MobilitySosTab } from '@/components/mobility/MobilitySosTab';
+import { MobilityStats } from '@/components/mobility/MobilityStats';
+import { RideDetailModal } from '@/components/mobility/RideDetailModal';
+import { adminApi } from '@/lib/api-client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@allgo/ui';
 import { Button } from '@allgo/ui';
+import { useEffect, useState } from 'react';
 
 export default function MobilityOperationsPage() {
-  const [activeTab, setActiveTab] = useState<'rides' | 'parcels' | 'hire_driver' | 'fares' | 'sos' | 'flags'>('rides');
+  const [activeTab, setActiveTab] = useState<
+    'rides' | 'parcels' | 'hire_driver' | 'fares' | 'sos' | 'flags'
+  >('rides');
 
   const [stats, setStats] = useState({
     totalRides: 0,
@@ -29,7 +31,10 @@ export default function MobilityOperationsPage() {
   const [rides, setRides] = useState<any[]>([]);
   const [parcels, setParcels] = useState<any[]>([]);
   const [hireDriverBookings, setHireDriverBookings] = useState<any[]>([]);
-  const [faresData, setFaresData] = useState<{ rideFares: any[]; parcelFares: any[] }>({ rideFares: [], parcelFares: [] });
+  const [faresData, setFaresData] = useState<{ rideFares: any[]; parcelFares: any[] }>({
+    rideFares: [],
+    parcelFares: [],
+  });
   const [sosEvents, setSosEvents] = useState<any[]>([]);
   const [featureFlags, setFeatureFlags] = useState<any[]>([]);
 
@@ -104,7 +109,11 @@ export default function MobilityOperationsPage() {
     }
   };
 
-  const handleToggleFlag = async (stateCode: string, field: 'ridesEnabled' | 'hireDriverEnabled' | 'bikeTaxiEnabled', currentValue: boolean) => {
+  const handleToggleFlag = async (
+    stateCode: string,
+    field: 'ridesEnabled' | 'hireDriverEnabled' | 'bikeTaxiEnabled',
+    currentValue: boolean,
+  ) => {
     try {
       await adminApi.updateMobilityFeatureFlags(stateCode, {
         [field]: !currentValue,
@@ -125,7 +134,8 @@ export default function MobilityOperationsPage() {
             Mobility & Parcel Operations Control Center
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Multi-vehicle ride dispatch, city courier parcels, designated driver duties, and regulatory state compliance
+            Multi-vehicle ride dispatch, city courier parcels, designated driver duties, and
+            regulatory state compliance
           </p>
         </div>
         <Button variant="outline" onClick={fetchAllData}>
@@ -135,7 +145,6 @@ export default function MobilityOperationsPage() {
 
       {isLoading && (
         <div className="p-4 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center gap-2 text-sm">
-          
           <span>Loading mobility radar and regulatory operational state...</span>
         </div>
       )}
@@ -160,7 +169,11 @@ export default function MobilityOperationsPage() {
         </TabsList>
 
         <TabsContent value="rides">
-          <MobilityRidesTab rides={rides} isLoadingRideDetail={isLoadingRideDetail} onViewRide={handleViewRide} />
+          <MobilityRidesTab
+            rides={rides}
+            isLoadingRideDetail={isLoadingRideDetail}
+            onViewRide={handleViewRide}
+          />
         </TabsContent>
         <TabsContent value="parcels">
           <MobilityParcelsTab parcels={parcels} />
@@ -172,7 +185,13 @@ export default function MobilityOperationsPage() {
           <MobilityFaresTab faresData={faresData} />
         </TabsContent>
         <TabsContent value="sos">
-          <MobilitySosTab sosEvents={sosEvents} onSelectSos={(ev) => { setSelectedSos(ev); setResolutionNotes(''); }} />
+          <MobilitySosTab
+            sosEvents={sosEvents}
+            onSelectSos={(ev) => {
+              setSelectedSos(ev);
+              setResolutionNotes('');
+            }}
+          />
         </TabsContent>
         <TabsContent value="flags">
           <MobilityFlagsTab featureFlags={featureFlags} onToggleFlag={handleToggleFlag} />
@@ -188,7 +207,10 @@ export default function MobilityOperationsPage() {
         isResolving={isResolving}
       />
 
-      <RideDetailModal selectedRideDetail={selectedRideDetail} onClose={() => setSelectedRideDetail(null)} />
+      <RideDetailModal
+        selectedRideDetail={selectedRideDetail}
+        onClose={() => setSelectedRideDetail(null)}
+      />
     </div>
   );
 }

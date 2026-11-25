@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 export const metadata = {
   title: 'AllGo Admin - Authentication',
@@ -6,9 +6,5 @@ export const metadata = {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-background flex flex-col justify-center">
-      {children}
-    </div>
-  );
+  return <div className="min-h-screen bg-background flex flex-col justify-center">{children}</div>;
 }

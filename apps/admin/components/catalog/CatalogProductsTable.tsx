@@ -1,14 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 
@@ -86,12 +77,22 @@ export function CatalogProductsTable({
           ) : (
             products.map((p) => {
               const basePrice = Number(p.basePriceInr ?? p.base_price_inr ?? 0);
-              const salePrice = p.salePriceInr != null ? Number(p.salePriceInr) : (p.sale_price_inr != null ? Number(p.sale_price_inr) : null);
+              const salePrice =
+                p.salePriceInr != null
+                  ? Number(p.salePriceInr)
+                  : p.sale_price_inr != null
+                    ? Number(p.sale_price_inr)
+                    : null;
               const adminStatus = p.adminStatus || p.admin_status || 'PENDING_REVIEW';
               const isVeg = Boolean(p.isVeg ?? p.is_veg ?? false);
-              const flags = Array.isArray(p.dietaryFlags) ? p.dietaryFlags : (Array.isArray(p.dietary_flags) ? p.dietary_flags : []);
+              const flags = Array.isArray(p.dietaryFlags)
+                ? p.dietaryFlags
+                : Array.isArray(p.dietary_flags)
+                  ? p.dietary_flags
+                  : [];
               const category = p.categoryName || p.category_name || 'General';
-              const merchant = p.businessName || p.business_name || p.outletName || p.outlet_name || 'Outlet';
+              const merchant =
+                p.businessName || p.business_name || p.outletName || p.outlet_name || 'Outlet';
               const stock = p.stockQuantity ?? p.stock_quantity ?? 0;
               const rejection = p.rejectionReason || p.rejection_reason;
 
@@ -129,11 +130,7 @@ export function CatalogProductsTable({
                     {flags.length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {flags.map((flag: string) => (
-                          <Badge
-                            key={flag}
-                            variant="secondary"
-                            className="text-[10px] px-1.5 py-0"
-                          >
+                          <Badge key={flag} variant="secondary" className="text-[10px] px-1.5 py-0">
                             {flag}
                           </Badge>
                         ))}
@@ -146,10 +143,14 @@ export function CatalogProductsTable({
                         adminStatus === 'APPROVED'
                           ? 'outline'
                           : adminStatus === 'REJECTED'
-                          ? 'destructive'
-                          : 'secondary'
+                            ? 'destructive'
+                            : 'secondary'
                       }
-                      className={adminStatus === 'APPROVED' ? 'border-primary/30 bg-primary/10 text-primary' : ''}
+                      className={
+                        adminStatus === 'APPROVED'
+                          ? 'border-primary/30 bg-primary/10 text-primary'
+                          : ''
+                      }
                     >
                       {adminStatus.replace(/_/g, ' ')}
                     </Badge>
@@ -162,11 +163,7 @@ export function CatalogProductsTable({
                   <TableCell className="text-end">
                     <div className="flex gap-2 justify-end">
                       {adminStatus !== 'APPROVED' && (
-                        <Button
-                          size="sm"
-                          onClick={() => onApprove(p)}
-                          className="cursor-pointer"
-                        >
+                        <Button size="sm" onClick={() => onApprove(p)} className="cursor-pointer">
                           Approve
                         </Button>
                       )}

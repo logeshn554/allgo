@@ -1,10 +1,10 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { PartnerService } from '../../apps/api/dist/partner/partner.service.js';
-import { MerchantService } from '../../apps/api/dist/merchant/merchant.service.js';
-import { StorageService } from '../../apps/api/dist/storage/storage.service.js';
-import { EncryptionService } from '../../apps/api/dist/common/encryption/encryption.service.js';
-import { MockDatabaseService, InMemoryRedisTestDouble } from '../helpers/test-doubles.ts';
+import { beforeEach, describe, it } from 'node:test';
+import { EncryptionService } from '../../services/api/dist/common/encryption/encryption.service.js';
+import { MerchantService } from '../../services/api/dist/merchant/merchant.service.js';
+import { PartnerService } from '../../services/api/dist/partner/partner.service.js';
+import { StorageService } from '../../services/api/dist/storage/storage.service.js';
+import { InMemoryRedisTestDouble, MockDatabaseService } from '../helpers/test-doubles.ts';
 
 describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verification', () => {
   let partnerService: PartnerService;
@@ -25,11 +25,36 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
     mockRedis = new InMemoryRedisTestDouble();
 
     // Seed mock users
-    mockDb.users.set(partnerUserA, { id: partnerUserA, phone: '+919876543201', full_name: 'Partner Alpha', status: 'ACTIVE' });
-    mockDb.users.set(partnerUserB, { id: partnerUserB, phone: '+919876543202', full_name: 'Partner Beta', status: 'ACTIVE' });
-    mockDb.users.set(merchantUserA, { id: merchantUserA, phone: '+919876543203', full_name: 'Merchant Alpha', status: 'ACTIVE' });
-    mockDb.users.set(merchantUserB, { id: merchantUserB, phone: '+919876543204', full_name: 'Merchant Beta', status: 'ACTIVE' });
-    mockDb.users.set(adminUser, { id: adminUser, phone: '+919876543999', full_name: 'Super Admin', status: 'ACTIVE' });
+    mockDb.users.set(partnerUserA, {
+      id: partnerUserA,
+      phone: '+919876543201',
+      full_name: 'Partner Alpha',
+      status: 'ACTIVE',
+    });
+    mockDb.users.set(partnerUserB, {
+      id: partnerUserB,
+      phone: '+919876543202',
+      full_name: 'Partner Beta',
+      status: 'ACTIVE',
+    });
+    mockDb.users.set(merchantUserA, {
+      id: merchantUserA,
+      phone: '+919876543203',
+      full_name: 'Merchant Alpha',
+      status: 'ACTIVE',
+    });
+    mockDb.users.set(merchantUserB, {
+      id: merchantUserB,
+      phone: '+919876543204',
+      full_name: 'Merchant Beta',
+      status: 'ACTIVE',
+    });
+    mockDb.users.set(adminUser, {
+      id: adminUser,
+      phone: '+919876543999',
+      full_name: 'Super Admin',
+      status: 'ACTIVE',
+    });
 
     encryptionService = new EncryptionService();
     encryptionService.initializeKeys();
@@ -37,7 +62,12 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
     storageService = new StorageService(mockDb as any);
 
     partnerService = new PartnerService(mockDb as any, encryptionService, storageService);
-    merchantService = new MerchantService(mockDb as any, mockRedis as any, encryptionService, storageService);
+    merchantService = new MerchantService(
+      mockDb as any,
+      mockRedis as any,
+      encryptionService,
+      storageService,
+    );
   });
 
   describe('Part A: End-to-End Partner Onboarding & Independent Service Lifecycle', () => {
@@ -86,11 +116,28 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
 
       // 6. Admin performs review:
       // APPROVE overall account
-      await partnerService.updateAdminPartnerStatus(reg.partnerId, adminUser, 'APPROVED', 'Identity and vehicle verified');
+      await partnerService.updateAdminPartnerStatus(
+        reg.partnerId,
+        adminUser,
+        'APPROVED',
+        'Identity and vehicle verified',
+      );
       // INDEPENDENT APPROVAL: Approve FOOD_DELIVERY
-      await partnerService.updateAdminServiceStatus(reg.partnerId, 'FOOD_DELIVERY', adminUser, 'APPROVED', 'Standard food delivery authorized');
+      await partnerService.updateAdminServiceStatus(
+        reg.partnerId,
+        'FOOD_DELIVERY',
+        adminUser,
+        'APPROVED',
+        'Standard food delivery authorized',
+      );
       // INDEPENDENT DECISION: REJECT BIKE_TAXI pending municipal legal clearance
-      await partnerService.updateAdminServiceStatus(reg.partnerId, 'BIKE_TAXI', adminUser, 'REJECTED', 'Municipal bike taxi aggregator clearance pending');
+      await partnerService.updateAdminServiceStatus(
+        reg.partnerId,
+        'BIKE_TAXI',
+        adminUser,
+        'REJECTED',
+        'Municipal bike taxi aggregator clearance pending',
+      );
 
       // 7. Verify partner profile in mobile app reflects exact independent states
       const profile = await partnerService.getProfile(partnerUserA);
@@ -101,7 +148,10 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
 
       assert.strictEqual(approvedFood.status, 'APPROVED');
       assert.strictEqual(rejectedTaxi.status, 'REJECTED');
-      assert.strictEqual(rejectedTaxi.rejection_reason, 'Municipal bike taxi aggregator clearance pending');
+      assert.strictEqual(
+        rejectedTaxi.rejection_reason,
+        'Municipal bike taxi aggregator clearance pending',
+      );
     });
   });
 
@@ -144,7 +194,7 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
         addressLine1: 'No 12 Bypass Road',
         postalCode: '600042',
         latitude: 12.9815,
-        longitude: 80.2180,
+        longitude: 80.218,
         phone: '+919876543205',
       });
       assert.strictEqual(branch2.outlet_status, 'PENDING_APPROVAL');
@@ -154,7 +204,7 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
       await merchantService.updateAdminMerchantStatus(
         reg.merchant.id,
         'DOCUMENTS_REQUIRED',
-        'FSSAI document image was blurry. Please re-upload high resolution copy.'
+        'FSSAI document image was blurry. Please re-upload high resolution copy.',
       );
 
       const profileReq = await merchantService.getProfile(merchantUserA);
@@ -184,12 +234,23 @@ describe('Checkpoint 7: Phase 2 End-to-End Integration & Security Boundary Verif
       // 7. Verify: Primary outlet is active, but secondary branch MUST REMAIN PENDING_APPROVAL
       const outlets = await merchantService.getOutlets(merchantUserA);
       const branch2After = outlets.find((o: any) => o.id === branch2.id);
-      assert.strictEqual(branch2After.outlet_status, 'PENDING_APPROVAL', 'Secondary branch must not auto-activate');
+      assert.strictEqual(
+        branch2After.outlet_status,
+        'PENDING_APPROVAL',
+        'Secondary branch must not auto-activate',
+      );
       assert.strictEqual(branch2After.is_open, false);
 
       // 8. Admin independently approves branch 2
-      await merchantService.updateAdminOutletStatus(branch2.id, adminUser, 'ACTIVE', 'Branch inspection passed');
-      const branch2Final = (await merchantService.getOutlets(merchantUserA)).find((o: any) => o.id === branch2.id);
+      await merchantService.updateAdminOutletStatus(
+        branch2.id,
+        adminUser,
+        'ACTIVE',
+        'Branch inspection passed',
+      );
+      const branch2Final = (await merchantService.getOutlets(merchantUserA)).find(
+        (o: any) => o.id === branch2.id,
+      );
       assert.strictEqual(branch2Final.outlet_status, 'ACTIVE');
       assert.strictEqual(branch2Final.is_open, true);
     });

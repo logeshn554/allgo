@@ -1,10 +1,10 @@
-import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
+import { beforeEach, describe, it } from 'node:test';
 import {
-  OtpSecurityService,
-  AtomicOtpChallengeStore,
-  OtpVerificationStatus,
   ATOMIC_OTP_VERIFY_AND_CONSUME_LUA,
+  AtomicOtpChallengeStore,
+  OtpSecurityService,
+  OtpVerificationStatus,
 } from '../../packages/common/src/auth/otp-service.ts';
 
 const TEST_PEPPER = 'allgo-production-cryptographic-pepper-2026';
@@ -73,11 +73,19 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / 
 
       // Challenge must be immediately consumed/deleted
       const postVerifyChallenge = store.getChallenge(TEST_PHONE);
-      assert.strictEqual(postVerifyChallenge, undefined, 'Challenge must be deleted immediately upon successful verification');
+      assert.strictEqual(
+        postVerifyChallenge,
+        undefined,
+        'Challenge must be deleted immediately upon successful verification',
+      );
 
       // Subsequent attempt with identical OTP must fail (replay attack blocked)
       const replayResult = await store.verifyAndConsumeOtp(TEST_PHONE, otp, 3);
-      assert.strictEqual(replayResult, OtpVerificationStatus.EXPIRED_OR_NOT_FOUND, 'Replay attempt must be rejected');
+      assert.strictEqual(
+        replayResult,
+        OtpVerificationStatus.EXPIRED_OR_NOT_FOUND,
+        'Replay attempt must be rejected',
+      );
     });
 
     it('should increment attempts on invalid OTP and destroy challenge on 3rd failure', async () => {
@@ -97,7 +105,11 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / 
       // 3rd failed attempt -> Max attempts exceeded, challenge destroyed
       const attempt3 = await store.verifyAndConsumeOtp(TEST_PHONE, '222222', 3);
       assert.strictEqual(attempt3, OtpVerificationStatus.MAX_ATTEMPTS_EXCEEDED);
-      assert.strictEqual(store.getChallenge(TEST_PHONE), undefined, 'Challenge must be deleted upon exceeding max attempts');
+      assert.strictEqual(
+        store.getChallenge(TEST_PHONE),
+        undefined,
+        'Challenge must be deleted upon exceeding max attempts',
+      );
     });
 
     it('should reject expired challenges', async () => {
@@ -110,7 +122,11 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / 
       challenge.expiresAt = Date.now() - 1000;
 
       const result = await store.verifyAndConsumeOtp(TEST_PHONE, otp, 3);
-      assert.strictEqual(result, OtpVerificationStatus.EXPIRED_OR_NOT_FOUND, 'Expired challenge must be rejected');
+      assert.strictEqual(
+        result,
+        OtpVerificationStatus.EXPIRED_OR_NOT_FOUND,
+        'Expired challenge must be rejected',
+      );
     });
   });
 
@@ -127,10 +143,20 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / 
 
       const results = [res1, res2];
       const successCount = results.filter((r) => r === OtpVerificationStatus.SUCCESS).length;
-      const consumedCount = results.filter((r) => r === OtpVerificationStatus.EXPIRED_OR_NOT_FOUND).length;
+      const consumedCount = results.filter(
+        (r) => r === OtpVerificationStatus.EXPIRED_OR_NOT_FOUND,
+      ).length;
 
-      assert.strictEqual(successCount, 1, 'Exactly one concurrent verification request must succeed');
-      assert.strictEqual(consumedCount, 1, 'The competing concurrent request must see the challenge as already consumed/expired');
+      assert.strictEqual(
+        successCount,
+        1,
+        'Exactly one concurrent verification request must succeed',
+      );
+      assert.strictEqual(
+        consumedCount,
+        1,
+        'The competing concurrent request must see the challenge as already consumed/expired',
+      );
     });
 
     it('should guarantee exactly-once consumption across 10 simultaneous high-concurrency requests', async () => {
@@ -139,25 +165,50 @@ describe('Task 5 / Finding 2.B: OTP Cryptographic Security & Concurrency Unit / 
 
       // Launch 10 simultaneous concurrent requests racing to consume the same OTP
       const concurrentRequests = Array.from({ length: 10 }, () =>
-        store.verifyAndConsumeOtp(TEST_PHONE, validOtp, 3)
+        store.verifyAndConsumeOtp(TEST_PHONE, validOtp, 3),
       );
 
       const outcomes = await Promise.all(concurrentRequests);
 
       const successes = outcomes.filter((status) => status === OtpVerificationStatus.SUCCESS);
-      const rejections = outcomes.filter((status) => status === OtpVerificationStatus.EXPIRED_OR_NOT_FOUND);
+      const rejections = outcomes.filter(
+        (status) => status === OtpVerificationStatus.EXPIRED_OR_NOT_FOUND,
+      );
 
-      assert.strictEqual(successes.length, 1, 'Strictly ONE request out of 10 concurrent racers must succeed');
-      assert.strictEqual(rejections.length, 9, 'All 9 competing racers must be rejected as challenge consumed');
-      assert.strictEqual(store.getChallenge(TEST_PHONE), undefined, 'Challenge must no longer exist in store');
+      assert.strictEqual(
+        successes.length,
+        1,
+        'Strictly ONE request out of 10 concurrent racers must succeed',
+      );
+      assert.strictEqual(
+        rejections.length,
+        9,
+        'All 9 competing racers must be rejected as challenge consumed',
+      );
+      assert.strictEqual(
+        store.getChallenge(TEST_PHONE),
+        undefined,
+        'Challenge must no longer exist in store',
+      );
     });
 
     it('should define a production Redis Lua script with atomic EXISTS, HGET, HINCRBY, and DEL semantics', () => {
-      assert.ok(ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('EXISTS'"), 'Must invoke EXISTS');
-      assert.ok(ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('HGET'"), 'Must invoke HGET');
-      assert.ok(ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('DEL'"), 'Must invoke DEL on match or attempt limit');
-      assert.ok(ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('HINCRBY'"), 'Must invoke HINCRBY on mismatch');
+      assert.ok(
+        ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('EXISTS'"),
+        'Must invoke EXISTS',
+      );
+      assert.ok(
+        ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('HGET'"),
+        'Must invoke HGET',
+      );
+      assert.ok(
+        ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('DEL'"),
+        'Must invoke DEL on match or attempt limit',
+      );
+      assert.ok(
+        ATOMIC_OTP_VERIFY_AND_CONSUME_LUA.includes("redis.call('HINCRBY'"),
+        'Must invoke HINCRBY on mismatch',
+      );
     });
   });
 });
-

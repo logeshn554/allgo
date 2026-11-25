@@ -1,5 +1,5 @@
-import pg from 'pg';
 import Redis from 'ioredis';
+import pg from 'pg';
 
 export async function verifyPostgresAndRedis() {
   console.log('========================================================');
@@ -31,16 +31,23 @@ export async function verifyPostgresAndRedis() {
       `SELECT ST_Distance(
         ST_SetSRID(ST_Point(80.2707, 13.0827), 4326)::geography,
         ST_SetSRID(ST_Point(80.2184, 13.0067), 4326)::geography
-      ) as distance_meters;`
+      ) as distance_meters;`,
     );
-    console.log('  [PASS] PostGIS Spatial Calculation (Chennai Central to Guindy):', Math.round(spatialRes.rows[0].distance_meters), 'meters');
+    console.log(
+      '  [PASS] PostGIS Spatial Calculation (Chennai Central to Guindy):',
+      Math.round(spatialRes.rows[0].distance_meters),
+      'meters',
+    );
 
     // Persistence row write
-    await pgClient.query('CREATE TABLE IF NOT EXISTS _allgo_persistence_check (id INT PRIMARY KEY, val TEXT, created_at TIMESTAMPTZ DEFAULT NOW());');
-    await pgClient.query("INSERT INTO _allgo_persistence_check (id, val) VALUES (1, 'allgo_persisted_evidence') ON CONFLICT (id) DO UPDATE SET val = EXCLUDED.val;");
+    await pgClient.query(
+      'CREATE TABLE IF NOT EXISTS _allgo_persistence_check (id INT PRIMARY KEY, val TEXT, created_at TIMESTAMPTZ DEFAULT NOW());',
+    );
+    await pgClient.query(
+      "INSERT INTO _allgo_persistence_check (id, val) VALUES (1, 'allgo_persisted_evidence') ON CONFLICT (id) DO UPDATE SET val = EXCLUDED.val;",
+    );
     const persistRes = await pgClient.query('SELECT * FROM _allgo_persistence_check WHERE id = 1;');
     console.log('  [PASS] Pre-restart Persistence Record:', persistRes.rows[0]);
-
   } catch (err: any) {
     console.error('  [FAIL] PostgreSQL Verification Error:', err.message);
     throw err;
@@ -72,7 +79,10 @@ export async function verifyPostgresAndRedis() {
     // Delete test key
     await redis.del(testKey);
     const existsVal = await redis.exists(testKey);
-    console.log('  [PASS] Redis Temporary Key Deleted. Exists check:', existsVal === 0 ? 'CLEANED' : 'STILL_EXISTS');
+    console.log(
+      '  [PASS] Redis Temporary Key Deleted. Exists check:',
+      existsVal === 0 ? 'CLEANED' : 'STILL_EXISTS',
+    );
 
     // Test Redis Lua atomic script
     const luaScript = `
@@ -88,8 +98,10 @@ export async function verifyPostgresAndRedis() {
     const luaRes1 = await redis.eval(luaScript, 1, luaTestKey, 'first');
     const luaRes2 = await redis.eval(luaScript, 1, luaTestKey, 'second');
     await redis.del(luaTestKey);
-    console.log('  [PASS] Redis Atomic Lua Script Execution:', { firstAttempt: luaRes1, secondAttempt: luaRes2 });
-
+    console.log('  [PASS] Redis Atomic Lua Script Execution:', {
+      firstAttempt: luaRes1,
+      secondAttempt: luaRes2,
+    });
   } catch (err: any) {
     console.error('  [FAIL] Redis Verification Error:', err.message);
     throw err;
@@ -104,4 +116,3 @@ export async function verifyPostgresAndRedis() {
 if (process.argv[1] && process.argv[1].endsWith('live-integration-verification.ts')) {
   verifyPostgresAndRedis().catch(() => process.exit(1));
 }
-

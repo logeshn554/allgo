@@ -1,9 +1,9 @@
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import { UndoIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import type React from 'react';
 
 interface ParcelInfoCardsProps {
   parcel: any;
@@ -33,7 +33,9 @@ export const ParcelInfoCards: React.FC<ParcelInfoCardsProps> = ({
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Service: <strong>{parcel.service_type || parcel.serviceType}</strong> · Category: <strong>{parcel.package_category || parcel.packageCategory}</strong> · Weight: <strong>{parcel.estimated_weight_kg || parcel.weightKg} kg</strong>
+              Service: <strong>{parcel.service_type || parcel.serviceType}</strong> · Category:{' '}
+              <strong>{parcel.package_category || parcel.packageCategory}</strong> · Weight:{' '}
+              <strong>{parcel.estimated_weight_kg || parcel.weightKg} kg</strong>
             </p>
           </div>
 
@@ -62,15 +64,29 @@ export const ParcelInfoCards: React.FC<ParcelInfoCardsProps> = ({
           <CardContent className="space-y-4">
             <div>
               <div className="text-xs font-semibold text-primary uppercase">PICKUP (SENDER)</div>
-              <div className="font-medium text-foreground text-sm mt-0.5">{parcel.sender_name || parcel.senderName}</div>
-              <div className="text-xs text-muted-foreground">{parcel.pickup_contact_phone || parcel.senderPhone}</div>
-              <div className="text-xs text-foreground mt-1">{parcel.pickup_address || parcel.pickupAddress}</div>
+              <div className="font-medium text-foreground text-sm mt-0.5">
+                {parcel.sender_name || parcel.senderName}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {parcel.pickup_contact_phone || parcel.senderPhone}
+              </div>
+              <div className="text-xs text-foreground mt-1">
+                {parcel.pickup_address || parcel.pickupAddress}
+              </div>
             </div>
             <div className="border-t border-border pt-4">
-              <div className="text-xs font-semibold text-primary uppercase">DESTINATION (RECIPIENT)</div>
-              <div className="font-medium text-foreground text-sm mt-0.5">{parcel.recipient_name || parcel.recipientName}</div>
-              <div className="text-xs text-muted-foreground">{parcel.recipient_phone || parcel.recipientPhone}</div>
-              <div className="text-xs text-foreground mt-1">{parcel.drop_address || parcel.dropAddress}</div>
+              <div className="text-xs font-semibold text-primary uppercase">
+                DESTINATION (RECIPIENT)
+              </div>
+              <div className="font-medium text-foreground text-sm mt-0.5">
+                {parcel.recipient_name || parcel.recipientName}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {parcel.recipient_phone || parcel.recipientPhone}
+              </div>
+              <div className="text-xs text-foreground mt-1">
+                {parcel.drop_address || parcel.dropAddress}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -83,29 +99,41 @@ export const ParcelInfoCards: React.FC<ParcelInfoCardsProps> = ({
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground text-xs">Delivery Courier Fee:</span>
-              <span className="font-semibold text-foreground">₹{Number(parcel.delivery_fee_inr || parcel.deliveryFeeInr || 0).toFixed(2)}</span>
+              <span className="font-semibold text-foreground">
+                ₹{Number(parcel.delivery_fee_inr || parcel.deliveryFeeInr || 0).toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground text-xs">Platform Fee:</span>
-              <span className="font-semibold text-foreground">₹{Number(parcel.platform_fee_inr || parcel.platformFeeInr || 0).toFixed(2)}</span>
+              <span className="font-semibold text-foreground">
+                ₹{Number(parcel.platform_fee_inr || parcel.platformFeeInr || 0).toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground text-xs">GST (18%):</span>
-              <span className="font-semibold text-foreground">₹{Number(parcel.tax_inr || parcel.taxInr || 0).toFixed(2)}</span>
+              <span className="font-semibold text-foreground">
+                ₹{Number(parcel.tax_inr || parcel.taxInr || 0).toFixed(2)}
+              </span>
             </div>
             <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
               <span>Total Paid:</span>
-              <span className="text-primary">₹{Number(parcel.total_amount_inr || parcel.totalAmountInr || 0).toFixed(2)}</span>
+              <span className="text-primary">
+                ₹{Number(parcel.total_amount_inr || parcel.totalAmountInr || 0).toFixed(2)}
+              </span>
             </div>
 
             <div className="border-t border-border pt-3 grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-muted-foreground">Pickup PIN: </span>
-                <span className="font-mono font-bold text-foreground">{parcel.pickup_otp || '••••'}</span>
+                <span className="font-mono font-bold text-foreground">
+                  {parcel.pickup_otp || '••••'}
+                </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Delivery PIN: </span>
-                <span className="font-mono font-bold text-foreground">{parcel.delivery_otp || '••••'}</span>
+                <span className="font-mono font-bold text-foreground">
+                  {parcel.delivery_otp || '••••'}
+                </span>
               </div>
             </div>
           </CardContent>

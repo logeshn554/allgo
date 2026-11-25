@@ -1,9 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
 class AllGoTheme {
   AllGoTheme._();
+
+  static FThemeData get foruiLightTheme => FTheme.neutral.light.touch;
+
+  static FThemeData get foruiDarkTheme => FTheme.neutral.dark.touch;
+
+  static ShadThemeData get shadLightTheme => ShadThemeData(
+        brightness: Brightness.light,
+        colorScheme: const ShadSlateColorScheme.light(
+          primary: AllGoColors.primary,
+          primaryForeground: AllGoColors.textInverse,
+          secondary: AllGoColors.secondary,
+          secondaryForeground: AllGoColors.textInverse,
+          background: AllGoColors.background,
+          foreground: AllGoColors.textPrimary,
+          card: AllGoColors.card,
+          cardForeground: AllGoColors.textPrimary,
+          border: AllGoColors.divider,
+          destructive: AllGoColors.error,
+          destructiveForeground: AllGoColors.textInverse,
+        ),
+      );
 
   static ThemeData get lightTheme {
     return ThemeData(

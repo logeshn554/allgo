@@ -1,7 +1,7 @@
-import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { CatalogMediaService } from '../../apps/api/dist/catalog/catalog-media.service.js';
+import { describe, test } from 'node:test';
 import { BadRequestException, PayloadTooLargeException } from '@nestjs/common';
+import { CatalogMediaService } from '../../services/api/dist/catalog/catalog-media.service.js';
 
 describe('Phase 3: Catalog Media Validation & Storage Security', () => {
   const dummyDb: any = { query: async () => ({ rows: [] }) };
@@ -38,17 +38,11 @@ describe('Phase 3: Catalog Media Validation & Storage Security', () => {
 
   test('should reject non-image file renamed to .jpg (magic bytes check)', () => {
     const fakeBuffer = Buffer.from('MZ\x90\x00\x03\x00\x00\x00'); // Windows PE executable header
-    assert.throws(
-      () => mediaService.validateImage(fakeBuffer, 'image/jpeg'),
-      BadRequestException
-    );
+    assert.throws(() => mediaService.validateImage(fakeBuffer, 'image/jpeg'), BadRequestException);
   });
 
   test('should reject empty image buffer', () => {
-    assert.throws(
-      () => mediaService.validateImage(Buffer.alloc(0)),
-      BadRequestException
-    );
+    assert.throws(() => mediaService.validateImage(Buffer.alloc(0)), BadRequestException);
   });
 
   test('should reject image payload exceeding 5 MB limit', () => {
@@ -58,19 +52,13 @@ describe('Phase 3: Catalog Media Validation & Storage Security', () => {
     largeBuffer[1] = 0xd8;
     largeBuffer[2] = 0xff;
 
-    assert.throws(
-      () => mediaService.validateImage(largeBuffer),
-      PayloadTooLargeException
-    );
+    assert.throws(() => mediaService.validateImage(largeBuffer), PayloadTooLargeException);
   });
 
   test('should reject declared MIME type mismatch with actual magic bytes', () => {
     // Buffer is PNG, but client claims image/jpeg
     const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    assert.throws(
-      () => mediaService.validateImage(pngBuffer, 'image/jpeg'),
-      BadRequestException
-    );
+    assert.throws(() => mediaService.validateImage(pngBuffer, 'image/jpeg'), BadRequestException);
   });
 
   test('should reject directory traversal in catalog image delivery route', () => {
@@ -82,17 +70,17 @@ describe('Phase 3: Catalog Media Validation & Storage Security', () => {
 
     assert.throws(
       () => mediaService.serveCatalogImage('../../../etc/passwd', dummyRes),
-      BadRequestException
+      BadRequestException,
     );
 
     assert.throws(
       () => mediaService.serveCatalogImage('..\\..\\Windows\\System32\\cmd.exe', dummyRes),
-      BadRequestException
+      BadRequestException,
     );
 
     assert.throws(
       () => mediaService.serveCatalogImage('private_kyc/doc.pdf', dummyRes),
-      BadRequestException
+      BadRequestException,
     );
   });
 });

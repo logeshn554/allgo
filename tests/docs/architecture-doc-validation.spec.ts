@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../../');
 const DOCS_DIR = path.join(ROOT_DIR, 'docs/architecture');
@@ -64,7 +64,7 @@ describe('System Architecture & Flow Specification Documentation Validation', ()
       assert.match(
         content,
         /```mermaid[\s\S]*?(?:sequenceDiagram|flowchart|graph)[\s\S]*?(?:Redis|Socket\.IO|GEO)[\s\S]*?```/,
-        'Must contain a mermaid diagram detailing Socket.IO / Redis real-time data flow'
+        'Must contain a mermaid diagram detailing Socket.IO / Redis real-time data flow',
       );
     });
   });
@@ -76,28 +76,40 @@ describe('System Architecture & Flow Specification Documentation Validation', ()
       const content = fs.readFileSync(filePath, 'utf-8');
 
       // Core architectural rules
-      assert.match(content, /FulfillmentStrategyEngine/i, 'Must specify FulfillmentStrategyEngine interface');
+      assert.match(
+        content,
+        /FulfillmentStrategyEngine/i,
+        'Must specify FulfillmentStrategyEngine interface',
+      );
       assert.match(content, /Mode A/i, 'Must specify Mode A');
       assert.match(content, /Mode B/i, 'Must specify Mode B');
       assert.match(content, /1\.5\s*km/i, 'Must specify proximity gating (1.5 km)');
       assert.match(content, /JIT|Just-in-Time/i, 'Must specify JIT dispatch');
       assert.match(content, /unbatch/i, 'Must specify dynamic unbatching fallback on delay');
-      assert.match(content, /perishab/i, 'Must specify perishability pickup sequencing (grocery last)');
-      assert.match(content, /refund/i, 'Must specify merchant rejection/cancellation refund handling');
+      assert.match(
+        content,
+        /perishab/i,
+        'Must specify perishability pickup sequencing (grocery last)',
+      );
+      assert.match(
+        content,
+        /refund/i,
+        'Must specify merchant rejection/cancellation refund handling',
+      );
 
       // Required Mermaid diagrams:
       // 1. checkout_session sequence
       assert.match(
         content,
         /```mermaid[\s\S]*?sequenceDiagram[\s\S]*?checkout_session[\s\S]*?```/,
-        'Must contain mermaid sequenceDiagram for checkout_session decomposition'
+        'Must contain mermaid sequenceDiagram for checkout_session decomposition',
       );
 
       // 2. Mode A vs Mode B lifecycle / state machines
       assert.match(
         content,
         /```mermaid[\s\S]*?(?:stateDiagram|flowchart|graph)[\s\S]*?(?:Mode A|SEPARATE)[\s\S]*?```/i,
-        'Must contain mermaid diagram for Mode A and Mode B fulfillment states'
+        'Must contain mermaid diagram for Mode A and Mode B fulfillment states',
       );
     });
   });
@@ -119,7 +131,7 @@ describe('System Architecture & Flow Specification Documentation Validation', ()
       assert.match(
         content,
         /```mermaid[\s\S]*?(?:stateDiagram|flowchart|graph)[\s\S]*?mutual exclusion[\s\S]*?```/i,
-        'Must contain mermaid diagram for partner mutual exclusion safety guard'
+        'Must contain mermaid diagram for partner mutual exclusion safety guard',
       );
     });
   });

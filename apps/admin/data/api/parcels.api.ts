@@ -1,5 +1,5 @@
+import type { ListAdminParcelsParams, ListAdminParcelsResponse } from '../types';
 import { adminFetch } from './base-client';
-import { ListAdminParcelsParams, ListAdminParcelsResponse } from '../types';
 
 export class ParcelsApi {
   async listAdminParcels(params?: ListAdminParcelsParams): Promise<ListAdminParcelsResponse> {
@@ -39,11 +39,7 @@ export class ParcelsApi {
     });
   }
 
-  async authorizeAdminParcelReturn(
-    id: string,
-    reason: string,
-    notes?: string,
-  ): Promise<any> {
+  async authorizeAdminParcelReturn(id: string, reason: string, notes?: string): Promise<any> {
     return adminFetch<any>(`/v1/admin/parcels/${encodeURIComponent(id)}/authorize-return`, {
       method: 'POST',
       body: JSON.stringify({ reason, notes }),
@@ -69,13 +65,10 @@ export class ParcelsApi {
   }
 
   async updateAdminParcelService(serviceType: string, dto: any): Promise<any> {
-    return adminFetch<any>(
-      `/v1/admin/parcels/config/services/${encodeURIComponent(serviceType)}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(dto),
-      },
-    );
+    return adminFetch<any>(`/v1/admin/parcels/config/services/${encodeURIComponent(serviceType)}`, {
+      method: 'PUT',
+      body: JSON.stringify(dto),
+    });
   }
 }
 

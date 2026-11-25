@@ -1,7 +1,7 @@
-import React from 'react';
+import { AdminShell } from '@/components/AdminShell';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { AdminShell } from '@/components/AdminShell';
+import type React from 'react';
 
 const SERVER_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 

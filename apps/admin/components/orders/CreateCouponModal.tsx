@@ -1,24 +1,18 @@
 'use client';
 
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@allgo/ui';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Label } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
+import type React from 'react';
 
 const COUPON_TYPE_ITEMS = {
   PERCENTAGE: 'Percentage (%)',
@@ -71,9 +65,7 @@ export function CreateCouponModal({
 
         <form onSubmit={handleCreateCoupon} className="space-y-4 my-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-foreground">
-              Coupon Code *
-            </Label>
+            <Label className="text-xs font-semibold text-foreground">Coupon Code *</Label>
             <Input
               type="text"
               required
@@ -84,9 +76,7 @@ export function CreateCouponModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-foreground">
-              Description
-            </Label>
+            <Label className="text-xs font-semibold text-foreground">Description</Label>
             <Input
               type="text"
               placeholder="e.g. 50% discount on food orders"
@@ -129,20 +119,12 @@ export function CreateCouponModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-foreground">
-                Min Order (₹)
-              </Label>
-              <Input
-                type="number"
-                value={minOrder}
-                onChange={(e) => setMinOrder(e.target.value)}
-              />
+              <Label className="text-xs font-semibold text-foreground">Min Order (₹)</Label>
+              <Input type="number" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} />
             </div>
             {couponType === 'PERCENTAGE' && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-foreground">
-                  Max Cap (₹)
-                </Label>
+                <Label className="text-xs font-semibold text-foreground">Max Cap (₹)</Label>
                 <Input
                   type="number"
                   value={maxDiscount}
@@ -153,11 +135,7 @@ export function CreateCouponModal({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowNewCouponModal(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setShowNewCouponModal(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isCreatingCoupon}>

@@ -1,8 +1,8 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@allgo/common', '@allgo/ui'],
+  transpilePackages: ['@allgo/common', '@allgo/ui', '@allgo/env', '@allgo/api-client'],
   experimental: {
     cpus: 1,
     workerThreads: false,

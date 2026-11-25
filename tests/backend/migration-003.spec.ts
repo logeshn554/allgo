@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 import pg from 'pg';
 
 describe('Checkpoint 1: Database Migration 003 & Rollback Specification Verification', () => {
@@ -92,7 +92,8 @@ describe('Checkpoint 1: Database Migration 003 & Rollback Specification Verifica
   });
 
   it('should test live PostgreSQL connection and rollback against a disposable database', async () => {
-    const adminUrl = process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
+    const adminUrl =
+      process.env.DATABASE_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/postgres';
     const adminClient = new pg.Client({
       connectionString: adminUrl,
       connectionTimeoutMillis: 1500,
@@ -127,7 +128,11 @@ describe('Checkpoint 1: Database Migration 003 & Rollback Specification Verifica
           SELECT table_name FROM information_schema.tables 
           WHERE table_name IN ('document_upload_tickets', 'partner_service_applications', 'merchant_documents');
         `);
-        assert.strictEqual(tablesRes.rows.length, 3, 'Migration 003 must create 3 tables in disposable DB');
+        assert.strictEqual(
+          tablesRes.rows.length,
+          3,
+          'Migration 003 must create 3 tables in disposable DB',
+        );
 
         // Apply symmetric rollback
         const rollbackSql = fs.readFileSync(fileRollback003, 'utf8');
@@ -137,7 +142,11 @@ describe('Checkpoint 1: Database Migration 003 & Rollback Specification Verifica
           SELECT table_name FROM information_schema.tables 
           WHERE table_name IN ('document_upload_tickets', 'partner_service_applications', 'merchant_documents');
         `);
-        assert.strictEqual(tablesAfterRes.rows.length, 0, 'Rollback 003 must cleanly drop tables in disposable DB');
+        assert.strictEqual(
+          tablesAfterRes.rows.length,
+          0,
+          'Rollback 003 must cleanly drop tables in disposable DB',
+        );
       } finally {
         await dispClient.end();
       }

@@ -1,7 +1,7 @@
-import React from 'react';
 import { StatusBadge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
-import { Card, CardHeader, CardTitle, CardContent } from '@allgo/ui';
+import { Card, CardContent, CardHeader, CardTitle } from '@allgo/ui';
+import type React from 'react';
 
 interface PartnerServicesApprovalProps {
   services: any[];
@@ -19,7 +19,8 @@ export const PartnerServicesApproval: React.FC<PartnerServicesApprovalProps> = (
       <CardHeader>
         <CardTitle className="text-base">Independent Service Category Applications</CardTitle>
         <p className="text-xs text-muted-foreground">
-          RULE: Each service application must be approved independently. Food delivery approval does not authorize bike taxi or cab rides.
+          RULE: Each service application must be approved independently. Food delivery approval does
+          not authorize bike taxi or cab rides.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">

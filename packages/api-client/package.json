@@ -1,0 +1,26 @@
+{
+  "name": "@allgo/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared typed HTTP client, error sanitizer, and auth headers for AllGo web and mobile apps",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@allgo/common": "workspace:*"
+  },
+  "devDependencies": {
+    "@allgo/config-typescript": "workspace:*"
+  }
+}

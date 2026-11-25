@@ -1,41 +1,34 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getFilteredRowModel,
-  flexRender,
-  ColumnDef,
-} from '@tanstack/react-table';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Input } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 import { StatusBadge } from '@allgo/ui';
 import {
   Select,
-  SelectTrigger,
-  SelectValue,
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@allgo/ui';
-import { HugeiconsIcon } from '@hugeicons/react';
 import {
-  Search01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   FilterIcon,
+  Search01Icon,
   ViewIcon,
 } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import {
+  type ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 
 interface OrderItem {
   id: string;
@@ -195,7 +188,7 @@ export function OrdersTable({
         ),
       },
     ],
-    [onInspectOrder]
+    [onInspectOrder],
   );
 
   const table = useReactTable({
@@ -302,7 +295,10 @@ export function OrdersTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     No results.
                   </TableCell>
                 </TableRow>
@@ -320,8 +316,9 @@ export function OrdersTable({
               to{' '}
               <span className="font-medium text-foreground">
                 {Math.min(
-                  (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                  filteredOrders.length
+                  (table.getState().pagination.pageIndex + 1) *
+                    table.getState().pagination.pageSize,
+                  filteredOrders.length,
                 )}
               </span>{' '}
               of <span className="font-medium text-foreground">{filteredOrders.length}</span> orders
@@ -363,7 +360,11 @@ export function OrdersTable({
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
-                    <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3.5 rtl:rotate-180" />
+                    <HugeiconsIcon
+                      icon={ArrowLeft01Icon}
+                      strokeWidth={2}
+                      className="size-3.5 rtl:rotate-180"
+                    />
                     <span className="sr-only">Previous Page</span>
                   </Button>
                   <Button
@@ -372,7 +373,11 @@ export function OrdersTable({
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
                   >
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3.5 rtl:rotate-180" />
+                    <HugeiconsIcon
+                      icon={ArrowRight01Icon}
+                      strokeWidth={2}
+                      className="size-3.5 rtl:rotate-180"
+                    />
                     <span className="sr-only">Next Page</span>
                   </Button>
                 </div>

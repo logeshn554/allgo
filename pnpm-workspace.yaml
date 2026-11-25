@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "services/*"
+  - "packages/*"
+
+allowBuilds:
+  "@biomejs/biome": true
+  "@firebase/util": true
+  "protobufjs": true
+  "sharp": true
+  "@scarf/scarf": false

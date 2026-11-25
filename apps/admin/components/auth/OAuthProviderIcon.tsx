@@ -1,12 +1,6 @@
 'use client';
-
-import React from 'react';
 import { HugeiconsIcon, cn } from '@allgo/ui';
-import {
-  Globe02Icon,
-  Mail01Icon,
-  SmartPhone01Icon,
-} from '@hugeicons/core-free-icons';
+import { Globe02Icon, Mail01Icon, SmartPhone01Icon } from '@hugeicons/core-free-icons';
 
 interface OAuthProviderIconProps {
   slug: string;
@@ -20,11 +14,7 @@ export function OAuthProviderIcon({ slug, className }: OAuthProviderIconProps) {
   switch (normalized) {
     case 'google':
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className={iconClass}
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" className={iconClass} aria-hidden="true">
           <path
             fill="#4285F4"
             d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
@@ -46,12 +36,7 @@ export function OAuthProviderIcon({ slug, className }: OAuthProviderIconProps) {
 
     case 'github':
       return (
-        <svg
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className={iconClass}
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" fill="currentColor" className={iconClass} aria-hidden="true">
           <path
             fillRule="evenodd"
             clipRule="evenodd"
@@ -62,23 +47,14 @@ export function OAuthProviderIcon({ slug, className }: OAuthProviderIconProps) {
 
     case 'apple':
       return (
-        <svg
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className={iconClass}
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" fill="currentColor" className={iconClass} aria-hidden="true">
           <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43Zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45Z" />
         </svg>
       );
 
     case 'microsoft':
       return (
-        <svg
-          viewBox="0 0 24 24"
-          className={iconClass}
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 24 24" className={iconClass} aria-hidden="true">
           <path fill="#F25022" d="M1 1h10.5v10.5H1z" />
           <path fill="#7FBA00" d="M12.5 1H23v10.5H12.5z" />
           <path fill="#00A4EF" d="M1 12.5h10.5V23H1z" />

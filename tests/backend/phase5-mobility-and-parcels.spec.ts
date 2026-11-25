@@ -1,18 +1,18 @@
-import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { ConfigService } from '../../apps/api/dist/config/config.service.js';
-import { DatabaseService } from '../../apps/api/dist/database/database.service.js';
-import { RedisService } from '../../apps/api/dist/redis/redis.service.js';
-import { MobilityFareService } from '../../apps/api/dist/mobility/mobility-fare.service.js';
-import { PartnerContinuityService } from '../../apps/api/dist/mobility/partner-continuity.service.js';
-import { RidesService } from '../../apps/api/dist/mobility/rides.service.js';
-import { ParcelsService } from '../../apps/api/dist/mobility/parcels.service.js';
-import { HireDriverService } from '../../apps/api/dist/mobility/hire-driver.service.js';
-import { RidesController } from '../../apps/api/dist/mobility/controllers/rides.controller.js';
-import { ParcelsController } from '../../apps/api/dist/mobility/controllers/parcels.controller.js';
-import { HireDriverController } from '../../apps/api/dist/mobility/controllers/hire-driver.controller.js';
-import { PartnerContinuityController } from '../../apps/api/dist/mobility/controllers/partner-continuity.controller.js';
-import { AdminMobilityController } from '../../apps/api/dist/mobility/controllers/admin-mobility.controller.js';
+import { after, before, describe, it } from 'node:test';
+import { ConfigService } from '../../services/api/dist/config/config.service.js';
+import { DatabaseService } from '../../services/api/dist/database/database.service.js';
+import { AdminMobilityController } from '../../services/api/dist/mobility/controllers/admin-mobility.controller.js';
+import { HireDriverController } from '../../services/api/dist/mobility/controllers/hire-driver.controller.js';
+import { ParcelsController } from '../../services/api/dist/mobility/controllers/parcels.controller.js';
+import { PartnerContinuityController } from '../../services/api/dist/mobility/controllers/partner-continuity.controller.js';
+import { RidesController } from '../../services/api/dist/mobility/controllers/rides.controller.js';
+import { HireDriverService } from '../../services/api/dist/mobility/hire-driver.service.js';
+import { MobilityFareService } from '../../services/api/dist/mobility/mobility-fare.service.js';
+import { ParcelsService } from '../../services/api/dist/mobility/parcels.service.js';
+import { PartnerContinuityService } from '../../services/api/dist/mobility/partner-continuity.service.js';
+import { RidesService } from '../../services/api/dist/mobility/rides.service.js';
+import { RedisService } from '../../services/api/dist/redis/redis.service.js';
 
 describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Suite', () => {
   let config: ConfigService;
@@ -52,7 +52,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     await db.onModuleInit();
     await redis.onModuleInit();
     try {
-      await db.query("SELECT 1;");
+      await db.query('SELECT 1;');
       isLiveAvailable = true;
     } catch {
       isLiveAvailable = false;
@@ -60,7 +60,6 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     if (!isLiveAvailable) {
       return;
     }
-
 
     fareService = new MobilityFareService(db);
     continuityService = new PartnerContinuityService(db, redis);
@@ -76,16 +75,28 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
     // Clean prior artifacts
     try {
-      await db.query(`DELETE FROM mobility_sos_events WHERE triggered_by_user_id IN ('${customerUserId}', '${partnerUserId}');`);
+      await db.query(
+        `DELETE FROM mobility_sos_events WHERE triggered_by_user_id IN ('${customerUserId}', '${partnerUserId}');`,
+      );
       await db.query(`DELETE FROM hire_driver_bookings WHERE customer_id = '${customerUserId}';`);
       await db.query(`DELETE FROM parcels WHERE sender_id = '${customerUserId}';`);
       await db.query(`DELETE FROM rides WHERE customer_id = '${customerUserId}';`);
-      await db.query(`DELETE FROM partner_modes WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM partner_earnings_entries WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
-      await db.query(`DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`);
+      await db.query(
+        `DELETE FROM partner_modes WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_earnings_entries WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM vehicles WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
+      await db.query(
+        `DELETE FROM partner_documents WHERE partner_id IN (SELECT id FROM partners WHERE user_id = '${partnerUserId}');`,
+      );
       await db.query(`DELETE FROM partners WHERE user_id = '${partnerUserId}';`);
-      await db.query(`DELETE FROM users WHERE id IN ('${customerUserId}', '${partnerUserId}', '${adminUserId}');`);
+      await db.query(
+        `DELETE FROM users WHERE id IN ('${customerUserId}', '${partnerUserId}', '${adminUserId}');`,
+      );
     } catch {}
 
     // Seed test users
@@ -120,20 +131,28 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
   });
 
   after(async () => {
-    if (!isLiveAvailable) { return; }
+    if (!isLiveAvailable) {
+      return;
+    }
     try {
-      await db.query(`DELETE FROM mobility_sos_events WHERE triggered_by_user_id IN ('${customerUserId}', '${partnerUserId}');`);
+      await db.query(
+        `DELETE FROM mobility_sos_events WHERE triggered_by_user_id IN ('${customerUserId}', '${partnerUserId}');`,
+      );
       await db.query(`DELETE FROM hire_driver_bookings WHERE customer_id = '${customerUserId}';`);
       await db.query(`DELETE FROM parcels WHERE sender_id = '${customerUserId}';`);
       await db.query(`DELETE FROM rides WHERE customer_id = '${customerUserId}';`);
       if (testPartnerId) {
         await db.query(`DELETE FROM partner_modes WHERE partner_id = '${testPartnerId}';`);
-        await db.query(`DELETE FROM partner_earnings_entries WHERE partner_id = '${testPartnerId}';`);
+        await db.query(
+          `DELETE FROM partner_earnings_entries WHERE partner_id = '${testPartnerId}';`,
+        );
         await db.query(`DELETE FROM vehicles WHERE partner_id = '${testPartnerId}';`);
         await db.query(`DELETE FROM partner_documents WHERE partner_id = '${testPartnerId}';`);
         await db.query(`DELETE FROM partners WHERE id = '${testPartnerId}';`);
       }
-      await db.query(`DELETE FROM users WHERE id IN ('${customerUserId}', '${partnerUserId}', '${adminUserId}');`);
+      await db.query(
+        `DELETE FROM users WHERE id IN ('${customerUserId}', '${partnerUserId}', '${adminUserId}');`,
+      );
     } catch {}
     await db.onModuleDestroy();
     await redis.onModuleDestroy();
@@ -141,16 +160,13 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('1. State Regulatory Feature Gating enforces compliance', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Unauthorized state (e.g. Maharashtra before clearance)
-    await assert.rejects(
-      async () => {
-        await fareService.checkStateClearance('MH', 'RIDE');
-      },
-      /Mobility operations not authorized in state: MH/
-    );
+    await assert.rejects(async () => {
+      await fareService.checkStateClearance('MH', 'RIDE');
+    }, /Mobility operations not authorized in state: MH/);
 
     // Authorized state (Tamil Nadu dev pilot)
     const tnApproved = await fareService.checkStateClearance('TN', 'RIDE');
@@ -159,7 +175,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('2. Multi-Vehicle Ride Fare Estimation calculates accurate pricing and 5% GST', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const pickup = { latitude: 13.0827, longitude: 80.2707 }; // Chennai Central
@@ -171,11 +187,15 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
       stateCode: 'TN',
     });
 
-    assert.strictEqual(estimates.length, 4, 'Must compute estimates for BIKE, AUTO, CAB_ECONOMY, CAB_PREMIUM');
+    assert.strictEqual(
+      estimates.length,
+      4,
+      'Must compute estimates for BIKE, AUTO, CAB_ECONOMY, CAB_PREMIUM',
+    );
 
-    const bike = estimates.find(e => e.vehicleCategory === 'BIKE')!;
-    const auto = estimates.find(e => e.vehicleCategory === 'AUTO')!;
-    const cab = estimates.find(e => e.vehicleCategory === 'CAB_ECONOMY')!;
+    const bike = estimates.find((e) => e.vehicleCategory === 'BIKE')!;
+    const auto = estimates.find((e) => e.vehicleCategory === 'AUTO')!;
+    const cab = estimates.find((e) => e.vehicleCategory === 'CAB_ECONOMY')!;
 
     assert.ok(bike.totalFareInr < auto.totalFareInr);
     assert.ok(auto.totalFareInr < cab.totalFareInr);
@@ -185,7 +205,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('3. Ride Booking creates ride with server-generated Start OTP', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const req = { user: { userId: customerUserId, roles: ['CUSTOMER'] } };
@@ -212,7 +232,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('4. Section 5B Mutual Exclusion: Driver acquires vertical lock and bars concurrent goods delivery', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const partnerReq = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
@@ -227,24 +247,18 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     assert.strictEqual(mode.activeVerticalLock, 'RIDE');
 
     // Strict Mutual Exclusion Check: Driver carrying passenger cannot receive or accept food/grocery/parcel
-    await assert.rejects(
-      async () => {
-        await continuityService.assertMutualExclusion(testPartnerId, 'FOOD');
-      },
-      /Safety Invariant Violation.*carrying human passenger/
-    );
+    await assert.rejects(async () => {
+      await continuityService.assertMutualExclusion(testPartnerId, 'FOOD');
+    }, /Safety Invariant Violation.*carrying human passenger/);
 
-    await assert.rejects(
-      async () => {
-        await continuityService.assertMutualExclusion(testPartnerId, 'PARCEL');
-      },
-      /Safety Invariant Violation.*carrying human passenger/
-    );
+    await assert.rejects(async () => {
+      await continuityService.assertMutualExclusion(testPartnerId, 'PARCEL');
+    }, /Safety Invariant Violation.*carrying human passenger/);
   });
 
   it('5. Ride Journey: Driver Arrives, Start OTP verification, Completion & Driver Payout', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const partnerReq = { user: { userId: partnerUserId, roles: ['PARTNER'] } };
@@ -254,15 +268,14 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     assert.strictEqual(arrived.status, 'ARRIVED');
 
     // 2. Invalid start OTP rejected
-    await assert.rejects(
-      async () => {
-        await ridesController.startTrip(partnerReq, testRideId, { startOtp: '0000' });
-      },
-      /Invalid ride start OTP/
-    );
+    await assert.rejects(async () => {
+      await ridesController.startTrip(partnerReq, testRideId, { startOtp: '0000' });
+    }, /Invalid ride start OTP/);
 
     // 3. Valid start OTP starts trip
-    const started = await ridesController.startTrip(partnerReq, testRideId, { startOtp: rideStartOtp });
+    const started = await ridesController.startTrip(partnerReq, testRideId, {
+      startOtp: rideStartOtp,
+    });
     assert.strictEqual(started.status, 'IN_PROGRESS');
 
     // 4. Complete trip
@@ -276,7 +289,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     // 5. Verify partner payout recorded in ledger
     const earningsRes = await db.query(
       'SELECT * FROM partner_earnings_entries WHERE partner_id = $1;',
-      [testPartnerId]
+      [testPartnerId],
     );
     assert.ok(earningsRes.rows.length >= 1);
     assert.ok(Number(earningsRes.rows[0].total_earned_inr) > 0);
@@ -288,15 +301,15 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('6. Emergency / SOS Safety: Trigger, audit logging and dispatcher resolution', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const custReq = { user: { userId: customerUserId, roles: ['CUSTOMER'] } };
 
     // Customer triggers SOS
     const sos = await ridesController.triggerSos(custReq, testRideId, {
-      latitude: 13.0700,
-      longitude: 80.2500,
+      latitude: 13.07,
+      longitude: 80.25,
       notes: 'Driver taking unexpected route off highway',
     });
 
@@ -304,7 +317,10 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     assert.strictEqual(sos.status, 'TRIGGERED');
 
     // Verify ride record flagged with SOS
-    const rideCheck = await db.query('SELECT sos_status, sos_triggered_at FROM rides WHERE id = $1;', [testRideId]);
+    const rideCheck = await db.query(
+      'SELECT sos_status, sos_triggered_at FROM rides WHERE id = $1;',
+      [testRideId],
+    );
     assert.strictEqual(rideCheck.rows[0].sos_status, 'TRIGGERED');
     assert.ok(rideCheck.rows[0].sos_triggered_at);
 
@@ -322,7 +338,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('7. Intra-City Parcel Courier: Dual OTP (Pickup & Delivery) with Fare Calculation', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const senderReq = { user: { userId: customerUserId, roles: ['CUSTOMER'] } };
@@ -330,11 +346,11 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
     // 1. Create parcel order
     const parcel = await parcelsController.createParcel(senderReq, {
-      pickupLocation: { latitude: 13.0800, longitude: 80.2400 },
+      pickupLocation: { latitude: 13.08, longitude: 80.24 },
       pickupAddress: 'Kilpauk, Chennai',
       pickupContactName: 'Kavitha Sender',
       pickupContactPhone: '+919999000031',
-      dropoffLocation: { latitude: 13.0300, longitude: 80.2100 },
+      dropoffLocation: { latitude: 13.03, longitude: 80.21 },
       dropoffAddress: 'Guindy Industrial Estate, Chennai',
       dropoffContactName: 'Ramesh Recipient',
       dropoffContactPhone: '+919999000039',
@@ -348,7 +364,11 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     assert.strictEqual(parcel.status, 'CREATED');
     assert.ok(/^\d{4}$/.test(parcel.pickup_otp), 'Must generate pickup OTP');
     assert.ok(/^\d{4}$/.test(parcel.delivery_otp), 'Must generate delivery OTP');
-    assert.notStrictEqual(parcel.pickup_otp, parcel.delivery_otp, 'Dual OTPs must be cryptographically distinct');
+    assert.notStrictEqual(
+      parcel.pickup_otp,
+      parcel.delivery_otp,
+      'Dual OTPs must be cryptographically distinct',
+    );
 
     testParcelId = parcel.id;
     parcelPickupOtp = parcel.pickup_otp;
@@ -364,10 +384,12 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     // 3. Sender Pickup OTP Verification
     await assert.rejects(
       async () => parcelsController.verifyPickup(courierReq, testParcelId, { otp: '0000' }),
-      /Invalid sender pickup OTP/
+      /Invalid sender pickup OTP/,
     );
 
-    const pickedUp = await parcelsController.verifyPickup(courierReq, testParcelId, { otp: parcelPickupOtp });
+    const pickedUp = await parcelsController.verifyPickup(courierReq, testParcelId, {
+      otp: parcelPickupOtp,
+    });
     assert.strictEqual(pickedUp.status, 'PICKED_UP');
 
     // 4. In Transit
@@ -377,10 +399,12 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     // 5. Recipient Delivery OTP Verification
     await assert.rejects(
       async () => parcelsController.verifyDelivery(courierReq, testParcelId, { otp: '0000' }),
-      /Invalid recipient delivery OTP/
+      /Invalid recipient delivery OTP/,
     );
 
-    const delivered = await parcelsController.verifyDelivery(courierReq, testParcelId, { otp: parcelDeliveryOtp });
+    const delivered = await parcelsController.verifyDelivery(courierReq, testParcelId, {
+      otp: parcelDeliveryOtp,
+    });
     assert.strictEqual(delivered.status, 'DELIVERED');
 
     // Vertical lock released back to null
@@ -390,7 +414,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('8. Designated Driver Hire (Hire-Driver): Hourly booking, Start & End OTPs, Odometer tracking', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     const custReq = { user: { userId: customerUserId, roles: ['CUSTOMER'] } };
@@ -400,7 +424,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
     const booking = await hireDriverController.bookDriver(custReq, {
       durationHours: 4,
       vehicleTransmission: 'MANUAL',
-      pickupLocation: { latitude: 13.0850, longitude: 80.2100 },
+      pickupLocation: { latitude: 13.085, longitude: 80.21 },
       pickupAddress: 'Anna Nagar, Chennai',
       scheduledStartTime: new Date(Date.now() + 3600000).toISOString(),
       stateCode: 'TN',
@@ -429,8 +453,12 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
     // 4. Start duty with Start OTP and initial odometer
     await assert.rejects(
-      async () => hireDriverController.startDuty(driverReq, testHireBookingId, { startOtp: '0000', odometerKm: 45200 }),
-      /Invalid start OTP/
+      async () =>
+        hireDriverController.startDuty(driverReq, testHireBookingId, {
+          startOtp: '0000',
+          odometerKm: 45200,
+        }),
+      /Invalid start OTP/,
     );
 
     const started = await hireDriverController.startDuty(driverReq, testHireBookingId, {
@@ -442,8 +470,12 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
     // 5. End duty with End OTP and final odometer
     await assert.rejects(
-      async () => hireDriverController.endDuty(driverReq, testHireBookingId, { endOtp: '0000', odometerKm: 45255 }),
-      /Invalid end OTP/
+      async () =>
+        hireDriverController.endDuty(driverReq, testHireBookingId, {
+          endOtp: '0000',
+          odometerKm: 45255,
+        }),
+      /Invalid end OTP/,
     );
 
     const completed = await hireDriverController.endDuty(driverReq, testHireBookingId, {
@@ -460,7 +492,7 @@ describe('Phase 5: Mobility, Rides, Parcels, Hire-Driver & Partner Continuity Su
 
   it('9. Safe Data Exposure & Role-Based Redactions across mobility services', async (t: any) => {
     if (!isLiveAvailable) {
-      t.skip("Live PostgreSQL & Redis socket unreachable in sandbox");
+      t.skip('Live PostgreSQL & Redis socket unreachable in sandbox');
       return;
     }
     // Customer query on ride -> sees start OTP (to tell driver verbally)

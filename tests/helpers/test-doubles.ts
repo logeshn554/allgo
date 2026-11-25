@@ -99,7 +99,7 @@ export class InMemoryRedisTestDouble {
       map = new Map();
       this.inMemoryHashes.set(key, map);
     }
-    const current = parseInt(map.get(field) || '0', 10);
+    const current = Number.parseInt(map.get(field) || '0', 10);
     const updated = current + increment;
     map.set(field, String(updated));
     return updated;
@@ -116,17 +116,13 @@ export class InMemoryRedisTestDouble {
     return remaining > 0 ? remaining : -2;
   }
 
-  async evalLuaOtpVerify(
-    key: string,
-    expectedHmac: string,
-    maxAttempts: number = 3
-  ): Promise<number> {
+  async evalLuaOtpVerify(key: string, expectedHmac: string, maxAttempts = 3): Promise<number> {
     const map = this.inMemoryHashes.get(key);
     if (!map) {
       return -1; // Not found / expired
     }
 
-    const attempts = parseInt(map.get('attempts') || '0', 10);
+    const attempts = Number.parseInt(map.get('attempts') || '0', 10);
     if (attempts >= maxAttempts) {
       this.inMemoryHashes.delete(key);
       return -2; // Max attempts exceeded
@@ -195,7 +191,7 @@ export class InMemoryRedisTestDouble {
     radius: number,
     _unit: string,
     _order: string,
-    _withdist: string
+    _withdist: string,
   ): Promise<any[]> {
     const g = this.inMemoryGeo.get(key);
     if (!g) return [];
@@ -206,12 +202,22 @@ export class InMemoryRedisTestDouble {
         results.push([member, d.toFixed(1)]);
       }
     }
-    results.sort((a, b) => parseFloat(a[1]) - parseFloat(b[1]));
+    results.sort((a, b) => Number.parseFloat(a[1]) - Number.parseFloat(b[1]));
     return results;
   }
 
   async georadius(key: string, lon: number, lat: number, radiusMeters: number): Promise<any[]> {
-    return this.geosearch(key, 'FROMLONLAT', lon, lat, 'BYRADIUS', radiusMeters, 'M', 'ASC', 'WITHDIST');
+    return this.geosearch(
+      key,
+      'FROMLONLAT',
+      lon,
+      lat,
+      'BYRADIUS',
+      radiusMeters,
+      'M',
+      'ASC',
+      'WITHDIST',
+    );
   }
 
   async zrem(key: string, member: string): Promise<number> {
@@ -230,7 +236,10 @@ export class InMemoryRedisTestDouble {
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -271,7 +280,10 @@ export class MockDatabaseService {
     return { connected: true, latencyMs: 1 };
   }
 
-  async query<T extends pg.QueryResultRow = any>(text: string, params: any[] = []): Promise<pg.QueryResult<T>> {
+  async query<T extends pg.QueryResultRow = any>(
+    text: string,
+    params: any[] = [],
+  ): Promise<pg.QueryResult<T>> {
     // SELECT from users by phone
     if (text.includes('FROM users WHERE phone = $1')) {
       const phone = params[0];
@@ -299,19 +311,36 @@ export class MockDatabaseService {
     }
 
     // SELECT refresh_token_hash FROM devices
-    if (text.includes('SELECT') && text.includes('FROM devices WHERE user_id = $1 AND device_id = $2')) {
+    if (
+      text.includes('SELECT') &&
+      text.includes('FROM devices WHERE user_id = $1 AND device_id = $2')
+    ) {
       const key = `${params[0]}:${params[1]}`;
       const d = this.devices.get(key);
       if (d) {
-        return { rows: [{ refresh_token_hash: d.refresh_token_hash } as T], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+        return {
+          rows: [{ refresh_token_hash: d.refresh_token_hash } as T],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        };
       }
       return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
     }
 
     // Notifications queries
     if (text.includes('SELECT id FROM notifications')) {
-      const existing = this.notifications.find((n) => n.user_id === params[0] && n.title === params[1] && n.category === params[2]);
-      return { rows: existing ? [existing as T] : [], rowCount: existing ? 1 : 0, command: 'SELECT', oid: 0, fields: [] };
+      const existing = this.notifications.find(
+        (n) => n.user_id === params[0] && n.title === params[1] && n.category === params[2],
+      );
+      return {
+        rows: existing ? [existing as T] : [],
+        rowCount: existing ? 1 : 0,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      };
     }
 
     if (text.includes('INSERT INTO notifications')) {
@@ -364,7 +393,7 @@ export class MockDatabaseService {
 
     // SELECT all users paginated
     if (text.includes('FROM users u') && text.includes('GROUP BY u.id')) {
-      const list = Array.from(this.users.values()).map(u => ({
+      const list = Array.from(this.users.values()).map((u) => ({
         ...u,
         roles: Array.from(this.userRoles.get(u.id) || ['CUSTOMER']),
       }));
@@ -373,7 +402,13 @@ export class MockDatabaseService {
 
     // COUNT users
     if (text.includes('SELECT COUNT(*) as count FROM users')) {
-      return { rows: [{ count: String(this.users.size) } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      return {
+        rows: [{ count: String(this.users.size) } as any],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      };
     }
 
     // UPDATE user status
@@ -388,7 +423,10 @@ export class MockDatabaseService {
     }
 
     // UPDATE user profile (fullName, defaultLanguage, email)
-    if (text.includes('UPDATE users') && (text.includes('full_name') || text.includes('default_language'))) {
+    if (
+      text.includes('UPDATE users') &&
+      (text.includes('full_name') || text.includes('default_language'))
+    ) {
       const id = params[0];
       const u = this.users.get(id);
       if (u) {
@@ -396,7 +434,13 @@ export class MockDatabaseService {
         if (params[2] !== null && params[2] !== undefined) u.default_language = params[2];
         if (params[3] !== null && params[3] !== undefined) u.email = params[3];
       }
-      return { rows: u ? [u as T] : [], rowCount: u ? 1 : 0, command: 'UPDATE', oid: 0, fields: [] };
+      return {
+        rows: u ? [u as T] : [],
+        rowCount: u ? 1 : 0,
+        command: 'UPDATE',
+        oid: 0,
+        fields: [],
+      };
     }
 
     // SELECT from roles WHERE name = $1
@@ -419,7 +463,13 @@ export class MockDatabaseService {
 
     // SELECT from roles WHERE name = 'MERCHANT_ADMIN' OR name = 'MERCHANT'
     if (text.includes("FROM roles WHERE name = 'MERCHANT_ADMIN' OR name = 'MERCHANT'")) {
-      return { rows: [{ id: 'role_merch_admin', name: 'MERCHANT_ADMIN' } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      return {
+        rows: [{ id: 'role_merch_admin', name: 'MERCHANT_ADMIN' } as any],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      };
     }
 
     // SELECT id, phone FROM users WHERE id = $1
@@ -431,7 +481,13 @@ export class MockDatabaseService {
 
     // SELECT id FROM zones WHERE is_active = TRUE LIMIT 1
     if (text.includes('FROM zones WHERE is_active = TRUE')) {
-      return { rows: [{ id: 'zone_chennai_central' } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      return {
+        rows: [{ id: 'zone_chennai_central' } as any],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      };
     }
 
     // SELECT from merchants WHERE m.owner_id = $1
@@ -441,12 +497,14 @@ export class MockDatabaseService {
         if (m.owner_id === ownerId) {
           const u = this.users.get(ownerId) || {};
           return {
-            rows: [{
-              ...m,
-              owner_phone: u.phone,
-              owner_name: u.full_name || 'Merchant Owner',
-              owner_email: u.email || 'owner@merchant.com',
-            } as any],
+            rows: [
+              {
+                ...m,
+                owner_phone: u.phone,
+                owner_name: u.full_name || 'Merchant Owner',
+                owner_email: u.email || 'owner@merchant.com',
+              } as any,
+            ],
             rowCount: 1,
             command: 'SELECT',
             oid: 0,
@@ -560,7 +618,10 @@ export class MockDatabaseService {
     }
 
     // UPDATE outlets status
-    if (text.includes('UPDATE outlets SET') && (text.includes('is_open') || text.includes('default_prep_time_minutes'))) {
+    if (
+      text.includes('UPDATE outlets SET') &&
+      (text.includes('is_open') || text.includes('default_prep_time_minutes'))
+    ) {
       for (const o of this.outlets.values()) {
         if (text.includes('WHERE id =')) {
           const outletId = params[params.length - 1];
@@ -583,7 +644,8 @@ export class MockDatabaseService {
     // SELECT catalogs for outlet
     if (text.includes('FROM catalogs WHERE outlet_id = $1')) {
       for (const c of this.catalogs.values()) {
-        if (c.outlet_id === params[0]) return { rows: [c as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+        if (c.outlet_id === params[0])
+          return { rows: [c as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
       }
       return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
     }
@@ -649,17 +711,19 @@ export class MockDatabaseService {
       }
 
       return {
-        rows: [{
-          count_new: newCount,
-          count_accepted: acceptedCount,
-          count_preparing: preparingCount,
-          count_ready: readyCount,
-          count_completed: completedCount,
-          count_cancelled: cancelledCount,
-          today_sales: todaySales,
-          weekly_sales: weeklySales,
-          total_earned: totalEarned,
-        } as any],
+        rows: [
+          {
+            count_new: newCount,
+            count_accepted: acceptedCount,
+            count_preparing: preparingCount,
+            count_ready: readyCount,
+            count_completed: completedCount,
+            count_cancelled: cancelledCount,
+            today_sales: todaySales,
+            weekly_sales: weeklySales,
+            total_earned: totalEarned,
+          } as any,
+        ],
         rowCount: 1,
         command: 'SELECT',
         oid: 0,
@@ -691,12 +755,14 @@ export class MockDatabaseService {
       if (so && so.outlet_id === params[1]) {
         const items = this.orderItems.get(so.id) || [];
         return {
-          rows: [{
-            ...so,
-            customer_name: 'Test Customer',
-            customer_phone: '+919988776655',
-            items,
-          } as any],
+          rows: [
+            {
+              ...so,
+              customer_name: 'Test Customer',
+              customer_phone: '+919988776655',
+              items,
+            } as any,
+          ],
           rowCount: 1,
           command: 'SELECT',
           oid: 0,
@@ -787,7 +853,11 @@ export class MockDatabaseService {
       const list = [];
       for (const it of this.items.values()) {
         if (it.is_active) {
-          const inv = this.inventory.get(it.id) || { stock_quantity: 10, is_in_stock: true, low_stock_threshold: 5 };
+          const inv = this.inventory.get(it.id) || {
+            stock_quantity: 10,
+            is_in_stock: true,
+            low_stock_threshold: 5,
+          };
           list.push({
             ...it,
             category_name: 'Biryani',
@@ -855,12 +925,16 @@ export class MockDatabaseService {
 
     if (text.includes('UPDATE inventory')) {
       const itemId = params[params.length - 1];
-      const inv = this.inventory.get(itemId) || { item_id: itemId, stock_quantity: 10, is_in_stock: true };
+      const inv = this.inventory.get(itemId) || {
+        item_id: itemId,
+        stock_quantity: 10,
+        is_in_stock: true,
+      };
       for (const p of params.slice(0, -2)) {
         if (typeof p === 'number') inv.stock_quantity = p;
         if (typeof p === 'boolean') inv.is_in_stock = p;
       }
-      if (inv.stock_quantity === 0 && !params.some(p => typeof p === 'boolean')) {
+      if (inv.stock_quantity === 0 && !params.some((p) => typeof p === 'boolean')) {
         inv.is_in_stock = false;
       }
       this.inventory.set(itemId, inv);
@@ -868,7 +942,7 @@ export class MockDatabaseService {
     }
 
     // Earnings query
-    if (text.includes('WHERE outlet_id = $1 AND status IN (\'DELIVERED\', \'COMPLETED\')')) {
+    if (text.includes("WHERE outlet_id = $1 AND status IN ('DELIVERED', 'COMPLETED')")) {
       let gross = 0;
       let commission = 0;
       let tax = 0;
@@ -882,12 +956,14 @@ export class MockDatabaseService {
         }
       }
       return {
-        rows: [{
-          gross_sales: gross,
-          commission: commission,
-          tax: tax,
-          net_payout: net,
-        } as any],
+        rows: [
+          {
+            gross_sales: gross,
+            commission: commission,
+            tax: tax,
+            net_payout: net,
+          } as any,
+        ],
         rowCount: 1,
         command: 'SELECT',
         oid: 0,
@@ -903,10 +979,16 @@ export class MockDatabaseService {
           paid += p.net_amount_inr;
         }
       }
-      return { rows: [{ total_paid: paid } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+      return {
+        rows: [{ total_paid: paid } as any],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      };
     }
 
-    if (text.includes('FROM payouts WHERE recipient_type = \'MERCHANT\'')) {
+    if (text.includes("FROM payouts WHERE recipient_type = 'MERCHANT'")) {
       const list = Array.from(this.payouts.values());
       return { rows: list as any[], rowCount: list.length, command: 'SELECT', oid: 0, fields: [] };
     }
@@ -930,7 +1012,7 @@ export class MockDatabaseService {
         }
         return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
       }
-      const list = Array.from(this.merchants.values()).map(m => ({
+      const list = Array.from(this.merchants.values()).map((m) => ({
         ...m,
         owner_phone: '+919876543210',
         owner_name: 'Merchant Owner',
@@ -1002,7 +1084,11 @@ export class MockDatabaseService {
 
     // UPDATE payment_transactions SET status = ... WHERE gateway_order_id = $1
     if (text.includes('UPDATE payment_transactions SET status =')) {
-      const newStatus = text.includes("'SUCCESS'") ? 'SUCCESS' : text.includes("'FAILED'") ? 'FAILED' : 'UPDATED';
+      const newStatus = text.includes("'SUCCESS'")
+        ? 'SUCCESS'
+        : text.includes("'FAILED'")
+          ? 'FAILED'
+          : 'UPDATED';
       const gwId = params[0];
       const tx = this.paymentTransactions.get(gwId);
       if (tx) tx.status = newStatus;
@@ -1015,14 +1101,19 @@ export class MockDatabaseService {
       const userId = params[1];
       const ord = this.orders.get(orderId);
       if (ord) {
-        const isOwner = ord.customer_id === userId || ord.merchant_id === userId || ord.driver_id === userId;
-        if (isOwner) return { rows: [{ '1': 1 } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
+        const isOwner =
+          ord.customer_id === userId || ord.merchant_id === userId || ord.driver_id === userId;
+        if (isOwner)
+          return { rows: [{ '1': 1 } as any], rowCount: 1, command: 'SELECT', oid: 0, fields: [] };
       }
       return { rows: [], rowCount: 0, command: 'SELECT', oid: 0, fields: [] };
     }
 
     // IDOR Merchant Ownership check
-    if (text.includes('FROM merchants m') && text.includes('WHERE (m.id = $1 OR o.id = $1) AND m.owner_id = $2')) {
+    if (
+      text.includes('FROM merchants m') &&
+      text.includes('WHERE (m.id = $1 OR o.id = $1) AND m.owner_id = $2')
+    ) {
       const merchantId = params[0];
       const userId = params[1];
       const m = this.merchants.get(merchantId);
@@ -1033,7 +1124,10 @@ export class MockDatabaseService {
     }
 
     // IDOR Driver Ownership check
-    if (text.includes('FROM partners p') && text.includes('WHERE (p.id = $1 OR p.user_id = $1) AND p.user_id = $2')) {
+    if (
+      text.includes('FROM partners p') &&
+      text.includes('WHERE (p.id = $1 OR p.user_id = $1) AND p.user_id = $2')
+    ) {
       const driverId = params[0];
       const userId = params[1];
       if (driverId === userId || driverId === `partner_${userId}`) {
@@ -1081,4 +1175,3 @@ export class MockDatabaseService {
     return callback(fakeClient);
   }
 }
-

@@ -1,6 +1,10 @@
 // Job: Automated OCR parsing, document validity verification, and expiry alert engine for driver onboarding.
 
-export type KycDocumentType = 'DRIVING_LICENSE' | 'VEHICLE_REGISTRATION' | 'INSURANCE' | 'BACKGROUND_CHECK';
+export type KycDocumentType =
+  | 'DRIVING_LICENSE'
+  | 'VEHICLE_REGISTRATION'
+  | 'INSURANCE'
+  | 'BACKGROUND_CHECK';
 
 export interface RawDocumentScanInput {
   documentType: KycDocumentType;
@@ -165,11 +169,13 @@ export class AutomatedKycVerifier {
     type: KycDocumentType,
     docNumber: string,
     expiryDate: Date | null,
-    confidence: number
+    confidence: number,
   ): VerifiedKycDocument {
     const now = new Date();
     const effectiveExpiry = expiryDate || new Date(now.getTime() + 180 * 24 * 3600 * 1000);
-    const daysUntilExpiry = Math.round((effectiveExpiry.getTime() - now.getTime()) / (24 * 3600 * 1000));
+    const daysUntilExpiry = Math.round(
+      (effectiveExpiry.getTime() - now.getTime()) / (24 * 3600 * 1000),
+    );
     const isExpired = daysUntilExpiry <= 0;
     const expiryAlertNeeded = !isExpired && daysUntilExpiry <= 30;
 

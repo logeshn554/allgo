@@ -22,7 +22,9 @@ export function evaluateNearestDrivers(pickupLat, pickupLon, drivers, options) {
     for (const driver of drivers) {
         if (driver.isAvailable === false)
             continue;
-        if (options?.requiredVehicleType && driver.vehicleType && driver.vehicleType !== options.requiredVehicleType) {
+        if (options?.requiredVehicleType &&
+            driver.vehicleType &&
+            driver.vehicleType !== options.requiredVehicleType) {
             continue;
         }
         if (driver.timestampMs && now - driver.timestampMs > maxStaleAge) {

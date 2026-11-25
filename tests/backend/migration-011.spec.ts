@@ -1,14 +1,19 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import { describe, it } from 'node:test';
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '../..');
-const MIGRATION_PATH = path.join(ROOT_DIR, 'database/migrations/011_phase9_financial_ledger_wallets_settlements_and_support.sql');
-const ROLLBACK_PATH = path.join(ROOT_DIR, 'database/rollbacks/011_phase9_financial_ledger_wallets_settlements_and_support_rollback.sql');
+const MIGRATION_PATH = path.join(
+  ROOT_DIR,
+  'database/migrations/011_phase9_financial_ledger_wallets_settlements_and_support.sql',
+);
+const ROLLBACK_PATH = path.join(
+  ROOT_DIR,
+  'database/rollbacks/011_phase9_financial_ledger_wallets_settlements_and_support_rollback.sql',
+);
 
 describe('Phase 9: Database Migration 011 & Rollback Verification', () => {
-
   // =========================================================================
   // TIER 1: STATIC & STRUCTURAL ANALYSIS (Runs In-Memory, 100% Offline-Safe)
   // =========================================================================
@@ -94,8 +99,14 @@ describe('Phase 9: Database Migration 011 & Rollback Verification', () => {
 
   it('9. should verify support_tickets check constraint covers all 7 required lifecycle states', () => {
     const sql = fs.readFileSync(MIGRATION_PATH, 'utf8');
-    assert.match(sql, /ALTER\s+TABLE\s+support_tickets\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+chk_ticket_status/i);
-    assert.match(sql, /ALTER\s+TABLE\s+support_tickets\s+ADD\s+CONSTRAINT\s+chk_ticket_status\s+CHECK/i);
+    assert.match(
+      sql,
+      /ALTER\s+TABLE\s+support_tickets\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+chk_ticket_status/i,
+    );
+    assert.match(
+      sql,
+      /ALTER\s+TABLE\s+support_tickets\s+ADD\s+CONSTRAINT\s+chk_ticket_status\s+CHECK/i,
+    );
 
     const requiredStatuses = [
       'OPEN',
@@ -104,7 +115,7 @@ describe('Phase 9: Database Migration 011 & Rollback Verification', () => {
       'WAITING_FOR_CUSTOMER',
       'ESCALATED',
       'RESOLVED',
-      'CLOSED'
+      'CLOSED',
     ];
 
     for (const st of requiredStatuses) {

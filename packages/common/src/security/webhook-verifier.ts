@@ -13,7 +13,7 @@ export interface WebhookVerificationOptions {
 
 /**
  * verifyGatewayWebhookSignature
- * 
+ *
  * Cryptographically verifies raw HTTP request payloads from payment providers
  * using HMAC SHA-256 before any JSON parsing occurs.
  */
@@ -35,10 +35,7 @@ export function verifyGatewayWebhookSignature(options: WebhookVerificationOption
 
   switch (gateway) {
     case 'razorpay': {
-      const expectedSignature = crypto
-        .createHmac('sha256', secret)
-        .update(rawBuffer)
-        .digest('hex');
+      const expectedSignature = crypto.createHmac('sha256', secret).update(rawBuffer).digest('hex');
 
       const sigBuf = Buffer.from(signatureHeader.trim(), 'utf8');
       const expBuf = Buffer.from(expectedSignature, 'utf8');
@@ -61,7 +58,7 @@ export function verifyGatewayWebhookSignature(options: WebhookVerificationOption
       if (!timestamp || !v1Sig) return false;
 
       // Anti-replay check
-      const tsNum = parseInt(timestamp, 10);
+      const tsNum = Number.parseInt(timestamp, 10);
       const nowSec = Math.floor(Date.now() / 1000);
       if (Math.abs(nowSec - tsNum) > toleranceSeconds) {
         return false;

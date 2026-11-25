@@ -1,13 +1,11 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import { describe, it } from 'node:test';
 
 process.env.OTP_PEPPER = 'allgo_dev_super_secret_pepper_2026';
 
-import { AuthService } from '../../apps/api/dist/auth/auth.service.js';
-import { AuthRepository } from '../../apps/api/dist/auth/data/auth.repository.js';
-import { OtpService } from '../../apps/api/dist/auth/otp.service.js';
-import { TokenSessionService } from '../../apps/api/dist/auth/token-session.service.js';
-import { DpdpComplianceService } from '../../apps/api/dist/users/dpdp-compliance.service.js';
+import { AuthService } from '../../services/api/dist/auth/auth.service.js';
+import { AuthRepository } from '../../services/api/dist/auth/data/auth.repository.js';
+import { DpdpComplianceService } from '../../services/api/dist/users/dpdp-compliance.service.js';
 
 describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', () => {
   class MockDb {
@@ -18,7 +16,9 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
     async query(sql: string, params: any[] = []): Promise<{ rows: any[] }> {
       const s = sql.trim();
       if (s.startsWith('INSERT INTO devices')) {
-        const existing = this.devices.find((d) => d.user_id === params[0] && d.device_id === params[1]);
+        const existing = this.devices.find(
+          (d) => d.user_id === params[0] && d.device_id === params[1],
+        );
         if (existing) {
           existing.refresh_token_hash = params[3];
           existing.fcm_token = params[4] || existing.fcm_token;
@@ -38,12 +38,18 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
         this.devices.push(row);
         return { rows: [row] };
       }
-      if (s.startsWith('SELECT id, device_id, platform, last_active_at, created_at FROM devices WHERE user_id = $1')) {
+      if (
+        s.startsWith(
+          'SELECT id, device_id, platform, last_active_at, created_at FROM devices WHERE user_id = $1',
+        )
+      ) {
         const rows = this.devices.filter((d) => d.user_id === params[0]);
         return { rows };
       }
       if (s.startsWith('DELETE FROM devices WHERE user_id = $1 AND device_id = $2')) {
-        this.devices = this.devices.filter((d) => !(d.user_id === params[0] && d.device_id === params[1]));
+        this.devices = this.devices.filter(
+          (d) => !(d.user_id === params[0] && d.device_id === params[1]),
+        );
         return { rows: [] };
       }
       if (s.startsWith('DELETE FROM devices WHERE user_id = $1')) {
@@ -51,7 +57,14 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
         return { rows: [] };
       }
       if (s.includes('INSERT INTO dpdp_consents')) {
-        const row = { id: `con_${Date.now()}`, user_id: params[0], consent_purpose: params[1], is_granted: params[2], policy_version: params[5], recorded_at: new Date() };
+        const row = {
+          id: `con_${Date.now()}`,
+          user_id: params[0],
+          consent_purpose: params[1],
+          is_granted: params[2],
+          policy_version: params[5],
+          recorded_at: new Date(),
+        };
         this.consents.push(row);
         return { rows: [row] };
       }
@@ -62,11 +75,17 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
         return { rows: [] };
       }
       if (s.includes('INSERT INTO dpdp_deletion_requests')) {
-        const row = { id: `del_${Date.now()}`, user_id: params[0], reason: params[1], scheduled_purge_at: params[2], status: 'PENDING' };
+        const row = {
+          id: `del_${Date.now()}`,
+          user_id: params[0],
+          reason: params[1],
+          scheduled_purge_at: params[2],
+          status: 'PENDING',
+        };
         this.deletions.push(row);
         return { rows: [row] };
       }
-      if (s.startsWith('UPDATE users SET status = \'SUSPENDED\'')) {
+      if (s.startsWith("UPDATE users SET status = 'SUSPENDED'")) {
         return { rows: [{ id: params[0], status: 'SUSPENDED' }] };
       }
       return { rows: [] };
@@ -76,7 +95,15 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
   it('1. should record device sessions and list active sessions for user', async () => {
     const mockDb = new MockDb();
     const authRepo = new AuthRepository(mockDb as any);
-    const authService = new AuthService({} as any, mockDb as any, {} as any, {} as any, authRepo, {} as any, {} as any);
+    const authService = new AuthService(
+      {} as any,
+      mockDb as any,
+      {} as any,
+      {} as any,
+      authRepo,
+      {} as any,
+      {} as any,
+    );
 
     await authRepo.recordDeviceSession('usr_100', 'dev_pixel_8', 'ANDROID', 'refresh_tok_1');
     await authRepo.recordDeviceSession('usr_100', 'dev_iphone_15', 'IOS', 'refresh_tok_2');
@@ -90,7 +117,15 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
   it('2. should revoke a specific device session on user demand', async () => {
     const mockDb = new MockDb();
     const authRepo = new AuthRepository(mockDb as any);
-    const authService = new AuthService({} as any, mockDb as any, {} as any, {} as any, authRepo, {} as any, {} as any);
+    const authService = new AuthService(
+      {} as any,
+      mockDb as any,
+      {} as any,
+      {} as any,
+      authRepo,
+      {} as any,
+      {} as any,
+    );
 
     await authRepo.recordDeviceSession('usr_200', 'dev_laptop', 'WEB', 'refresh_tok_3');
     await authRepo.recordDeviceSession('usr_200', 'dev_tablet', 'ANDROID', 'refresh_tok_4');
@@ -107,7 +142,15 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
   it('3. should revoke all device sessions on security reset or logout from all devices', async () => {
     const mockDb = new MockDb();
     const authRepo = new AuthRepository(mockDb as any);
-    const authService = new AuthService({} as any, mockDb as any, {} as any, {} as any, authRepo, {} as any, {} as any);
+    const authService = new AuthService(
+      {} as any,
+      mockDb as any,
+      {} as any,
+      {} as any,
+      authRepo,
+      {} as any,
+      {} as any,
+    );
 
     await authRepo.recordDeviceSession('usr_300', 'dev_1', 'ANDROID', 'tok_1');
     await authRepo.recordDeviceSession('usr_300', 'dev_2', 'IOS', 'tok_2');
@@ -122,11 +165,16 @@ describe('Priority 5: Device Sessions, Revocation & DPDP Compliance Workflows', 
     const mockRedis = { set: async () => 'OK' };
     const dpdp = new DpdpComplianceService(mockDb as any, mockRedis as any);
 
-    const consent = await dpdp.recordConsent('usr_dpdp_1', {
-      purpose: 'LOCATION_TRACKING',
-      granted: true,
-      policyVersion: 'v1.0',
-    }, '10.0.0.1', 'AllGoCustomerApp/1.0');
+    const consent = await dpdp.recordConsent(
+      'usr_dpdp_1',
+      {
+        purpose: 'LOCATION_TRACKING',
+        granted: true,
+        policyVersion: 'v1.0',
+      },
+      '10.0.0.1',
+      'AllGoCustomerApp/1.0',
+    );
 
     assert.ok(consent);
     assert.strictEqual(consent.consent_purpose, 'LOCATION_TRACKING');

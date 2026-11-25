@@ -75,16 +75,18 @@ export class OtpSecurityService {
   private readonly defaultTtlSeconds: number;
   private readonly maxAttempts: number;
 
-  constructor(pepper: string, defaultTtlSeconds: number = 300, maxAttempts: number = 3) {
+  constructor(pepper: string, defaultTtlSeconds = 300, maxAttempts = 3) {
     if (!pepper || pepper.length < 16) {
-      throw new Error('OtpSecurityService requires a cryptographically strong server pepper (min 16 chars).');
+      throw new Error(
+        'OtpSecurityService requires a cryptographically strong server pepper (min 16 chars).',
+      );
     }
     this.pepper = pepper;
     this.defaultTtlSeconds = defaultTtlSeconds;
     this.maxAttempts = maxAttempts;
   }
 
-  public generateSecureOtp(length: number = 6): string {
+  public generateSecureOtp(length = 6): string {
     const min = Math.pow(10, length - 1);
     const max = Math.pow(10, length);
     return crypto.randomInt(min, max).toString();
@@ -100,7 +102,7 @@ export class OtpSecurityService {
   public evaluateAtomicVerification(
     currentData: OtpChallengeData | undefined,
     submittedHmac: string,
-    maxAttempts: number = this.maxAttempts
+    maxAttempts: number = this.maxAttempts,
   ): {
     statusCode: number; // 1 = SUCCESS, 0 = INVALID, -1 = EXPIRED/NONE, -2 = EXCEEDED
     status: OtpVerificationStatus;
@@ -122,8 +124,7 @@ export class OtpSecurityService {
     const submittedBuf = Buffer.from(submittedHmac, 'hex');
 
     const isMatch =
-      storedBuf.length === submittedBuf.length &&
-      crypto.timingSafeEqual(storedBuf, submittedBuf);
+      storedBuf.length === submittedBuf.length && crypto.timingSafeEqual(storedBuf, submittedBuf);
 
     if (isMatch) {
       return { statusCode: 1, status: OtpVerificationStatus.SUCCESS };
@@ -172,8 +173,8 @@ export class AtomicOtpChallengeStore {
   public async setChallenge(
     phone: string,
     otp: string,
-    ttlSeconds: number = 300,
-    maxAttempts: number = 3
+    ttlSeconds = 300,
+    maxAttempts = 3,
   ): Promise<string> {
     const key = `otp:challenge:${phone.trim()}`;
     const hmac = this.security.computeOtpHmac(phone, otp);
@@ -193,7 +194,7 @@ export class AtomicOtpChallengeStore {
   public async verifyAndConsumeOtp(
     phone: string,
     submittedOtp: string,
-    maxAttempts: number = 3
+    maxAttempts = 3,
   ): Promise<OtpVerificationStatus> {
     const key = `otp:challenge:${phone.trim()}`;
     const submittedHmac = this.security.computeOtpHmac(phone, submittedOtp);

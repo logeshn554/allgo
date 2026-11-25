@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import Link from 'next/link';
 import { Button, HugeiconsIcon } from '@allgo/ui';
 import { Alert02Icon, RefreshIcon } from '@hugeicons/core-free-icons';
+import Link from 'next/link';
+import { useEffect } from 'react';
 
 export default function AdminError({
   error,
@@ -25,16 +25,19 @@ export default function AdminError({
         <div className="w-12 h-12 rounded-full bg-destructive/15 text-destructive flex items-center justify-center mx-auto">
           <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-6" />
         </div>
-        <h2 className="text-lg font-bold text-destructive">
-          Unable to Load Administrative View
-        </h2>
+        <h2 className="text-lg font-bold text-destructive">Unable to Load Administrative View</h2>
         <p className="text-xs text-muted-foreground leading-relaxed">{message}</p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
           <Button variant="default" size="sm" onClick={() => retry()} className="gap-2">
             <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
             Try Again
           </Button>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/admin/dashboard" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/admin/dashboard" />}
+          >
             Return to Dashboard
           </Button>
         </div>

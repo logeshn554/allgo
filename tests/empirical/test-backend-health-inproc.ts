@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../../apps/api/dist/app.module.js';
+import { AppModule } from '../../services/api/dist/app.module.js';
 
 async function testLiveHealth() {
   console.log('>>> [BOOTSTRAPPING NESTJS APPLICATION IN-PROCESS WITH REAL PG & REDIS]...');
@@ -29,12 +29,13 @@ async function testLiveHealth() {
       throw new Error(`Redis is not up: ${JSON.stringify(healthData.services?.redis)}`);
     }
 
-    console.log('\n[PASS] Backend successfully bootstrapped and connected to live PostgreSQL and Redis!');
+    console.log(
+      '\n[PASS] Backend successfully bootstrapped and connected to live PostgreSQL and Redis!',
+    );
     console.log(`[PASS] Postgres latency: ${healthData.services.postgres.latencyMs}ms`);
     console.log(`[PASS] Redis latency: ${healthData.services.redis.latencyMs}ms`);
     console.log(`[PASS] Environment: ${healthData.environment}`);
     console.log(`[PASS] Uptime: ${healthData.uptimeSeconds}s`);
-
   } finally {
     await app.close();
     console.log('>>> [NESTJS APPLICATION CLOSED CLEANLY]');
@@ -45,4 +46,3 @@ testLiveHealth().catch((err) => {
   console.error('[FAIL]', err);
   process.exit(1);
 });
-

@@ -49,7 +49,9 @@ The following variables configure application behaviors across environments and 
 | `PORT` | `apps/api`, `apps/dispatch`, `apps/webhooks`, `apps/admin` | `3000`, `3001`, `3002`, `3003` | TCP port on which the microservice listens for incoming HTTP / WebSocket traffic. |
 | `CORS_ORIGIN` | `apps/api` | `http://localhost:3000,http://localhost:3001` | Comma-delimited list of allowed Cross-Origin Resource Sharing origins for browser clients. |
 | `DISPATCH_SEARCH_RADIUS_KM` | `apps/dispatch` | `5` | Maximum geodesic search radius (in kilometers) when scanning for candidate drivers in Redis GEO. |
-| `DISPATCH_MATCH_TIMEOUT_SEC` | `apps/dispatch` | `20` | Partner offer acceptance countdown window (in seconds) before matching escalates to next driver. |
+| `DISPATCH_MATCH_TIMEOUT_SEC` | `services/dispatch` | `20` | Partner offer acceptance countdown window (in seconds) before matching escalates to next driver. |
+| `EXPO_PUBLIC_API_URL` | `apps/mobile` | `http://localhost:3000/v1` | Public REST API base URL for the Expo / React Native mobile app. |
+| `EXPO_PUBLIC_WS_URL` | `apps/mobile` | `ws://localhost:3000/delivery` | Public WebSocket endpoint for real-time delivery tracking in Expo / React Native. |
 
 ---
 

@@ -1,16 +1,16 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { DeliveryPricingService } from '../../apps/api/dist/ordering/services/delivery-pricing.service.js';
-import { OrderPlacementService } from '../../apps/api/dist/ordering/services/order-placement.service.js';
+import { describe, it } from 'node:test';
+import { DeliveryPricingService } from '../../services/api/dist/ordering/services/delivery-pricing.service.js';
+import { OrderPlacementService } from '../../services/api/dist/ordering/services/order-placement.service.js';
 
 describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => {
   const mockPricingRepo: any = {
     getOutletLocation: async (outletId: string) => {
       if (outletId === 'outlet_biryani_anna_nagar') {
-        return { id: outletId, lat: 13.0850, lng: 80.2100, zone_id: 'zone_central' };
+        return { id: outletId, lat: 13.085, lng: 80.21, zone_id: 'zone_central' };
       }
       if (outletId === 'outlet_zepto_grocery') {
-        return { id: outletId, lat: 13.0600, lng: 80.2400, zone_id: 'zone_central' };
+        return { id: outletId, lat: 13.06, lng: 80.24, zone_id: 'zone_central' };
       }
       return null;
     },
@@ -50,7 +50,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
   const mockSurgeCalculator: any = {
     calculateDistanceKm: (lat1: number, lon1: number, lat2: number, lon2: number) => {
       // Deterministic distance mock
-      if (lat1 === 13.0850) return 2.5; // Biryani outlet
+      if (lat1 === 13.085) return 2.5; // Biryani outlet
       return 4.0; // Grocery outlet
     },
     toPaisa: (inr: number) => Math.round(inr * 100),
@@ -75,7 +75,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     const pricingService = new DeliveryPricingService(
       mockPricingRepo,
       mockSurgeCalculator,
-      mockCouponsService
+      mockCouponsService,
     );
 
     const cartItems = [
@@ -95,7 +95,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     const pricing = await pricingService.calculateCheckoutTotals(
       cartItems,
       undefined,
-      customerLocation
+      customerLocation,
     );
 
     // Items Subtotal = 700 + 225 = 925.00
@@ -122,7 +122,9 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     assert.ok(pricing.outletsBreakdown);
     assert.strictEqual(pricing.outletsBreakdown.length, 2);
 
-    const outletA = pricing.outletsBreakdown.find((o) => o.outletId === 'outlet_biryani_anna_nagar');
+    const outletA = pricing.outletsBreakdown.find(
+      (o) => o.outletId === 'outlet_biryani_anna_nagar',
+    );
     assert.ok(outletA);
     assert.strictEqual(outletA.itemsSubtotalInr, 700.0);
     assert.strictEqual(outletA.deliveryFeeInr, 30.0);
@@ -141,7 +143,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     const pricingService = new DeliveryPricingService(
       mockPricingRepo,
       mockSurgeCalculator,
-      mockCouponsService
+      mockCouponsService,
     );
 
     const cartItems = [
@@ -156,7 +158,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     const pricing = await pricingService.calculateCheckoutTotals(
       cartItems,
       'outlet_biryani_anna_nagar',
-      customerLocation
+      customerLocation,
     );
 
     assert.strictEqual(pricing.itemsSubtotalInr, 700.0);
@@ -255,19 +257,53 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
         discountAmountInr: 0,
         finalPayableAmountInr: 1076.25,
         itemsBreakdown: [
-          { itemId: 'item_mutton_biryani', itemName: 'Special Mutton Biryani', unitPriceInr: 350.0, quantity: 2, totalPriceInr: 700.0 },
-          { itemId: 'item_organic_milk', itemName: 'Fresh Organic Milk 1L', unitPriceInr: 75.0, quantity: 3, totalPriceInr: 225.0 },
+          {
+            itemId: 'item_mutton_biryani',
+            itemName: 'Special Mutton Biryani',
+            unitPriceInr: 350.0,
+            quantity: 2,
+            totalPriceInr: 700.0,
+          },
+          {
+            itemId: 'item_organic_milk',
+            itemName: 'Fresh Organic Milk 1L',
+            unitPriceInr: 75.0,
+            quantity: 3,
+            totalPriceInr: 225.0,
+          },
         ],
         outletsBreakdown: [
-          { outletId: 'outlet_biryani_anna_nagar', itemsSubtotalInr: 700.0, deliveryFeeInr: 30.0, packagingFeeInr: 15.0, gstAmountInr: 35.0, distanceKm: 2.5, itemCount: 2 },
-          { outletId: 'outlet_zepto_grocery', itemsSubtotalInr: 225.0, deliveryFeeInr: 40.0, packagingFeeInr: 15.0, gstAmountInr: 11.25, distanceKm: 4.0, itemCount: 3 },
+          {
+            outletId: 'outlet_biryani_anna_nagar',
+            itemsSubtotalInr: 700.0,
+            deliveryFeeInr: 30.0,
+            packagingFeeInr: 15.0,
+            gstAmountInr: 35.0,
+            distanceKm: 2.5,
+            itemCount: 2,
+          },
+          {
+            outletId: 'outlet_zepto_grocery',
+            itemsSubtotalInr: 225.0,
+            deliveryFeeInr: 40.0,
+            packagingFeeInr: 15.0,
+            gstAmountInr: 11.25,
+            distanceKm: 4.0,
+            itemCount: 3,
+          },
         ],
       }),
     };
 
     let paymentInitiatedWithAmount = 0;
     const mockPaymentService: any = {
-      initiatePayment: async (_ogId: string, _soId: string, _cId: string, _method: string, amount: number) => {
+      initiatePayment: async (
+        _ogId: string,
+        _soId: string,
+        _cId: string,
+        _method: string,
+        amount: number,
+      ) => {
         paymentInitiatedWithAmount = amount;
         return { paymentId: 'pay_multi_1076', status: 'INITIATED' };
       },
@@ -288,7 +324,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
       mockPricingService,
       mockAddressService,
       mockInventoryReservation,
-      mockPaymentService
+      mockPaymentService,
     );
 
     const orderRes = await placementService.placeOrder(
@@ -297,7 +333,7 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
         deliveryAddressId: 'addr_home',
         paymentMethod: 'UPI',
       } as any,
-      async () => ({})
+      async () => ({}),
     );
 
     // Verify Master Order Group
@@ -305,7 +341,10 @@ describe('Multi-Merchant Unified Cart & Combined Checkout (Phase 2 & 3)', () => 
     assert.strictEqual(orderRes.orderGroupId, 'group_unified_999');
     assert.strictEqual(insertedOrderGroup.finalPayableAmountInr, 1076.25);
     assert.strictEqual(insertedOrderGroup.itemsSubtotalInr, 925.0);
-    assert.strictEqual(insertedOrderGroup.totalDeliveryFeesInr || insertedOrderGroup.deliveryFeeInr, 70.0);
+    assert.strictEqual(
+      insertedOrderGroup.totalDeliveryFeesInr || insertedOrderGroup.deliveryFeeInr,
+      70.0,
+    );
 
     // Verify 2 Distinct Sub-Orders were created
     assert.strictEqual(insertedSubOrders.length, 2);

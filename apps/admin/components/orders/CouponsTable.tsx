@@ -1,14 +1,5 @@
 'use client';
-
-import React from 'react';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@allgo/ui';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@allgo/ui';
 import { Badge } from '@allgo/ui';
 import { Button } from '@allgo/ui';
 
@@ -20,7 +11,9 @@ interface CouponsTableProps {
 
 export function CouponsTable({ coupons, isLoadingCoupons, onToggleCoupon }: CouponsTableProps) {
   if (isLoadingCoupons) {
-    return <div className="text-center py-12 text-muted-foreground text-sm">Loading coupons...</div>;
+    return (
+      <div className="text-center py-12 text-muted-foreground text-sm">Loading coupons...</div>
+    );
   }
 
   if (coupons.length === 0) {
@@ -47,12 +40,14 @@ export function CouponsTable({ coupons, isLoadingCoupons, onToggleCoupon }: Coup
         <TableBody>
           {coupons.map((c) => (
             <TableRow key={c.id}>
-              <TableCell className="font-bold text-primary font-mono text-sm">
-                {c.code}
+              <TableCell className="font-bold text-primary font-mono text-sm">{c.code}</TableCell>
+              <TableCell className="text-muted-foreground text-sm">
+                {c.description || '—'}
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">{c.description || '—'}</TableCell>
               <TableCell className="font-semibold text-foreground text-sm">
-                {c.discount_percentage ? `${c.discount_percentage}% OFF` : `₹${c.flat_discount_inr} FLAT`}
+                {c.discount_percentage
+                  ? `${c.discount_percentage}% OFF`
+                  : `₹${c.flat_discount_inr} FLAT`}
               </TableCell>
               <TableCell className="text-xs text-muted-foreground">
                 Min Order: ₹{Number(c.min_order_amount_inr || 0).toFixed(0)}
@@ -61,7 +56,11 @@ export function CouponsTable({ coupons, isLoadingCoupons, onToggleCoupon }: Coup
               <TableCell>
                 <Badge
                   variant={c.is_active ? 'outline' : 'secondary'}
-                  className={c.is_active ? 'border-primary/30 bg-primary/10 text-primary' : 'text-muted-foreground'}
+                  className={
+                    c.is_active
+                      ? 'border-primary/30 bg-primary/10 text-primary'
+                      : 'text-muted-foreground'
+                  }
                 >
                   {c.is_active ? 'ACTIVE' : 'INACTIVE'}
                 </Badge>
