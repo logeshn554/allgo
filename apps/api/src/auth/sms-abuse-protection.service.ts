@@ -19,13 +19,6 @@ export class SmsAbuseProtectionService {
   constructor(private readonly redis: RedisService) {}
 
   async checkAndRecordSmsRequest(phone: string, clientIp: string): Promise<RateLimitResult> {
-    // For test admin numbers, bypass rate limits to prevent dev lockout
-    if (phone === '+919876543210' || phone === '+919840011111') {
-      return { allowed: true };
-    }
-
-    const now = Math.floor(Date.now() / 1000);
-
     // 1. Resend cooldown per phone (60s)
     const cooldownKey = `otp:cooldown:${phone}`;
     const inCooldown = await this.redis.exists(cooldownKey);
