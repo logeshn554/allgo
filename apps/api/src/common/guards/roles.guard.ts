@@ -56,8 +56,28 @@ export class RolesGuard implements CanActivate {
     let identity: UserIdentity;
     try {
       const userRes = await this.db.query(
-        `SELECT u.id, u.phone, u.status, 
-                COALESCE(json_agg(json_build_object('role', r.name, 'status', 'ACTIVE')) FILTER (WHERE r.name IS NOT NULL), '[]') as roles
+        `SELECT u.id, u.phone, u.status,
+                COALESCE(
+                  json_agg(json_build_object('role', r.name, 'status', 'ACTIVE'))
+                    FILTER (
+                      WHERE r.name IS NOT NULL
+                        AND (
+                          r.name <> 'PARTNER'
+                          OR EXISTS (
+                            SELECT 1 FROM partners p
+                            WHERE p.user_id = u.id AND p.status IN ('APPROVED', 'ACTIVE')
+                          )
+                        )
+                        AND (
+                          r.name NOT IN ('MERCHANT', 'MERCHANT_ADMIN')
+                          OR EXISTS (
+                            SELECT 1 FROM merchants m
+                            WHERE m.owner_id = u.id AND m.status IN ('APPROVED', 'LIVE')
+                          )
+                        )
+                    ),
+                  '[]'
+                ) AS roles
          FROM users u
          LEFT JOIN user_roles ur ON ur.user_id = u.id
          LEFT JOIN roles r ON r.id = ur.role_id
