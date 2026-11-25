@@ -263,21 +263,10 @@ export class OAuthService {
       }
 
       if (!user) {
-        if (!settings.allowSelfSignup || !provider.allowSignup) {
-          return buildErrorRedirect(
-            'Self-registration is disabled for this OAuth provider.',
-            true,
-          );
-        }
-        user = await this.authManagerRepo.createUserWithIdentity({
-          email: profile.email,
-          fullName: profile.fullName,
-          avatarUrl: profile.avatarUrl,
-          emailVerified: profile.emailVerified,
-          provider: provider.slug,
-          providerAccountId: profile.providerAccountId,
-          loginMethod: `OAUTH_${provider.slug.toUpperCase()}`,
-        });
+        return buildErrorRedirect(
+          'Create your AllGo account with verified phone OTP first, then link this sign-in provider from account settings.',
+          true,
+        );
       }
 
       if (user.status === 'BLOCKED' || user.status === 'SUSPENDED') {
