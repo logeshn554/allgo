@@ -49,5 +49,6 @@
 - Admin allowlist data cannot be safely populated until the owner verifies the existing admin identifiers and user ID from a trusted database snapshot.
 - This branch does not reconcile legacy duplicate accounts or migrate Firestore user documents; no automatic merge or ID rewrite is safe without data exports and owner-approved mapping.
 - Full Next.js/Flutter UI and device verification remains outstanding.
+- The merchant approval gate currently uses the schema's `merchants.owner_id` relationship. If merchant staff identities are introduced through another relation in a later schema, that relation must be explicitly added before granting `MERCHANT_ADMIN` to staff accounts.
 - The admin generic user-link endpoint preserves the existing route for compatibility but no longer creates a new account; admin-created invitations should use the phone OTP onboarding flow.
 - The Firebase compatibility gateway only proxies `/v1/auth/*`; any unrelated Firebase Function behavior must be checked before removing this function from deployment.
