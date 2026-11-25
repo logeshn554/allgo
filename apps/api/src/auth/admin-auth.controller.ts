@@ -142,44 +142,36 @@ export class AdminAuthController {
   }
 
   @Post('users')
-  @ApiOperation({ summary: 'Create or invite a new user with email/phone/password/role (Admin)' })
+  @ApiOperation({ summary: 'Link an email identity to an existing phone-verified user (Admin)' })
   async createUser(@Body() body: any) {
     const email = body?.email ? String(body.email).trim().toLowerCase() : null;
     const phone = body?.phone ? String(body.phone).trim() : null;
-    if (!email && !phone) {
-      throw new BadRequestException('Either email or phone is required.');
+    if (!phone || !/^\\+91[6-9]\\d{9}$/.test(phone)) {
+      throw new BadRequestException('A normalized E.164 Indian phone number is required.');
     }
-    const passwordHash = body?.password
-      ? await this.emailAuthService.hashPassword(String(body.password))
-      : null;
+    if (body?.role && String(body.role).toUpperCase() !== 'CUSTOMER') {
+      throw new BadRequestException(
+        'Privileged roles must be granted through the approved onboarding or trusted admin provisioning workflow.',
+      );
+    }
 
-    const provider = email ? 'email' : 'phone';
-    const providerAccountId = email || phone!;
+    const user = await this.authManagerRepo.findUserByPhone(phone);
+    if (!user || !user.phoneVerified) {
+      throw new BadRequestException(
+        'The user must complete phone OTP registration before an administrator can link additional identifiers.',
+      );
+    }
 
-    const user = await this.authManagerRepo.createUserWithIdentity({
-      email,
-      phone,
-      fullName: body?.fullName || null,
-      passwordHash,
-      emailVerified: Boolean(email),
-      phoneVerified: Boolean(phone),
-      role: body?.role || 'CUSTOMER',
-      provider,
-      providerAccountId,
-      loginMethod: 'ADMIN_CREATED',
-    });
-
-    if (email && phone) {
+    if (email) {
       await this.authManagerRepo.linkIdentity({
         userId: user.id,
-        provider: 'phone',
-        providerAccountId: phone,
-        phone,
-        displayName: body?.fullName || null,
-        verified: true,
+        provider: 'email',
+        providerAccountId: email,
+        email,
+        verified: false,
       });
     }
 
-    return user;
+    return this.authManagerRepo.findUserById(user.id);
   }
 }
