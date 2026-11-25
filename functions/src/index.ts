@@ -1,189 +1,100 @@
 import { onRequest } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
-import jwt from 'jsonwebtoken';
-import crypto from 'node:crypto';
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
-const db = admin.firestore();
-
-// Enforce required secrets from environment; fail-fast on startup in production if missing
-const nodeEnv = process.env.NODE_ENV || 'development';
-const isProduction = nodeEnv === 'production';
-const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? '' : 'allgo_cloud_jwt_secret_dev_32b_minimum_len');
-const FPNV_TEST_TOKEN = process.env.FPNV_TEST_TOKEN || '';
-const SMS_GATEWAY_API_KEY = process.env.SMS_GATEWAY_API_KEY || '';
-const GCP_PROJECT_ID = process.env.GCP_PROJECT || process.env.GCLOUD_PROJECT || admin.instanceId?.() || 'allgo-platform';
-
-if (isProduction) {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-    throw new Error('FATAL: JWT_SECRET environment variable is missing or insecure (<32 chars) in production.');
-  }
-}
-
+/**
+ * Compatibility gateway only.
+ *
+ * NestJS (apps/api) is the sole AllGo identity, authorization and session
+ * authority. This Firebase Function deliberately does not read/write user or
+ * OTP records, mint JWTs, or assign roles. Existing clients can continue to
+ * call the Firebase Function URL while they are migrated to the Core API.
+ */
 const app = express();
 app.use(cors({ origin: true }));
-app.use(express.json());
+app.use(express.json({ limit: '32kb' }));
 
-function validateIndianPhone(phone: string): string {
-  if (!phone || typeof phone !== 'string') {
-    throw new Error('Phone number is required');
-  }
-  const digits = phone.replace(/\D/g, '');
-  const last10 = digits.slice(-10);
-  if (!/^[6-9]\d{9}$/.test(last10)) {
-    throw new Error('Invalid Indian mobile number. Must be a 10-digit number starting with 6-9');
-  }
-  return `+91${last10}`;
-}
+const CORE_API_URL = (
+  process.env.ALLGO_CORE_API_URL || 'https://allgo-api.onrender.com'
+).replace(/\/+$/, '');
 
-function generateSecureOtp(): string {
-  return crypto.randomInt(100000, 999999).toString();
-}
+const FORWARDED_REQUEST_HEADERS = [
+  'accept',
+  'content-type',
+  'authorization',
+  'x-firebase-appcheck',
+  'x-device-id',
+  'x-platform',
+  'user-agent',
+] as const;
 
-async function sendSmsOtp(phone: string, otpCode: string): Promise<void> {
-  if (SMS_GATEWAY_API_KEY) {
-    // In production with SMS gateway configured, deliver via provider API
-    // e.g. Twilio / Gupshup / Fast2SMS
-    return;
-  }
-  // In development/staging or mock environments, logged to stdout securely without exposing sensitive payload
-}
+const FORWARDED_RESPONSE_HEADERS = [
+  'content-type',
+  'cache-control',
+  'set-cookie',
+  'www-authenticate',
+  'retry-after',
+] as const;
 
 app.get('/v1/health', (_req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'ok',
-    service: 'AllGo Core API on Google Cloud',
-    project: GCP_PROJECT_ID,
-    timestamp: new Date().toISOString(),
+    service: 'AllGo authentication compatibility gateway',
+    authority: 'NestJS Core API',
   });
 });
 
-app.post('/v1/auth/otp/send', async (req, res) => {
+app.all('/v1/auth/*', async (req, res) => {
+  const path = req.originalUrl;
+  if (!path.startsWith('/v1/auth/')) {
+    return res.status(404).json({ statusCode: 404, message: 'Not found' });
+  }
+
+  const headers = new Headers();
+  for (const name of FORWARDED_REQUEST_HEADERS) {
+    const value = req.header(name);
+    if (value) headers.set(name, value);
+  }
+
+  const method = req.method.toUpperCase();
+  const body =
+    method === 'GET' || method === 'HEAD' ? undefined : JSON.stringify(req.body ?? {});
+
   try {
-    const phone = validateIndianPhone(req.body.phone);
-    const code = generateSecureOtp();
-    const challengeRef = db.collection('otp_challenges').doc(phone);
-    await challengeRef.set({
-      phone,
-      code,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    const upstream = await fetch(`${CORE_API_URL}${path}`, {
+      method,
+      headers,
+      body,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(15000),
     });
 
-    await sendSmsOtp(phone, code);
+    for (const name of FORWARDED_RESPONSE_HEADERS) {
+      const value = upstream.headers.get(name);
+      if (value) res.setHeader(name, value);
+    }
 
-    res.json({
-      status: 'OTP_SENT',
-      cooldownSeconds: 60,
-      message: 'Verification code dispatched via Google Cloud Service',
+    const responseBody = await upstream.text();
+    return res.status(upstream.status).send(responseBody);
+  } catch {
+    // Do not log request bodies, credentials, OTPs, or upstream secrets.
+    return res.status(503).json({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      message: 'Central authentication service is temporarily unavailable.',
     });
-  } catch (err: any) {
-    res.status(400).json({ statusCode: 400, error: 'Bad Request', message: err.message });
   }
 });
 
-app.post('/v1/auth/otp/verify', async (req, res) => {
-  try {
-    const phone = validateIndianPhone(req.body.phone);
-    const code = req.body.code ? String(req.body.code).trim() : '';
-    const token = req.body.token ? String(req.body.token).trim() : '';
-
-    const isTestToken = Boolean(FPNV_TEST_TOKEN && (token === FPNV_TEST_TOKEN || code === FPNV_TEST_TOKEN));
-    const isMockOtp = !isProduction && (code === '123456');
-
-    // Retrieve active challenge from Firestore
-    let challengeValid = false;
-    const challengeDoc = await db.collection('otp_challenges').doc(phone).get();
-    if (challengeDoc.exists) {
-      const challenge = challengeDoc.data()!;
-      const expiresAt = challenge.expiresAt?.toDate ? challenge.expiresAt.toDate() : new Date(challenge.expiresAt);
-      if (expiresAt.getTime() > Date.now() && challenge.code === code) {
-        challengeValid = true;
-        // Invalidate challenge upon successful use
-        await db.collection('otp_challenges').doc(phone).delete();
-      }
-    }
-
-    if (!challengeValid && !isTestToken && !isMockOtp) {
-      return res.status(400).json({
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'Invalid or expired verification code.',
-      });
-    }
-
-    const userRef = db.collection('users').doc(phone);
-    const userDoc = await userRef.get();
-
-    let userData: any;
-    let isNewUser = false;
-
-    if (!userDoc.exists) {
-      isNewUser = true;
-      userData = {
-        id: `usr_${phone.replace(/\D/g, '')}`,
-        phone,
-        status: 'ACTIVE',
-        roles: ['CUSTOMER', 'PARTNER', 'MERCHANT_ADMIN'],
-        defaultLanguage: 'en',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      };
-      await userRef.set(userData);
-    } else {
-      userData = userDoc.data();
-    }
-
-    const payload = {
-      userId: userData.id,
-      phone: userData.phone,
-      status: userData.status,
-      roles: userData.roles,
-    };
-
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
-    const refreshToken = jwt.sign({ ...payload, type: 'refresh' }, JWT_SECRET, { expiresIn: '30d' });
-
-    return res.json({
-      accessToken,
-      refreshToken,
-      tokenType: 'Bearer',
-      expiresIn: 604800,
-      isNewUser,
-      user: {
-        id: userData.id,
-        phone: userData.phone,
-        fullName: userData.fullName || null,
-        status: userData.status || 'ACTIVE',
-        roles: userData.roles || ['CUSTOMER'],
-        defaultLanguage: userData.defaultLanguage || 'en',
-      },
-    });
-  } catch (err: any) {
-    return res.status(400).json({ statusCode: 400, error: 'Bad Request', message: err.message });
-  }
+app.all('*', (_req, res) => {
+  return res.status(404).json({
+    statusCode: 404,
+    error: 'Not Found',
+    message: 'This compatibility gateway only serves centralized authentication routes.',
+  });
 });
 
-app.get('/v1/auth/me', async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ statusCode: 401, error: 'Unauthorized', message: 'Missing token' });
-    }
-    const token = authHeader.split(' ')[1];
-    const decoded: any = jwt.verify(token, JWT_SECRET);
-    const userDoc = await db.collection('users').doc(decoded.phone).get();
-    if (!userDoc.exists) {
-      return res.status(404).json({ statusCode: 404, error: 'Not Found', message: 'User not found' });
-    }
-    return res.json(userDoc.data());
-  } catch (err: any) {
-    return res.status(401).json({ statusCode: 401, error: 'Unauthorized', message: err.message });
-  }
-});
-
-export const api = onRequest({ region: 'asia-south1', maxInstances: 10, cors: true }, app);
+export const api = onRequest(
+  { region: 'asia-south1', maxInstances: 10, cors: true },
+  app,
+);
