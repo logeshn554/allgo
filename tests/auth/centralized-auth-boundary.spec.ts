@@ -45,3 +45,11 @@ test('new account paths require an existing phone-verified account before email/
   assert.match(admin, /!user\.phoneVerified/);
   assert.match(admin, /Privileged roles must be granted through the approved onboarding/);
 });
+
+test('backend role guard gates partner, merchant and admin permissions authoritatively', async () => {
+  const guard = await source('apps/api/src/common/guards/roles.guard.ts');
+  assert.match(guard, /p\.status IN \('APPROVED', 'ACTIVE'\)/);
+  assert.match(guard, /m\.status IN \('APPROVED', 'LIVE'\)/);
+  assert.match(guard, /admin_identity_allowlist/);
+  assert.match(guard, /verified_identity_count/);
+});
